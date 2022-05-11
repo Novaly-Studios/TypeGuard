@@ -1,0 +1,12 @@
+{
+	"name": "Types",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedFirst": {
+			"$className": "ReplicatedFirst",
+			"Types": {
+				"$path": "src"
+			}
+		}
+	}
+}
