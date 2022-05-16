@@ -1,35 +1,35 @@
 -- WIP
 
 return function()
-    local Types = require(script.Parent.Types)
+    local TypeGuard = require(script.Parent)
 
-    describe("Types.Template", function()
+    describe("TypeGuard.Template", function()
         it("should reject no Name given", function()
             expect(function()
-                Types.Template()
+                TypeGuard.Template()
             end).to.throw()
         end)
 
         it("should reject incorrect types for Name", function()
             expect(function()
-                Types.Template(1)
+                TypeGuard.Template(1)
             end).to.throw()
 
             expect(function()
-                Types.Template({})
+                TypeGuard.Template({})
             end).to.throw()
 
             expect(function()
-                Types.Template(true)
+                TypeGuard.Template(true)
             end).to.throw()
 
             expect(function()
-                Types.Template("Test")
+                TypeGuard.Template("Test")
             end).never.to.throw()
         end)
 
         it("should return a constructor function and a TypeChecker class for extension", function()
-            local TestCreate, TestClass = Types.Template("Test")
+            local TestCreate, TestClass = TypeGuard.Template("Test")
             expect(TestCreate).to.be.a("function")
             expect(TestClass).to.be.a("table")
 
@@ -47,18 +47,18 @@ return function()
         end)
     end)
 
-    describe("Types.Params", function()
+    describe("TypeGuard.Params", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
-                Types.Params(1)
+                TypeGuard.Params(1)
             end).to.throw()
 
             expect(function()
-                Types.Params({})
+                TypeGuard.Params({})
             end).to.throw()
 
             expect(function()
-                Types.Params(true)
+                TypeGuard.Params(true)
             end).to.throw()
         end)
 
