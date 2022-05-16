@@ -1,1 +1,1 @@
-roots = ["ReplicatedFirst", "ServerScriptService", "ReplicatedStorage"]
+roots = ["ReplicatedFirst"]

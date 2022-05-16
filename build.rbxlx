@@ -1,4 +1,12 @@
---!nonstrict
+<roblox version="4">
+  <Item class="ReplicatedFirst" referent="0">
+    <Properties>
+      <string name="Name">ReplicatedFirst</string>
+    </Properties>
+    <Item class="ModuleScript" referent="1">
+      <Properties>
+        <string name="Name">TypeGuard</string>
+        <string name="Source">--!nonstrict
 -- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
@@ -28,7 +36,7 @@ local function ConcatWithToString(Array: {any}, Separator: string): string
     for Index, Value in ipairs(Array) do
         Result ..= tostring(Value)
 
-        if (Index < Size) then
+        if (Index &lt; Size) then
             Result ..= Separator
         end
     end
@@ -49,13 +57,13 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
 }
 
 -- Standard re-usable functions throughout all type checkers
-    local function IsAKeyIn<T>(self: T, ...)
+    local function IsAKeyIn&lt;T>(self: T, ...)
         return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
             return Store[Key] ~= nil, "No key found in table: " .. tostring(Store)
         end, ...)
     end
 
-    local function IsAValueIn<T>(self: T, ...)
+    local function IsAValueIn&lt;T>(self: T, ...)
         return self:_AddConstraint("IsAValueIn", function(_, TargetValue, Store)
             for _, Value in pairs(Store) do
                 if (Value == TargetValue) then
@@ -67,21 +75,21 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
         end, ...)
     end
 
-    local function Equals<T>(self: T, ...)
+    local function Equals&lt;T>(self: T, ...)
         return self:_AddConstraint("Equals", function(_, Value, ExpectedValue)
             return Value == ExpectedValue, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
         end, ...)
     end
 
-    local function GreaterThan<T>(self: T, ...)
+    local function GreaterThan&lt;T>(self: T, ...)
         return self:_AddConstraint("GreaterThan", function(_, Value, ExpectedValue)
             return Value > ExpectedValue, "Value " .. tostring(Value) .. " is not greater than " .. tostring(ExpectedValue)
         end, ...)
     end
 
-    local function LessThan<T>(self: T, ...)
+    local function LessThan&lt;T>(self: T, ...)
         return self:_AddConstraint("LessThan", function(_, Value, ExpectedValue)
-            return Value < ExpectedValue, "Value " .. tostring(Value) .. " is not less than " .. tostring(ExpectedValue)
+            return Value &lt; ExpectedValue, "Value " .. tostring(Value) .. " is not less than " .. tostring(ExpectedValue)
         end, ...)
     end
 
@@ -91,38 +99,38 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
 
 local TypeGuard = {}
 
-type SelfReturn<T, P...> = ((T, P...) -> T)
+type SelfReturn&lt;T, P...> = ((T, P...) -> T)
 
-type TypeCheckerObject<T> = {
-    _Copy: SelfReturn<TypeCheckerObject<T>>;
-    _AddConstraint: SelfReturn<TypeCheckerObject<T>, string, (any) -> (TypeCheckerObject<T>), ...any>;
+type TypeCheckerObject&lt;T> = {
+    _Copy: SelfReturn&lt;TypeCheckerObject&lt;T>>;
+    _AddConstraint: SelfReturn&lt;TypeCheckerObject&lt;T>, string, (any) -> (TypeCheckerObject&lt;T>), ...any>;
 
-    Or: SelfReturn<TypeCheckerObject<T>, TypeCheckerObject<any>>;
-    And: SelfReturn<TypeCheckerObject<T>, TypeCheckerObject<any>>;
-    Alias: SelfReturn<TypeCheckerObject<T>, string>;
-    AddTag: SelfReturn<TypeCheckerObject<T>, string>;
-    Optional: SelfReturn<TypeCheckerObject<T>>;
+    Or: SelfReturn&lt;TypeCheckerObject&lt;T>, TypeCheckerObject&lt;any>>;
+    And: SelfReturn&lt;TypeCheckerObject&lt;T>, TypeCheckerObject&lt;any>>;
+    Alias: SelfReturn&lt;TypeCheckerObject&lt;T>, string>;
+    AddTag: SelfReturn&lt;TypeCheckerObject&lt;T>, string>;
+    Optional: SelfReturn&lt;TypeCheckerObject&lt;T>>;
 
-    WrapCheck: (TypeCheckerObject<T>) -> ((any) -> (boolean, string));
-    WrapAssert: (TypeCheckerObject<T>) -> ((any) -> ());
-    Check: (TypeCheckerObject<T>, any) -> (string, boolean);
-    Assert: (TypeCheckerObject<T>, any) -> ();
+    WrapCheck: (TypeCheckerObject&lt;T>) -> ((any) -> (boolean, string));
+    WrapAssert: (TypeCheckerObject&lt;T>) -> ((any) -> ());
+    Check: (TypeCheckerObject&lt;T>, any) -> (string, boolean);
+    Assert: (TypeCheckerObject&lt;T>, any) -> ();
 
     -- Standard constraints
-    Equals: SelfReturn<TypeCheckerObject<T>, any>;
-    equals: SelfReturn<TypeCheckerObject<T>, any>;
+    Equals: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
+    equals: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
 
-    IsAValueIn: SelfReturn<TypeCheckerObject<T>, any>;
-    isAValueIn: SelfReturn<TypeCheckerObject<T>, any>;
+    IsAValueIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
+    isAValueIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
 
-    IsAKeyIn: SelfReturn<TypeCheckerObject<T>, any>;
-    isAKeyIn: SelfReturn<TypeCheckerObject<T>, any>;
+    IsAKeyIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
+    isAKeyIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
 
-    GreaterThan: SelfReturn<TypeCheckerObject<T>, number>;
-    greaterThan: SelfReturn<TypeCheckerObject<T>, number>;
+    GreaterThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
+    greaterThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
 
-    LessThan: SelfReturn<TypeCheckerObject<T>, number>;
-    lessThan: SelfReturn<TypeCheckerObject<T>, number>;
+    LessThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
+    lessThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
 }
 
 function TypeGuard.Template(Name)
@@ -382,7 +390,7 @@ function TypeGuard._AssertIsTypeBase(Subject)
     assert(Subject._Conjunction ~= nil, "Subject does not contain _Conjunction field")
 end
 
---- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
+--- Cheap &amp; easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
 function TypeGuard.FromTypeName(TypeName)
     ExpectType(TypeName, "string", 1)
 
@@ -397,29 +405,29 @@ TypeGuard.fromTypeName = TypeGuard.FromTypeName
 
 do
     type NumberTypeCheckerObject = {
-        Integer: SelfReturn<NumberTypeCheckerObject>;
-        integer: SelfReturn<NumberTypeCheckerObject>;
+        Integer: SelfReturn&lt;NumberTypeCheckerObject>;
+        integer: SelfReturn&lt;NumberTypeCheckerObject>;
 
-        Decimal: SelfReturn<NumberTypeCheckerObject>;
-        decimal: SelfReturn<NumberTypeCheckerObject>;
+        Decimal: SelfReturn&lt;NumberTypeCheckerObject>;
+        decimal: SelfReturn&lt;NumberTypeCheckerObject>;
 
-        Min: SelfReturn<NumberTypeCheckerObject, number>;
-        min: SelfReturn<NumberTypeCheckerObject, number>;
+        Min: SelfReturn&lt;NumberTypeCheckerObject, number>;
+        min: SelfReturn&lt;NumberTypeCheckerObject, number>;
 
-        Max: SelfReturn<NumberTypeCheckerObject, number>;
-        max: SelfReturn<NumberTypeCheckerObject, number>;
+        Max: SelfReturn&lt;NumberTypeCheckerObject, number>;
+        max: SelfReturn&lt;NumberTypeCheckerObject, number>;
 
-        Range: SelfReturn<NumberTypeCheckerObject, number, number>;
-        range: SelfReturn<NumberTypeCheckerObject, number, number>;
+        Range: SelfReturn&lt;NumberTypeCheckerObject, number, number>;
+        range: SelfReturn&lt;NumberTypeCheckerObject, number, number>;
 
-        Positive: SelfReturn<NumberTypeCheckerObject>;
-        positive: SelfReturn<NumberTypeCheckerObject>;
+        Positive: SelfReturn&lt;NumberTypeCheckerObject>;
+        positive: SelfReturn&lt;NumberTypeCheckerObject>;
 
-        Negative: SelfReturn<NumberTypeCheckerObject>;
-        negative: SelfReturn<NumberTypeCheckerObject>;
-    } & TypeCheckerObject<NumberTypeCheckerObject>
+        Negative: SelfReturn&lt;NumberTypeCheckerObject>;
+        negative: SelfReturn&lt;NumberTypeCheckerObject>;
+    } &amp; TypeCheckerObject&lt;NumberTypeCheckerObject>
 
-    local Number: SelfReturn<NumberTypeCheckerObject>, NumberClass = TypeGuard.Template("Number")
+    local Number: SelfReturn&lt;NumberTypeCheckerObject>, NumberClass = TypeGuard.Template("Number")
 
     function NumberClass:_Initial(Item)
         return typeof(Item) == "number", "Expected number, got " .. typeof(Item)
@@ -448,14 +456,14 @@ do
 
     function NumberClass:Max(...)
         return self:_AddConstraint("Max", function(_, Item, Max)
-            return Item <= Max, "Length must be at most " .. tostring(Max) .. ", got " .. tostring(Item)
+            return Item &lt;= Max, "Length must be at most " .. tostring(Max) .. ", got " .. tostring(Item)
         end, ...)
     end
     NumberClass.max = NumberClass.Max
 
     function NumberClass:Range(...)
         return self:_AddConstraint("Range", function(_, Item, Min, Max)
-            return Item >= Min and Item <= Max, "Length must be between " .. tostring(Min) .. " and " .. tostring(Max) .. ", got " .. tostring(Item)
+            return Item >= Min and Item &lt;= Max, "Length must be between " .. tostring(Min) .. " and " .. tostring(Max) .. ", got " .. tostring(Item)
         end, ...)
     end
     NumberClass.range = NumberClass.Range
@@ -469,7 +477,7 @@ do
 
     function NumberClass:Negative(...)
         return self:_AddConstraint("Negative", function(_, Item)
-            return Item < 0, "Expected negative number, got " .. tostring(Item)
+            return Item &lt; 0, "Expected negative number, got " .. tostring(Item)
         end, ...)
     end
     NumberClass.negative = NumberClass.Negative
@@ -482,18 +490,18 @@ end
 
 
 do
-    type StringTypeCheckerObject = TypeCheckerObject<StringTypeCheckerObject> & {
-        MinLength: SelfReturn<StringTypeCheckerObject, number>;
-        minLength: SelfReturn<StringTypeCheckerObject, number>;
+    type StringTypeCheckerObject = TypeCheckerObject&lt;StringTypeCheckerObject> &amp; {
+        MinLength: SelfReturn&lt;StringTypeCheckerObject, number>;
+        minLength: SelfReturn&lt;StringTypeCheckerObject, number>;
 
-        MaxLength: SelfReturn<StringTypeCheckerObject, number>;
-        maxLength: SelfReturn<StringTypeCheckerObject, number>;
+        MaxLength: SelfReturn&lt;StringTypeCheckerObject, number>;
+        maxLength: SelfReturn&lt;StringTypeCheckerObject, number>;
 
-        Pattern: SelfReturn<StringTypeCheckerObject, string>;
-        pattern: SelfReturn<StringTypeCheckerObject, string>;
+        Pattern: SelfReturn&lt;StringTypeCheckerObject, string>;
+        pattern: SelfReturn&lt;StringTypeCheckerObject, string>;
     }
 
-    local String: SelfReturn<StringTypeCheckerObject>, StringClass = TypeGuard.Template("String")
+    local String: SelfReturn&lt;StringTypeCheckerObject>, StringClass = TypeGuard.Template("String")
     StringClass._Initial = CreateStandardInitial("string")
 
     function StringClass:MinLength(...)
@@ -505,7 +513,7 @@ do
 
     function StringClass:MaxLength(...)
         return self:_AddConstraint("MaxLength", function(_, Item, MaxLength)
-            return #Item <= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #Item
+            return #Item &lt;= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #Item
         end, ...)
     end
     StringClass.maxLength = StringClass.MaxLength
@@ -530,33 +538,33 @@ do
     local ERR_PREFIX = "[%s '%d'] "
     local ERR_UNEXPECTED_VALUE = ERR_PREFIX .. " Unexpected value (strict tag is present)"
 
-    type ArrayTypeCheckerObject = TypeCheckerObject<ArrayTypeCheckerObject> & {
-        OfLength: SelfReturn<ArrayTypeCheckerObject, number>;
-        ofLength: SelfReturn<ArrayTypeCheckerObject, number>;
+    type ArrayTypeCheckerObject = TypeCheckerObject&lt;ArrayTypeCheckerObject> &amp; {
+        OfLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+        ofLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
 
-        MinLength: SelfReturn<ArrayTypeCheckerObject, number>;
-        minLength: SelfReturn<ArrayTypeCheckerObject, number>;
+        MinLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+        minLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
 
-        MaxLength: SelfReturn<ArrayTypeCheckerObject, number>;
-        maxLength: SelfReturn<ArrayTypeCheckerObject, number>;
+        MaxLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+        maxLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
 
-        Contains: SelfReturn<ArrayTypeCheckerObject, any>;
-        contains: SelfReturn<ArrayTypeCheckerObject, any>;
+        Contains: SelfReturn&lt;ArrayTypeCheckerObject, any>;
+        contains: SelfReturn&lt;ArrayTypeCheckerObject, any>;
 
-        OfType: SelfReturn<ArrayTypeCheckerObject, TypeCheckerObject<any>>;
-        ofType: SelfReturn<ArrayTypeCheckerObject, TypeCheckerObject<any>>;
+        OfType: SelfReturn&lt;ArrayTypeCheckerObject, TypeCheckerObject&lt;any>>;
+        ofType: SelfReturn&lt;ArrayTypeCheckerObject, TypeCheckerObject&lt;any>>;
 
-        OfStructure: SelfReturn<ArrayTypeCheckerObject, {TypeCheckerObject<any>}>;
-        ofStructure: SelfReturn<ArrayTypeCheckerObject, {TypeCheckerObject<any>}>;
+        OfStructure: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
+        ofStructure: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
 
-        StructuralEquals: SelfReturn<ArrayTypeCheckerObject, {TypeCheckerObject<any>}>;
-        structuralEquals: SelfReturn<ArrayTypeCheckerObject, {TypeCheckerObject<any>}>;
+        StructuralEquals: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
+        structuralEquals: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
 
-        Strict: SelfReturn<ArrayTypeCheckerObject>;
-        strict: SelfReturn<ArrayTypeCheckerObject>;
+        Strict: SelfReturn&lt;ArrayTypeCheckerObject>;
+        strict: SelfReturn&lt;ArrayTypeCheckerObject>;
     }
 
-    local Array: SelfReturn<ArrayTypeCheckerObject>, ArrayClass = TypeGuard.Template("Array")
+    local Array: SelfReturn&lt;ArrayTypeCheckerObject>, ArrayClass = TypeGuard.Template("Array")
 
     function ArrayClass:_PrefixError(ErrorString: string, Index: number)
         return ErrorString:format((self._Tags.DenoteParams and PREFIX_PARAM or PREFIX_ARRAY), Index)
@@ -594,7 +602,7 @@ do
 
     function ArrayClass:MaxLength(...)
         return self:_AddConstraint("MaxLength", function(_, TargetArray, MaxLength)
-            return #TargetArray <= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
+            return #TargetArray &lt;= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
         end, ...)
     end
     ArrayClass.maxLength = ArrayClass.MaxLength
@@ -681,24 +689,24 @@ end
 
 
 do
-    type ObjectTypeCheckerObject = TypeCheckerObject<ObjectTypeCheckerObject> & {
-        OfStructure: SelfReturn<ObjectTypeCheckerObject, {[any]: TypeCheckerObject<any>}>;
-        ofStructure: SelfReturn<ObjectTypeCheckerObject, {[any]: TypeCheckerObject<any>}>;
+    type ObjectTypeCheckerObject = TypeCheckerObject&lt;ObjectTypeCheckerObject> &amp; {
+        OfStructure: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
+        ofStructure: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
 
-        StructuralEquals: SelfReturn<ObjectTypeCheckerObject, {[any]: TypeCheckerObject<any>}>;
-        structuralEquals: SelfReturn<ObjectTypeCheckerObject, {[any]: TypeCheckerObject<any>}>;
+        StructuralEquals: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
+        structuralEquals: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
 
-        Strict: SelfReturn<ObjectTypeCheckerObject>;
-        strict: SelfReturn<ObjectTypeCheckerObject>;
+        Strict: SelfReturn&lt;ObjectTypeCheckerObject>;
+        strict: SelfReturn&lt;ObjectTypeCheckerObject>;
 
-        OfValueType: SelfReturn<ObjectTypeCheckerObject, TypeCheckerObject<any>>;
-        ofValueType: SelfReturn<ObjectTypeCheckerObject, TypeCheckerObject<any>>;
+        OfValueType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
+        ofValueType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
 
-        OfKeyType: SelfReturn<ObjectTypeCheckerObject, TypeCheckerObject<any>>;
-        ofKeyType: SelfReturn<ObjectTypeCheckerObject, TypeCheckerObject<any>>;
+        OfKeyType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
+        ofKeyType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
     }
 
-    local Object: SelfReturn<ObjectTypeCheckerObject>, ObjectClass = TypeGuard.Template("Object")
+    local Object: SelfReturn&lt;ObjectTypeCheckerObject>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass:_Initial(TargetObject)
         if (typeof(TargetObject) ~= "table") then
@@ -805,24 +813,24 @@ end
 
 
 do
-    type InstanceTypeCheckerObject = TypeCheckerObject<InstanceTypeCheckerObject> & {
-        OfStructure: SelfReturn<InstanceTypeCheckerObject, {[any]: TypeCheckerObject<Instance>}>;
-        ofStructure: SelfReturn<InstanceTypeCheckerObject, {[any]: TypeCheckerObject<Instance>}>;
+    type InstanceTypeCheckerObject = TypeCheckerObject&lt;InstanceTypeCheckerObject> &amp; {
+        OfStructure: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
+        ofStructure: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
 
-        StructuralEquals: SelfReturn<InstanceTypeCheckerObject, {[any]: TypeCheckerObject<Instance>}>;
-        structuralEquals: SelfReturn<InstanceTypeCheckerObject, {[any]: TypeCheckerObject<Instance>}>;
+        StructuralEquals: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
+        structuralEquals: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
 
-        IsA: SelfReturn<InstanceTypeCheckerObject, string>;
-        isA: SelfReturn<InstanceTypeCheckerObject, string>;
+        IsA: SelfReturn&lt;InstanceTypeCheckerObject, string>;
+        isA: SelfReturn&lt;InstanceTypeCheckerObject, string>;
 
-        CheckProperty: SelfReturn<InstanceTypeCheckerObject, string, TypeCheckerObject<any>>;
-        checkProperty: SelfReturn<InstanceTypeCheckerObject, string, TypeCheckerObject<any>>;
+        CheckProperty: SelfReturn&lt;InstanceTypeCheckerObject, string, TypeCheckerObject&lt;any>>;
+        checkProperty: SelfReturn&lt;InstanceTypeCheckerObject, string, TypeCheckerObject&lt;any>>;
 
-        Strict: SelfReturn<InstanceTypeCheckerObject>;
-        strict: SelfReturn<InstanceTypeCheckerObject>;
+        Strict: SelfReturn&lt;InstanceTypeCheckerObject>;
+        strict: SelfReturn&lt;InstanceTypeCheckerObject>;
     }
 
-    local InstanceChecker: SelfReturn<InstanceTypeCheckerObject>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: SelfReturn&lt;InstanceTypeCheckerObject>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
@@ -899,11 +907,11 @@ end
 
 
 do
-    type BooleanTypeCheckerObject = TypeCheckerObject<BooleanTypeCheckerObject> & {
+    type BooleanTypeCheckerObject = TypeCheckerObject&lt;BooleanTypeCheckerObject> &amp; {
         -- Fill any stuff here in future
     }
 
-    local Boolean: SelfReturn<BooleanTypeCheckerObject>, BooleanClass = TypeGuard.Template("Boolean")
+    local Boolean: SelfReturn&lt;BooleanTypeCheckerObject>, BooleanClass = TypeGuard.Template("Boolean")
     BooleanClass._Initial = CreateStandardInitial("boolean")
 
     BooleanClass._InitialConstraint = BooleanClass.Equals
@@ -916,12 +924,12 @@ end
 
 
 do
-    type EnumTypeCheckerObject = TypeCheckerObject<EnumTypeCheckerObject> & {
-        IsA: SelfReturn<EnumTypeCheckerObject, Enum | EnumItem>;
-        isA: SelfReturn<EnumTypeCheckerObject, Enum | EnumItem>;
+    type EnumTypeCheckerObject = TypeCheckerObject&lt;EnumTypeCheckerObject> &amp; {
+        IsA: SelfReturn&lt;EnumTypeCheckerObject, Enum | EnumItem>;
+        isA: SelfReturn&lt;EnumTypeCheckerObject, Enum | EnumItem>;
     }
 
-    local EnumChecker: SelfReturn<EnumTypeCheckerObject>, EnumCheckerClass = TypeGuard.Template("Enum")
+    local EnumChecker: SelfReturn&lt;EnumTypeCheckerObject>, EnumCheckerClass = TypeGuard.Template("Enum")
 
     function EnumCheckerClass:_Initial(Value)
         local GotType = typeof(Value)
@@ -959,9 +967,9 @@ end
 
 
 do
-    type NilTypeCheckerObject = TypeCheckerObject<NilTypeCheckerObject> & {}
+    type NilTypeCheckerObject = TypeCheckerObject&lt;NilTypeCheckerObject> &amp; {}
 
-    local NilChecker: SelfReturn<NilTypeCheckerObject>, NilCheckerClass = TypeGuard.Template("Nil")
+    local NilChecker: SelfReturn&lt;NilTypeCheckerObject>, NilCheckerClass = TypeGuard.Template("Nil")
 
     function NilCheckerClass:_Initial(Value)
         if (Value == nil) then
@@ -1040,4 +1048,92 @@ function TypeGuard.VariadicParams(CompareType)
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
-return TypeGuard
+return TypeGuard</string>
+      </Properties>
+      <Item class="ModuleScript" referent="2">
+        <Properties>
+          <string name="Name">TypeGuard.spec</string>
+          <string name="Source">-- WIP
+
+return function()
+    local TypeGuard = require(script.Parent)
+
+    describe("TypeGuard.Template", function()
+        it("should reject no Name given", function()
+            expect(function()
+                TypeGuard.Template()
+            end).to.throw()
+        end)
+
+        it("should reject incorrect types for Name", function()
+            expect(function()
+                TypeGuard.Template(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.Template({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.Template(true)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.Template("Test")
+            end).never.to.throw()
+        end)
+
+        it("should return a constructor function and a TypeChecker class for extension", function()
+            local TestCreate, TestClass = TypeGuard.Template("Test")
+            expect(TestCreate).to.be.a("function")
+            expect(TestClass).to.be.a("table")
+
+            expect(TestClass._Copy).to.be.ok()
+            expect(TestClass._AddConstraint).to.be.ok()
+            expect(TestClass.Optional).to.be.ok()
+            expect(TestClass.Or).to.be.ok()
+            expect(TestClass.And).to.be.ok()
+            expect(TestClass.Alias).to.be.ok()
+            expect(TestClass.AddTag).to.be.ok()
+            expect(TestClass.WrapCheck).to.be.ok()
+            expect(TestClass.WrapAssert).to.be.ok()
+            expect(TestClass.Check).to.be.ok()
+            expect(TestClass.Assert).to.be.ok()
+        end)
+    end)
+
+    describe("TypeGuard.Params", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.Params(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.Params({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.Params(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+        
+        end)
+
+        it("should check multiple types", function()
+        
+        end)
+    end)
+end</string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+</roblox>

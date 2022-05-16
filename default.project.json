@@ -1,12 +1,6 @@
 {
-	"name": "Types",
+	"name": "TypeGuard",
 	"tree": {
-		"$className": "DataModel",
-		"ReplicatedFirst": {
-			"$className": "ReplicatedFirst",
-			"Types": {
-				"$path": "src"
-			}
-		}
+		"$path": "src"
 	}
 }
