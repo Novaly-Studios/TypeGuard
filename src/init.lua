@@ -164,9 +164,24 @@ function TypeGuard.Template(Name: string)
 
         setmetatable(self, TemplateClass)
 
-        -- @todo Support for multiple initial constraints
-        if (TemplateClass._InitialConstraint and select("#", ...) > 0) then
-            return self:_InitialConstraint(...)
+        local NumArgs = select("#", ...)
+
+        -- Support for a single constraint passed as the constructor, with an arbitrary number of args
+        local InitialConstraint = self._InitialConstraint
+
+        if (InitialConstraint and NumArgs > 0) then
+            return InitialConstraint(self, ...)
+        end
+
+        -- Multiple constraints support (but only ONE arg per constraint is supported currently)
+        local InitialConstraints = TemplateClass._InitialConstraints
+
+        if (InitialConstraints and NumArgs > 0) then
+            for Index = 1, NumArgs do
+                self = InitialConstraints[Index](self, select(Index, ...))
+            end
+
+            return self
         end
 
         return self
@@ -1032,7 +1047,7 @@ do
     end
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
-    InstanceCheckerClass._InitialConstraint = InstanceCheckerClass.IsA
+    InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
     TypeGuard.Instance = InstanceChecker
 end

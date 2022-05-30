@@ -1,5 +1,3 @@
--- WIP
-
 return function()
     local TypeGuard = require(script.Parent)
 
