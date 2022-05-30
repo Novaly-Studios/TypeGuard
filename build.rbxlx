@@ -1,23 +1,325 @@
-<roblox version="4">
-  <Item class="ReplicatedFirst" referent="0">
-    <Properties>
-      <string name="Name">ReplicatedFirst</string>
-    </Properties>
-    <Item class="ModuleScript" referent="1">
-      <Properties>
-        <string name="Name">TypeGuard</string>
-        <string name="Source">--!nonstrict
--- @TODO This script really needs splitting up into sub-modules
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Workspace" referent="RBXC68C3F2191F748729CDF4EE9BFBE91D2">
+		<Properties>
+			<bool name="AllowThirdPartySales">false</bool>
+			<token name="AnimationWeightedBlendFix">0</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<token name="ClientAnimatorThrottling">0</token>
+			<string name="CollisionGroups">Default^0^-1</string>
+			<Ref name="CurrentCamera">RBX99A50EFB2EDC42DE87A33167D57A5C53</Ref>
+			<double name="DistributedGameTime">0</double>
+			<bool name="ExplicitAutoJoints">true</bool>
+			<float name="FallenPartsDestroyHeight">-500</float>
+			<Vector3 name="GlobalWind">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<float name="Gravity">196.199997</float>
+			<token name="HumanoidOnlySetCollisionsOnStateChange">0</token>
+			<token name="InterpolationThrottling">0</token>
+			<token name="LevelOfDetail">0</token>
+			<token name="MeshPartHeadsAndAccessories">0</token>
+			<CoordinateFrame name="ModelMeshCFrame">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+				<R00>1</R00>
+				<R01>0</R01>
+				<R02>0</R02>
+				<R10>0</R10>
+				<R11>1</R11>
+				<R12>0</R12>
+				<R20>0</R20>
+				<R21>0</R21>
+				<R22>1</R22>
+			</CoordinateFrame>
+			<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<Vector3 name="ModelMeshSize">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<string name="Name">Workspace</string>
+			<bool name="NeedsPivotMigration">false</bool>
+			<token name="PhysicsInertiaAndVolumeFix">0</token>
+			<token name="PhysicsSteppingMethod">0</token>
+			<Ref name="PrimaryPart">null</Ref>
+			<token name="ReplicateInstanceDestroySetting">0</token>
+			<token name="Retargeting">0</token>
+			<token name="SignalBehavior">0</token>
+			<int64 name="SourceAssetId">-1</int64>
+			<token name="StreamOutBehavior">0</token>
+			<bool name="StreamingEnabled">false</bool>
+			<int name="StreamingMinRadius">64</int>
+			<token name="StreamingPauseMode">0</token>
+			<int name="StreamingTargetRadius">1024</int>
+			<BinaryString name="Tags"></BinaryString>
+			<bool name="TerrainWeldsFixed">true</bool>
+			<bool name="TouchesUseCollisionGroups">false</bool>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001de26</UniqueId>
+			<OptionalCoordinateFrame name="WorldPivotData">
+				<CFrame>
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CFrame>
+			</OptionalCoordinateFrame>
+		</Properties>
+		<Item class="Camera" referent="RBX99A50EFB2EDC42DE87A33167D57A5C53">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<CoordinateFrame name="CFrame">
+					<X>-0.411463588</X>
+					<Y>18.3632832</Y>
+					<Z>21.2225304</Z>
+					<R00>0.999876976</R00>
+					<R01>0.00899894536</R01>
+					<R02>-0.01285196</R02>
+					<R10>4.65661287e-10</R10>
+					<R11>0.819154918</R11>
+					<R12>0.573572457</R12>
+					<R20>0.0156892911</R20>
+					<R21>-0.573501885</R21>
+					<R22>0.819054067</R22>
+				</CoordinateFrame>
+				<Ref name="CameraSubject">null</Ref>
+				<token name="CameraType">0</token>
+				<float name="FieldOfView">70</float>
+				<token name="FieldOfViewMode">0</token>
+				<CoordinateFrame name="Focus">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>-5</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<bool name="HeadLocked">true</bool>
+				<float name="HeadScale">1</float>
+				<string name="Name">Camera</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f79d</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="Terrain" referent="RBXF591692BD3514E3DB5812149369906C7">
+			<Properties>
+				<token name="AcquisitionMethod">0</token>
+				<bool name="Anchored">true</bool>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<float name="BackParamA">-0.5</float>
+				<float name="BackParamB">0.5</float>
+				<token name="BackSurface">0</token>
+				<token name="BackSurfaceInput">0</token>
+				<float name="BottomParamA">-0.5</float>
+				<float name="BottomParamB">0.5</float>
+				<token name="BottomSurface">4</token>
+				<token name="BottomSurfaceInput">0</token>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">true</bool>
+				<bool name="CanQuery">true</bool>
+				<bool name="CanTouch">true</bool>
+				<bool name="CastShadow">true</bool>
+				<int name="CollisionGroupId">0</int>
+				<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+				<PhysicalProperties name="CustomPhysicalProperties">
+					<CustomPhysics>false</CustomPhysics>
+				</PhysicalProperties>
+				<bool name="Decoration">false</bool>
+				<float name="FrontParamA">-0.5</float>
+				<float name="FrontParamB">0.5</float>
+				<token name="FrontSurface">0</token>
+				<token name="FrontSurfaceInput">0</token>
+				<float name="LeftParamA">-0.5</float>
+				<float name="LeftParamB">0.5</float>
+				<token name="LeftSurface">0</token>
+				<token name="LeftSurfaceInput">0</token>
+				<bool name="Locked">true</bool>
+				<bool name="Massless">false</bool>
+				<token name="Material">256</token>
+				<BinaryString name="MaterialColors"><![CDATA[AAAAAAAAan8/P39rf2Y/ilY+j35fi21PZmxvZbDqw8faiVpHOi4kHh4lZlw76JxKc3trhHta
+gcLgc4RKxr21zq2UlJSM]]></BinaryString>
+				<string name="MaterialVariantSerialized"></string>
+				<string name="Name">Terrain</string>
+				<BinaryString name="PhysicsGrid">AgMAAAAAAAAAAAAAAAA=</BinaryString>
+				<CoordinateFrame name="PivotOffset">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<float name="Reflectance">0</float>
+				<float name="RightParamA">-0.5</float>
+				<float name="RightParamB">0.5</float>
+				<token name="RightSurface">0</token>
+				<token name="RightSurfaceInput">0</token>
+				<int name="RootPriority">0</int>
+				<Vector3 name="RotVelocity">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<BinaryString name="SmoothGrid">AQU=</BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<float name="TopParamA">-0.5</float>
+				<float name="TopParamB">0.5</float>
+				<token name="TopSurface">3</token>
+				<token name="TopSurfaceInput">0</token>
+				<float name="Transparency">0</float>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f811</UniqueId>
+				<Vector3 name="Velocity">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<Color3 name="WaterColor">
+					<R>0.0500000007</R>
+					<G>0.330000013</G>
+					<B>0.360000014</B>
+				</Color3>
+				<float name="WaterReflectance">1</float>
+				<float name="WaterTransparency">0.300000012</float>
+				<float name="WaterWaveSize">0.150000006</float>
+				<float name="WaterWaveSpeed">10</float>
+				<Vector3 name="size">
+					<X>2044</X>
+					<Y>252</Y>
+					<Z>2044</Z>
+				</Vector3>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="SoundService" referent="RBX53BE2664AB224360B79878AAE4E375A2">
+		<Properties>
+			<token name="AmbientReverb">0</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<float name="DistanceFactor">3.32999992</float>
+			<float name="DopplerScale">1</float>
+			<string name="Name">SoundService</string>
+			<bool name="RespectFilteringEnabled">false</bool>
+			<float name="RolloffScale">1</float>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f751</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="NonReplicatedCSGDictionaryService" referent="RBXCB5C1659C33D4B6BAE4A213E867094A8">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">NonReplicatedCSGDictionaryService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f75d</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CSGDictionaryService" referent="RBXE7EFA7465FDE48919A478EB437D3703B">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">CSGDictionaryService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f75e</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Chat" referent="RBX7FF64E444D704C7594BAD0789238E013">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="BubbleChatEnabled">false</bool>
+			<bool name="LoadDefaultChat">true</bool>
+			<string name="Name">Chat</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f763</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TimerService" referent="RBX9D92D0D917B84CE48D6243359B190C8A">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Instance</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f764</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Players" referent="RBXA44B04B33CF5403787D3382762E987C8">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="CharacterAutoLoads">true</bool>
+			<int name="MaxPlayersInternal">12</int>
+			<string name="Name">Players</string>
+			<int name="PreferredPlayersInternal">0</int>
+			<float name="RespawnTime">5</float>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f766</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ReplicatedFirst" referent="0">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">ReplicatedFirst</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f76a</UniqueId>
+		</Properties>
+		<Item class="ModuleScript" referent="1">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">TypeGuard</string>
+				<string name="ScriptGuid">{5547C111-C4C3-4B7A-8637-06F71A57C79C}</string>
+				<ProtectedString name="Source"><![CDATA[-- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
-local INVALID_ARGUMENT = "Invalid argument #%d (%s expected, got %s)"
+local INVALID_ARGUMENT = "Invalid argument #%s (%s expected, got %s)"
 
-local function ExpectType(PassedArg: any, ExpectedType: string, ArgNumber: number)
+--- This is only really for type checking internally for data passed to constraints and util functions
+local function ExpectType<T>(PassedArg: T, ExpectedType: string, ArgKey: number | string)
     local GotType = typeof(PassedArg)
-    assert(GotType == ExpectedType, INVALID_ARGUMENT:format(ArgNumber, ExpectedType, GotType))
+    assert(GotType == ExpectedType, INVALID_ARGUMENT:format(tostring(ArgKey), ExpectedType, GotType))
 end
 
-local function CreateStandardInitial(ExpectedTypeName)
+local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string))
     return function(_, Item)
         local ItemType = typeof(Item)
 
@@ -29,14 +331,14 @@ local function CreateStandardInitial(ExpectedTypeName)
     end
 end
 
-local function ConcatWithToString(Array: {any}, Separator: string): string
+local function ConcatWithToString<T>(Array: {T}, Separator: string): string
     local Result = EMPTY_STRING
     local Size = #Array
 
     for Index, Value in ipairs(Array) do
         Result ..= tostring(Value)
 
-        if (Index &lt; Size) then
+        if (Index < Size) then
             Result ..= Separator
         end
     end
@@ -57,13 +359,17 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
 }
 
 -- Standard re-usable functions throughout all type checkers
-    local function IsAKeyIn&lt;T>(self: T, ...)
+    local function IsAKeyIn(self, Store)
+        ExpectType(Store, "table", 1)
+
         return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
             return Store[Key] ~= nil, "No key found in table: " .. tostring(Store)
-        end, ...)
+        end, Store)
     end
 
-    local function IsAValueIn&lt;T>(self: T, ...)
+    local function IsAValueIn(self, Store)
+        ExpectType(Store, "table", 1)
+
         return self:_AddConstraint("IsAValueIn", function(_, TargetValue, Store)
             for _, Value in pairs(Store) do
                 if (Value == TargetValue) then
@@ -72,68 +378,84 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
             end
 
             return false, "No value found in table: " .. tostring(Store)
-        end, ...)
+        end, Store)
     end
 
-    local function Equals&lt;T>(self: T, ...)
+    local function Equals(self, ExpectedValue)
         return self:_AddConstraint("Equals", function(_, Value, ExpectedValue)
             return Value == ExpectedValue, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
-        end, ...)
+        end, ExpectedValue)
     end
 
-    local function GreaterThan&lt;T>(self: T, ...)
-        return self:_AddConstraint("GreaterThan", function(_, Value, ExpectedValue)
-            return Value > ExpectedValue, "Value " .. tostring(Value) .. " is not greater than " .. tostring(ExpectedValue)
-        end, ...)
+    local function GreaterThan(self, GTValue)
+        return self:_AddConstraint("GreaterThan", function(_, Value, GTValue)
+            return Value > GTValue, "Value " .. tostring(Value) .. " is not greater than " .. tostring(GTValue)
+        end, GTValue)
     end
 
-    local function LessThan&lt;T>(self: T, ...)
-        return self:_AddConstraint("LessThan", function(_, Value, ExpectedValue)
-            return Value &lt; ExpectedValue, "Value " .. tostring(Value) .. " is not less than " .. tostring(ExpectedValue)
-        end, ...)
+    local function LessThan(self, LTValue)
+        return self:_AddConstraint("LessThan", function(_, Value, LTValue)
+            return Value < LTValue, "Value " .. tostring(Value) .. " is not less than " .. tostring(LTValue)
+        end, LTValue)
+    end
+
+    local function GreaterThanOrEqualTo(self, GTEValue)
+        return self:_AddConstraint("GreaterThanOrEqualTo", function(_, Value, GTEValue)
+            return Value >= GTEValue, "Value " .. tostring(Value) .. " is not greater than or equal to " .. tostring(GTEValue)
+        end, GTEValue)
+    end
+
+    local function LessThanOrEqualTo(self, LTEValue)
+        return self:_AddConstraint("LessThanOrEqualTo", function(_, Value, LTEValue)
+            return Value <= LTEValue, "Value " .. tostring(Value) .. " is not less than or equal to " .. tostring(LTEValue)
+        end, LTEValue)
     end
 
 
 
 
+type SelfReturn<T, P...> = ((T, P...) -> T)
+
+type TypeCheckerConstructor<T, P...> = ((P...) -> T)
+
+type TypeChecker<T> = {
+    Or: SelfReturn<T, TypeChecker<any>>;
+    And: SelfReturn<T, TypeChecker<any>>;
+    Alias: SelfReturn<T, string>;
+    AddTag: SelfReturn<T, string>;
+    Optional: SelfReturn<T>;
+
+    WrapCheck: (T) -> ((any) -> (boolean, string));
+    WrapAssert: (T) -> ((any) -> ());
+    Check: (T, any) -> (string, boolean);
+    Assert: (T, any) -> ();
+
+    -- Standard constraints
+    Equals: SelfReturn<T, any>;
+    equals: SelfReturn<T, any>;
+
+    IsAValueIn: SelfReturn<T, any>;
+    isAValueIn: SelfReturn<T, any>;
+
+    IsAKeyIn: SelfReturn<T, any>;
+    isAKeyIn: SelfReturn<T, any>;
+
+    GreaterThan: SelfReturn<T, number>;
+    greaterThan: SelfReturn<T, number>;
+
+    LessThan: SelfReturn<T, number>;
+    lessThan: SelfReturn<T, number>;
+
+    GreaterThanOrEqualTo: SelfReturn<T, number>;
+    greaterThanOrEqualTo: SelfReturn<T, number>;
+
+    LessThanOrEqualTo: SelfReturn<T, number>;
+    lessThanOrEqualTo: SelfReturn<T, number>;
+};
 
 local TypeGuard = {}
 
-type SelfReturn&lt;T, P...> = ((T, P...) -> T)
-
-type TypeCheckerObject&lt;T> = {
-    _Copy: SelfReturn&lt;TypeCheckerObject&lt;T>>;
-    _AddConstraint: SelfReturn&lt;TypeCheckerObject&lt;T>, string, (any) -> (TypeCheckerObject&lt;T>), ...any>;
-
-    Or: SelfReturn&lt;TypeCheckerObject&lt;T>, TypeCheckerObject&lt;any>>;
-    And: SelfReturn&lt;TypeCheckerObject&lt;T>, TypeCheckerObject&lt;any>>;
-    Alias: SelfReturn&lt;TypeCheckerObject&lt;T>, string>;
-    AddTag: SelfReturn&lt;TypeCheckerObject&lt;T>, string>;
-    Optional: SelfReturn&lt;TypeCheckerObject&lt;T>>;
-
-    WrapCheck: (TypeCheckerObject&lt;T>) -> ((any) -> (boolean, string));
-    WrapAssert: (TypeCheckerObject&lt;T>) -> ((any) -> ());
-    Check: (TypeCheckerObject&lt;T>, any) -> (string, boolean);
-    Assert: (TypeCheckerObject&lt;T>, any) -> ();
-
-    -- Standard constraints
-    Equals: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-    equals: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-
-    IsAValueIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-    isAValueIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-
-    IsAKeyIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-    isAKeyIn: SelfReturn&lt;TypeCheckerObject&lt;T>, any>;
-
-    GreaterThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
-    greaterThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
-
-    LessThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
-    lessThan: SelfReturn&lt;TypeCheckerObject&lt;T>, number>;
-}
-
-function TypeGuard.Template(Name)
+function TypeGuard.Template(Name: string)
     ExpectType(Name, "string", 1)
 
     local TemplateClass = {}
@@ -152,6 +474,7 @@ function TypeGuard.Template(Name)
 
         setmetatable(self, TemplateClass)
 
+        -- @todo Support for multiple initial constraints
         if (TemplateClass._InitialConstraint and select("#", ...) > 0) then
             return self:_InitialConstraint(...)
         end
@@ -198,26 +521,30 @@ function TypeGuard.Template(Name)
         return self
     end
 
+    --- Calling this will only check the type of the passed value if that value is not nil, i.e. it's an optional value so nothing can be passed, but if it is not nothing then it will be checked
     function TemplateClass:Optional()
         return self:AddTag("Optional")
     end
 
+    --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
     function TemplateClass:Or(OtherType)
-        TypeGuard._AssertIsTypeBase(OtherType)
+        TypeGuard._AssertIsTypeBase(OtherType, 1)
 
         self = self:_Copy()
         table.insert(self._Disjunction, OtherType)
         return self
     end
 
+    --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
-        TypeGuard._AssertIsTypeBase(OtherType)
+        TypeGuard._AssertIsTypeBase(OtherType, 1)
 
         self = self:_Copy()
         table.insert(self._Conjunction, OtherType)
         return self
     end
 
+    --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing
     function TemplateClass:Alias(AliasName)
         ExpectType(AliasName, "string", 1)
 
@@ -226,26 +553,33 @@ function TypeGuard.Template(Name)
         return self
     end
 
+    --- Adds a tag (for internal purposes)
+    --- @todo Make this private?
     function TemplateClass:AddTag(TagName)
         ExpectType(TagName, "string", 1)
+
+        assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
 
         self = self:_Copy()
         self._Tags[TagName] = true
         return self
     end
 
+    --- Wrap Check into its own callable function
     function TemplateClass:WrapCheck()
-        return function(...)
-            return self:Check(...)
+        return function(Value)
+            return self:Check(Value)
         end
     end
 
+    --- Wraps Assert into its own callable function
     function TemplateClass:WrapAssert()
-        return function(...)
-            return self:Assert(...)
+        return function(Value)
+            return self:Assert(Value)
         end
     end
 
+    --- Checks if the value is of the correct type
     function TemplateClass:Check(Value)
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
@@ -301,6 +635,7 @@ function TypeGuard.Template(Name)
         return true, EMPTY_STRING
     end
 
+    --- Throws an error if the check is unsatisfied
     function TemplateClass:Assert(...)
         assert(self:Check(...))
     end
@@ -375,28 +710,33 @@ function TypeGuard.Template(Name)
     TemplateClass.LessThan = LessThan
     TemplateClass.lessThan = LessThan
 
+    TemplateClass.GreaterThanOrEqualTo = GreaterThanOrEqualTo
+    TemplateClass.greaterThanOrEqualTo = GreaterThanOrEqualTo
+
+    TemplateClass.LessThanOrEqualTo = LessThanOrEqualTo
+    TemplateClass.lessThanOrEqualTo = LessThanOrEqualTo
+
     return function(...)
         return TemplateClass.new(...)
     end, TemplateClass
 end
 
 --- Checks if an object contains the fields which define a type template from this module
-function TypeGuard._AssertIsTypeBase(Subject)
-    ExpectType(Subject, "table", 1)
+function TypeGuard._AssertIsTypeBase<T>(Subject: T, Position: number | string)
+    ExpectType(Subject, "table", Position)
 
-    assert(Subject._Tags ~= nil, "Subject does not contain _Tags field")
-    assert(Subject._ActiveConstraints ~= nil, "Subject does not contain _ActiveConstraints field")
-    assert(Subject._Disjunction ~= nil, "Subject does not contain _Disjunction field")
-    assert(Subject._Conjunction ~= nil, "Subject does not contain _Conjunction field")
+    assert(Subject._IsTemplate, "Subject is not a type template")
 end
 
---- Cheap &amp; easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
-function TypeGuard.FromTypeName(TypeName)
+--- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
+function TypeGuard.FromTypeName(TypeName: string)
     ExpectType(TypeName, "string", 1)
 
     local CheckerFunction, CheckerClass = TypeGuard.Template(TypeName)
     CheckerClass._Initial = CreateStandardInitial(TypeName)
-    return CheckerFunction
+
+    type CustomTypeChecker = TypeChecker<CustomTypeChecker> & {}
+    return CheckerFunction :: TypeCheckerConstructor<CustomTypeChecker>
 end
 TypeGuard.fromTypeName = TypeGuard.FromTypeName
 
@@ -404,81 +744,81 @@ TypeGuard.fromTypeName = TypeGuard.FromTypeName
 
 
 do
-    type NumberTypeCheckerObject = {
-        Integer: SelfReturn&lt;NumberTypeCheckerObject>;
-        integer: SelfReturn&lt;NumberTypeCheckerObject>;
+    type NumberTypeChecker = TypeChecker<NumberTypeChecker> & {
+        Integer: SelfReturn<NumberTypeChecker>;
+        integer: SelfReturn<NumberTypeChecker>;
 
-        Decimal: SelfReturn&lt;NumberTypeCheckerObject>;
-        decimal: SelfReturn&lt;NumberTypeCheckerObject>;
+        Decimal: SelfReturn<NumberTypeChecker>;
+        decimal: SelfReturn<NumberTypeChecker>;
 
-        Min: SelfReturn&lt;NumberTypeCheckerObject, number>;
-        min: SelfReturn&lt;NumberTypeCheckerObject, number>;
+        RangeInclusive: SelfReturn<NumberTypeChecker, number, number>;
+        rangeInclusive: SelfReturn<NumberTypeChecker, number, number>;
 
-        Max: SelfReturn&lt;NumberTypeCheckerObject, number>;
-        max: SelfReturn&lt;NumberTypeCheckerObject, number>;
+        RangeExclusive: SelfReturn<NumberTypeChecker, number, number>;
+        rangeExclusive: SelfReturn<NumberTypeChecker, number, number>;
 
-        Range: SelfReturn&lt;NumberTypeCheckerObject, number, number>;
-        range: SelfReturn&lt;NumberTypeCheckerObject, number, number>;
+        Positive: SelfReturn<NumberTypeChecker>;
+        positive: SelfReturn<NumberTypeChecker>;
 
-        Positive: SelfReturn&lt;NumberTypeCheckerObject>;
-        positive: SelfReturn&lt;NumberTypeCheckerObject>;
+        Negative: SelfReturn<NumberTypeChecker>;
+        negative: SelfReturn<NumberTypeChecker>;
+    };
 
-        Negative: SelfReturn&lt;NumberTypeCheckerObject>;
-        negative: SelfReturn&lt;NumberTypeCheckerObject>;
-    } &amp; TypeCheckerObject&lt;NumberTypeCheckerObject>
+    local Number: TypeCheckerConstructor<NumberTypeChecker, TypeChecker<any>?>, NumberClass = TypeGuard.Template("Number")
+    NumberClass._Initial = CreateStandardInitial("number")
 
-    local Number: SelfReturn&lt;NumberTypeCheckerObject>, NumberClass = TypeGuard.Template("Number")
-
-    function NumberClass:_Initial(Item)
-        return typeof(Item) == "number", "Expected number, got " .. typeof(Item)
-    end
-
-    function NumberClass:Integer(...)
+    --- Checks if the value is whole
+    function NumberClass:Integer()
         return self:_AddConstraint("Integer", function(_, Item)
             return math.floor(Item) == Item, "Expected integer form, got " .. tostring(Item)
-        end, ...)
+        end)
     end
     NumberClass.integer = NumberClass.Integer
 
-    function NumberClass:Decimal(...)
+    --- Checks if the number is a decimal
+    function NumberClass:Decimal()
         return self:_AddConstraint("Decimal", function(_, Item)
             return math.floor(Item) ~= Item, "Expected decimal form, got " .. tostring(Item)
-        end, ...)
+        end)
     end
     NumberClass.decimal = NumberClass.Decimal
 
-    function NumberClass:Min(...)
-        return self:_AddConstraint("Min", function(_, Item, Min)
-            return Item >= Min, "Length must be at least " .. tostring(Min) .. ", got " .. tostring(Item)
-        end, ...)
-    end
-    NumberClass.min = NumberClass.Min
+    --- Ensures a number is between or equal to a minimum and maxmimu value
+    function NumberClass:RangeInclusive(Min, Max)
+        ExpectType(Min, "number", 1)
+        ExpectType(Max, "number", 2)
 
-    function NumberClass:Max(...)
-        return self:_AddConstraint("Max", function(_, Item, Max)
-            return Item &lt;= Max, "Length must be at most " .. tostring(Max) .. ", got " .. tostring(Item)
-        end, ...)
+        return self:GreaterThanOrEqualTo(Min):LessThanOrEqualTo(Max)
     end
-    NumberClass.max = NumberClass.Max
+    NumberClass.rangeInclusive = NumberClass.RangeInclusive
 
-    function NumberClass:Range(...)
-        return self:_AddConstraint("Range", function(_, Item, Min, Max)
-            return Item >= Min and Item &lt;= Max, "Length must be between " .. tostring(Min) .. " and " .. tostring(Max) .. ", got " .. tostring(Item)
-        end, ...)
+    --- Ensures a number is between but not equal to a minimum and maximum value
+    function NumberClass:RangeExclusive(Min, Max)
+        return self:GreaterThan(Min):LessThan(Max)
     end
-    NumberClass.range = NumberClass.Range
+    NumberClass.rangeExclusive = NumberClass.RangeExclusive
 
-    function NumberClass:Positive(...)
+    --- Checks the number is positive
+    function NumberClass:Positive()
         return self:_AddConstraint("Positive", function(_, Item)
-            return Item >= 0, "Expected positive number, got " .. tostring(Item)
-        end, ...)
+            if (Item < 0) then
+                return false, "Expected positive number, got " .. tostring(Item)
+            end
+
+            return true, EMPTY_STRING
+        end)
     end
     NumberClass.positive = NumberClass.Positive
 
-    function NumberClass:Negative(...)
+    --- Checks the number is negative
+    function NumberClass:Negative()
         return self:_AddConstraint("Negative", function(_, Item)
-            return Item &lt; 0, "Expected negative number, got " .. tostring(Item)
-        end, ...)
+            if (Item >= 0) then
+                return false, "Expected negative number, got " .. tostring(Item)
+            end
+
+            return true, EMPTY_STRING
+        end)
     end
     NumberClass.negative = NumberClass.Negative
 
@@ -490,40 +830,74 @@ end
 
 
 do
-    type StringTypeCheckerObject = TypeCheckerObject&lt;StringTypeCheckerObject> &amp; {
-        MinLength: SelfReturn&lt;StringTypeCheckerObject, number>;
-        minLength: SelfReturn&lt;StringTypeCheckerObject, number>;
+    type StringTypeChecker = TypeChecker<StringTypeChecker> & {
+        MinLength: SelfReturn<StringTypeChecker, number>;
+        minLength: SelfReturn<StringTypeChecker, number>;
 
-        MaxLength: SelfReturn&lt;StringTypeCheckerObject, number>;
-        maxLength: SelfReturn&lt;StringTypeCheckerObject, number>;
+        MaxLength: SelfReturn<StringTypeChecker, number>;
+        maxLength: SelfReturn<StringTypeChecker, number>;
 
-        Pattern: SelfReturn&lt;StringTypeCheckerObject, string>;
-        pattern: SelfReturn&lt;StringTypeCheckerObject, string>;
-    }
+        Pattern: SelfReturn<StringTypeChecker, string>;
+        pattern: SelfReturn<StringTypeChecker, string>;
+    };
 
-    local String: SelfReturn&lt;StringTypeCheckerObject>, StringClass = TypeGuard.Template("String")
+    local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
     StringClass._Initial = CreateStandardInitial("string")
 
-    function StringClass:MinLength(...)
+    --- Ensures a string is at least a certain length
+    function StringClass:MinLength(MinLength)
+        ExpectType(MinLength, "number", 1)
+
         return self:_AddConstraint("MinLength", function(_, Item, MinLength)
-            return #Item >= MinLength, "Length must be at least " .. MinLength .. ", got " .. #Item
-        end, ...)
+            if (#Item < MinLength) then
+                return false, "Length must be at least " .. MinLength .. ", got " .. #Item
+            end
+
+            return true, EMPTY_STRING
+        end, MinLength)
     end
     StringClass.minLength = StringClass.MinLength
 
-    function StringClass:MaxLength(...)
+    --- Ensures a string is at most a certain length
+    function StringClass:MaxLength(MaxLength)
+        ExpectType(MaxLength, "number", 1)
+
         return self:_AddConstraint("MaxLength", function(_, Item, MaxLength)
-            return #Item &lt;= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #Item
-        end, ...)
+            if (#Item > MaxLength) then
+                return false, "Length must be at most " .. MaxLength .. ", got " .. #Item
+            end
+
+            return true, EMPTY_STRING
+        end, MaxLength)
     end
     StringClass.maxLength = StringClass.MaxLength
 
-    function StringClass:Pattern(...)
+    --- Ensures a string matches a pattern
+    function StringClass:Pattern(PatternString)
+        ExpectType(PatternString, "string", 1)
+
         return self:_AddConstraint("Pattern", function(_, Item, Pattern)
-            return string.match(Item, Pattern) ~= nil, "String does not match pattern " .. tostring(Pattern)
-        end, ...)
+            if (string.match(Item, Pattern) ~= Item) then
+                return false, "String does not match pattern " .. tostring(Pattern)
+            end
+
+            return true, EMPTY_STRING
+        end, PatternString)
     end
     StringClass.pattern = StringClass.Pattern
+
+    --- Ensures a string contains a certain substring
+    function StringClass:Contains(SubstringValue)
+        ExpectType(SubstringValue, "string", 1)
+
+        return self:_AddConstraint("Contains", function(_, Item, Substring)
+            if (string.find(Item, Substring) == nil) then
+                return false, "String does not contain substring " .. tostring(Substring)
+            end
+
+            return true, EMPTY_STRING
+        end, SubstringValue)
+    end
 
     TypeGuard.String = String
     TypeGuard.string = String
@@ -533,38 +907,41 @@ end
 
 
 do
-    local PREFIX_ARRAY = "Index"
-    local PREFIX_PARAM = "Param"
-    local ERR_PREFIX = "[%s '%d'] "
+    local PREFIX_ARRAY = "Index "
+    local PREFIX_PARAM = "Param #"
+    local ERR_PREFIX = "[%s%d] "
     local ERR_UNEXPECTED_VALUE = ERR_PREFIX .. " Unexpected value (strict tag is present)"
 
-    type ArrayTypeCheckerObject = TypeCheckerObject&lt;ArrayTypeCheckerObject> &amp; {
-        OfLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
-        ofLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+    type ArrayTypeChecker = TypeChecker<ArrayTypeChecker> & {
+        OfLength: SelfReturn<ArrayTypeChecker, number>;
+        ofLength: SelfReturn<ArrayTypeChecker, number>;
 
-        MinLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
-        minLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+        MinLength: SelfReturn<ArrayTypeChecker, number>;
+        minLength: SelfReturn<ArrayTypeChecker, number>;
 
-        MaxLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
-        maxLength: SelfReturn&lt;ArrayTypeCheckerObject, number>;
+        MaxLength: SelfReturn<ArrayTypeChecker, number>;
+        maxLength: SelfReturn<ArrayTypeChecker, number>;
 
-        Contains: SelfReturn&lt;ArrayTypeCheckerObject, any>;
-        contains: SelfReturn&lt;ArrayTypeCheckerObject, any>;
+        Contains: SelfReturn<ArrayTypeChecker, any>;
+        contains: SelfReturn<ArrayTypeChecker, any>;
 
-        OfType: SelfReturn&lt;ArrayTypeCheckerObject, TypeCheckerObject&lt;any>>;
-        ofType: SelfReturn&lt;ArrayTypeCheckerObject, TypeCheckerObject&lt;any>>;
+        OfType: SelfReturn<ArrayTypeChecker, TypeChecker<any>>;
+        ofType: SelfReturn<ArrayTypeChecker, TypeChecker<any>>;
 
-        OfStructure: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
-        ofStructure: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
+        OfStructure: SelfReturn<ArrayTypeChecker, {TypeChecker<any>}>;
+        ofStructure: SelfReturn<ArrayTypeChecker, {TypeChecker<any>}>;
 
-        StructuralEquals: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
-        structuralEquals: SelfReturn&lt;ArrayTypeCheckerObject, {TypeCheckerObject&lt;any>}>;
+        StructuralEquals: SelfReturn<ArrayTypeChecker, {TypeChecker<any>}>;
+        structuralEquals: SelfReturn<ArrayTypeChecker, {TypeChecker<any>}>;
 
-        Strict: SelfReturn&lt;ArrayTypeCheckerObject>;
-        strict: SelfReturn&lt;ArrayTypeCheckerObject>;
-    }
+        Strict: SelfReturn<ArrayTypeChecker>;
+        strict: SelfReturn<ArrayTypeChecker>;
 
-    local Array: SelfReturn&lt;ArrayTypeCheckerObject>, ArrayClass = TypeGuard.Template("Array")
+        DenoteParams: SelfReturn<ArrayTypeChecker>;
+        denoteParams: SelfReturn<ArrayTypeChecker>;
+    };
+
+    local Array: TypeCheckerConstructor<ArrayTypeChecker, TypeChecker<any>?>, ArrayClass = TypeGuard.Template("Array")
 
     function ArrayClass:_PrefixError(ErrorString: string, Index: number)
         return ErrorString:format((self._Tags.DenoteParams and PREFIX_PARAM or PREFIX_ARRAY), Index)
@@ -586,35 +963,72 @@ do
         return true, EMPTY_STRING
     end
 
-    function ArrayClass:OfLength(...)
+    --- Ensures an array is of a certain length
+    function ArrayClass:OfLength(Length)
+        ExpectType(Length, "number", 1)
+
         return self:_AddConstraint("Length", function(_, TargetArray, Length)
-            return #TargetArray == Length, "Length must be " .. Length .. ", got " .. #TargetArray
-        end, ...)
+            if (#TargetArray ~= Length) then
+                return false, "Length must be " .. Length .. ", got " .. #TargetArray
+            end
+
+            return true, EMPTY_STRING
+        end, Length)
     end
     ArrayClass.ofLength = ArrayClass.OfLength
 
-    function ArrayClass:MinLength(...)
+    --- Ensures an array is at least a certain length
+    function ArrayClass:MinLength(MinLength)
+        ExpectType(MinLength, "number", 1)
+
         return self:_AddConstraint("MinLength", function(_, TargetArray, MinLength)
-            return #TargetArray >= MinLength, "Length must be at least " .. MinLength .. ", got " .. #TargetArray
-        end, ...)
+            if (#TargetArray < MinLength) then
+                return false, "Length must be at least " .. MinLength .. ", got " .. #TargetArray
+            end
+
+            return true, EMPTY_STRING
+        end, MinLength)
     end
     ArrayClass.minLength = ArrayClass.MinLength
 
-    function ArrayClass:MaxLength(...)
+    --- Ensures an array is at most a certain length
+    function ArrayClass:MaxLength(MaxLength)
+        ExpectType(MaxLength, "number", 1)
+
         return self:_AddConstraint("MaxLength", function(_, TargetArray, MaxLength)
-            return #TargetArray &lt;= MaxLength, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
-        end, ...)
+            if (#TargetArray > MaxLength) then
+                return false, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
+            end
+
+            return true, EMPTY_STRING
+        end, MaxLength)
     end
     ArrayClass.maxLength = ArrayClass.MaxLength
 
-    function ArrayClass:Contains(...)
+    --- Ensures an array contains some given value
+    function ArrayClass:Contains(Value, StartPoint)
+        if (Value == nil) then
+            ExpectType(Value, "something", 1)
+        end
+
+        if (StartPoint) then
+            ExpectType(StartPoint, "number", 2)
+        end
+
         return self:_AddConstraint("Contains", function(_, TargetArray, Value, StartPoint)
-            return table.find(TargetArray, Value, StartPoint) ~= nil, "Value not found in array: " .. tostring(Value)
-        end, ...)
+            if (table.find(TargetArray, Value, StartPoint) == nil) then
+                return false, "Value not found in array: " .. tostring(Value)
+            end
+
+            return true, EMPTY_STRING
+        end, Value, StartPoint)
     end
     ArrayClass.contains = ArrayClass.Contains
 
-    function ArrayClass:OfType(...)
+    --- Ensures each value in the template array satisfies the passed type checker
+    function ArrayClass:OfType(SubType)
+        TypeGuard._AssertIsTypeBase(SubType, 1)
+
         return self:_AddConstraint("OfType", function(SelfRef, TargetArray, SubType)
             for Index, Value in ipairs(TargetArray) do
                 local Success, SubMessage = SubType:Check(Value)
@@ -625,16 +1039,20 @@ do
             end
 
             return true, EMPTY_STRING
-        end, ...)
+        end, SubType)
     end
     ArrayClass.ofType = ArrayClass.OfType
 
-    function ArrayClass:OfStructure(ArrayToCheck, ...)
+    -- Takes an array of types and checks it against the passed array
+    function ArrayClass:OfStructure(SubTypesAtPositions)
+        ExpectType(SubTypesAtPositions, "table", 1)
+
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
-        for Key, Value in ipairs(ArrayToCheck) do
-            SubTypesCopy[Key] = Value
+        for Index, Value in ipairs(SubTypesAtPositions) do
+            TypeGuard._AssertIsTypeBase(Value, Index)
+            SubTypesCopy[Index] = Value
         end
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
@@ -645,7 +1063,7 @@ do
                 local Success, SubMessage = Checker:Check(TargetArray[Index])
 
                 if (not Success) then
-                    return false, self:_PrefixError(ERR_PREFIX, tostring(Index)) .. SubMessage
+                    return false, SelfRef:_PrefixError(ERR_PREFIX, tostring(Index)) .. SubMessage
                 end
             end
 
@@ -655,26 +1073,29 @@ do
                     local Checker = SubTypesAtPositions[Index]
 
                     if (not Checker) then
-                        return false, self:_PrefixError(ERR_UNEXPECTED_VALUE, tostring(Index))
+                        return false, SelfRef:_PrefixError(ERR_UNEXPECTED_VALUE, tostring(Index))
                     end
                 end
             end
 
             return true, EMPTY_STRING
-        end, SubTypesCopy, ...)
+        end, SubTypesCopy, SubTypesAtPositions)
     end
     ArrayClass.ofStructure = ArrayClass.OfStructure
 
+    --- OfStructure but strict
     function ArrayClass:StructuralEquals(Other)
         return self:OfStructure(Other):Strict()
     end
     ArrayClass.structuralEquals = ArrayClass.StructuralEquals
 
+    --- Tags this ArrayTypeChecker as strict i.e. no extra indexes allowed in OfStructure constraint
     function ArrayClass:Strict()
         return self:AddTag("Strict")
     end
     ArrayClass.strict = ArrayClass.Strict
 
+    --- Tags this ArrayTypeChecker as a params call (just for better information when using TypeGuard.Params)
     function ArrayClass:DenoteParams()
         return self:AddTag("DenoteParams")
     end
@@ -689,24 +1110,24 @@ end
 
 
 do
-    type ObjectTypeCheckerObject = TypeCheckerObject&lt;ObjectTypeCheckerObject> &amp; {
-        OfStructure: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
-        ofStructure: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
+    type ObjectTypeChecker = TypeChecker<ObjectTypeChecker> & {
+        OfStructure: SelfReturn<ObjectTypeChecker, {[any]: TypeChecker<any>}>;
+        ofStructure: SelfReturn<ObjectTypeChecker, {[any]: TypeChecker<any>}>;
 
-        StructuralEquals: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
-        structuralEquals: SelfReturn&lt;ObjectTypeCheckerObject, {[any]: TypeCheckerObject&lt;any>}>;
+        StructuralEquals: SelfReturn<ObjectTypeChecker, {[any]: TypeChecker<any>}>;
+        structuralEquals: SelfReturn<ObjectTypeChecker, {[any]: TypeChecker<any>}>;
 
-        Strict: SelfReturn&lt;ObjectTypeCheckerObject>;
-        strict: SelfReturn&lt;ObjectTypeCheckerObject>;
+        Strict: SelfReturn<ObjectTypeChecker>;
+        strict: SelfReturn<ObjectTypeChecker>;
 
-        OfValueType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
-        ofValueType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
+        OfValueType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+        ofValueType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
 
-        OfKeyType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
-        ofKeyType: SelfReturn&lt;ObjectTypeCheckerObject, TypeCheckerObject&lt;any>>;
-    }
+        OfKeyType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+        ofKeyType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+    };
 
-    local Object: SelfReturn&lt;ObjectTypeCheckerObject>, ObjectClass = TypeGuard.Template("Object")
+    local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass:_Initial(TargetObject)
         if (typeof(TargetObject) ~= "table") then
@@ -722,12 +1143,14 @@ do
         return true, EMPTY_STRING
     end
 
+    --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs
     function ObjectClass:OfStructure(OriginalSubTypes)
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
-        for Key, Value in pairs(OriginalSubTypes) do
-            SubTypesCopy[Key] = Value
+        for Index, Value in pairs(OriginalSubTypes) do
+            TypeGuard._AssertIsTypeBase(Value, Index)
+            SubTypesCopy[Index] = Value
         end
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
@@ -764,7 +1187,10 @@ do
     end
     ObjectClass.ofStructure = ObjectClass.OfStructure
 
-    function ObjectClass:OfValueType(...)
+    --- For all values in the passed table, they must satisfy the TypeChecker passed to this constraint
+    function ObjectClass:OfValueType(SubType)
+        TypeGuard._AssertIsTypeBase(SubType, 1)
+
         return self:_AddConstraint("OfValueType", function(_, TargetArray, SubType)
             for Index, Value in pairs(TargetArray) do
                 local Success, SubMessage = SubType:Check(Value)
@@ -775,32 +1201,37 @@ do
             end
 
             return true, EMPTY_STRING
-        end, ...)
+        end, SubType)
     end
     ObjectClass.ofValueType = ObjectClass.OfValueType
 
-    function ObjectClass:OfKeyType(...)
+    --- For all keys in the passed table, they must satisfy the TypeChecker passed to this constraint
+    function ObjectClass:OfKeyType(SubType)
+        TypeGuard._AssertIsTypeBase(SubType, 1)
+
         return self:_AddConstraint("OfKeyType", function(_, TargetArray, SubType)
-            for Index, Value in pairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Value)
+            for Key in pairs(TargetArray) do
+                local Success, SubMessage = SubType:Check(Key)
 
                 if (not Success) then
-                    return false, "[OfKeyType: Key '" .. tostring(Index) .. "'] " .. SubMessage
+                    return false, "[OfKeyType: Key '" .. tostring(Key) .. "'] " .. SubMessage
                 end
             end
 
             return true, EMPTY_STRING
-        end, ...)
+        end, SubType)
     end
     ObjectClass.ofKeyType = ObjectClass.OfKeyType
 
+    --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure
     function ObjectClass:Strict()
         return self:AddTag("Strict")
     end
     ObjectClass.strict = ObjectClass.Strict
 
-    function ObjectClass:StructuralEquals(...)
-        return self:OfStructure(...):Strict()
+    --- OfStructure but strict
+    function ObjectClass:StructuralEquals(Structure)
+        return self:OfStructure(Structure):Strict()
     end
     ObjectClass.structuralEquals = ObjectClass.StructuralEquals
 
@@ -813,47 +1244,62 @@ end
 
 
 do
-    type InstanceTypeCheckerObject = TypeCheckerObject&lt;InstanceTypeCheckerObject> &amp; {
-        OfStructure: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
-        ofStructure: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
+    type InstanceTypeChecker = TypeChecker<InstanceTypeChecker> & {
+        OfStructure: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
+        ofStructure: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
 
-        StructuralEquals: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
-        structuralEquals: SelfReturn&lt;InstanceTypeCheckerObject, {[any]: TypeCheckerObject&lt;Instance>}>;
+        StructuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
+        structuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
 
-        IsA: SelfReturn&lt;InstanceTypeCheckerObject, string>;
-        isA: SelfReturn&lt;InstanceTypeCheckerObject, string>;
+        IsA: SelfReturn<InstanceTypeChecker, string>;
+        isA: SelfReturn<InstanceTypeChecker, string>;
 
-        CheckProperty: SelfReturn&lt;InstanceTypeCheckerObject, string, TypeCheckerObject&lt;any>>;
-        checkProperty: SelfReturn&lt;InstanceTypeCheckerObject, string, TypeCheckerObject&lt;any>>;
+        Strict: SelfReturn<InstanceTypeChecker>;
+        strict: SelfReturn<InstanceTypeChecker>;
+    };
 
-        Strict: SelfReturn&lt;InstanceTypeCheckerObject>;
-        strict: SelfReturn&lt;InstanceTypeCheckerObject>;
-    }
+    local function Get(Inst, Key)
+        return Inst[Key]
+    end
 
-    local InstanceChecker: SelfReturn&lt;InstanceTypeCheckerObject>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local function TryGet(Inst, Key)
+        local Success, Result = pcall(Get, Inst, Key)
+
+        if (Success) then
+            return Result
+        end
+
+        return nil
+    end
+
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
+    --- Ensures that an Instance has specific children (this is not for properties)
+    --- @todo Check properties too
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
         for Key, Value in pairs(OriginalSubTypes) do
+            TypeGuard._AssertIsTypeBase(Value, Key)
             SubTypesCopy[Key] = Value
         end
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
 
         return self:_AddConstraint("OfStructure", function(SelfRef, InstanceRoot, SubTypes)
-            -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
+            -- Check all properties and children which should be in the Instance exist (unless optional) and the type check for each passes
             for Key, Checker in pairs(SubTypes) do
-                local Success, SubMessage = Checker:Check(InstanceRoot:FindFirstChild(Key))
+                local Value = TryGet(InstanceRoot, Key)
+                local Success, SubMessage = Checker:Check(Value)
 
                 if (not Success) then
-                    return false, "[Instance '" .. tostring(Key) .. "'] " .. SubMessage
+                    return false, (typeof(Value) == "Instance" and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
                 end
             end
 
-            -- Check there are no extra fields which shouldn't be in the object
+            -- Check there are no extra children which shouldn't be in the Instance
             if (SelfRef._Tags.Strict) then
                 for _, Value in ipairs(InstanceRoot:GetChildren()) do
                     local Key = Value.Name
@@ -870,31 +1316,29 @@ do
     end
     InstanceCheckerClass.ofStructure = InstanceCheckerClass.OfStructure
 
-    function InstanceCheckerClass:IsA(...)
+    --- Uses Instance.IsA to assert the type of an Instance
+    function InstanceCheckerClass:IsA(InstanceIsA)
+        ExpectType(InstanceIsA, "string", 1)
+
         return self:_AddConstraint("IsA", function(_, InstanceRoot, InstanceIsA)
             if (not InstanceRoot:IsA(InstanceIsA)) then
                 return false, "Expected " .. InstanceIsA .. ", got " .. InstanceRoot.ClassName
             end
 
             return true, EMPTY_STRING
-        end, ...)
+        end, InstanceIsA)
     end
     InstanceCheckerClass.isA = InstanceCheckerClass.IsA
 
-    function InstanceCheckerClass:CheckProperty(...)
-        return self:_AddConstraint("CheckProperty", function(_, InstanceRoot, PropertyName, Checker)
-            return Checker:Check(InstanceRoot[PropertyName])
-        end, ...)
-    end
-    InstanceCheckerClass.checkProperty = InstanceCheckerClass.CheckProperty
-
+    --- Activates strict tag for OfStructure
     function InstanceCheckerClass:Strict()
         return self:AddTag("Strict")
     end
     InstanceCheckerClass.strict = InstanceCheckerClass.Strict
 
-    function InstanceCheckerClass:StructuralEquals(...)
-        return self:OfStructure(...):Strict()
+    --- OfStructure + strict tag i.e. no extra children exist beyond what is specified
+    function InstanceCheckerClass:StructuralEquals(Structure)
+        return self:OfStructure(Structure):Strict()
     end
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
@@ -907,11 +1351,9 @@ end
 
 
 do
-    type BooleanTypeCheckerObject = TypeCheckerObject&lt;BooleanTypeCheckerObject> &amp; {
-        -- Fill any stuff here in future
-    }
+    type BooleanTypeChecker = TypeChecker<BooleanTypeChecker> & {};
 
-    local Boolean: SelfReturn&lt;BooleanTypeCheckerObject>, BooleanClass = TypeGuard.Template("Boolean")
+    local Boolean: TypeCheckerConstructor<BooleanTypeChecker>, BooleanClass = TypeGuard.Template("Boolean")
     BooleanClass._Initial = CreateStandardInitial("boolean")
 
     BooleanClass._InitialConstraint = BooleanClass.Equals
@@ -924,12 +1366,12 @@ end
 
 
 do
-    type EnumTypeCheckerObject = TypeCheckerObject&lt;EnumTypeCheckerObject> &amp; {
-        IsA: SelfReturn&lt;EnumTypeCheckerObject, Enum | EnumItem>;
-        isA: SelfReturn&lt;EnumTypeCheckerObject, Enum | EnumItem>;
-    }
+    type EnumTypeChecker = TypeChecker<EnumTypeChecker> & {
+        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem>;
+        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem>;
+    };
 
-    local EnumChecker: SelfReturn&lt;EnumTypeCheckerObject>, EnumCheckerClass = TypeGuard.Template("Enum")
+    local EnumChecker: TypeCheckerConstructor<EnumTypeChecker>, EnumCheckerClass = TypeGuard.Template("Enum")
 
     function EnumCheckerClass:_Initial(Value)
         local GotType = typeof(Value)
@@ -941,20 +1383,35 @@ do
         return true, EMPTY_STRING
     end
 
-    function EnumCheckerClass:IsA(...)
+    --- Ensures that a passed EnumItem is either equivalent to an EnumItem or a sub-item of an Enum class
+    function EnumCheckerClass:IsA(TargetEnum)
+        local GotType = typeof(TargetEnum)
+        assert(GotType == "Enum" or GotType == "EnumItem", INVALID_ARGUMENT:format("1", "Enum or EnumItem", GotType))
+
         return self:_AddConstraint("IsA", function(_, Value, TargetEnum)
             local PassedType = typeof(Value)
             local TargetType = typeof(TargetEnum)
 
-            -- Both are EnumItems
-            if (PassedType == "EnumItem" and TargetType == "EnumItem") then
-                return Value == TargetEnum, "Expected " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
-            elseif (PassedType == "EnumItem" and TargetType == "Enum") then
-                return table.find(TargetEnum:GetEnumItems(), Value) ~= nil, "Expected a " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
+            if (PassedType ~= "EnumItem" and PassedType ~= "Enum") then
+                return false, "Expected EnumItem, got " .. PassedType
             end
 
-            return false, "Invalid comparison: " .. PassedType .. " to " .. TargetType
-        end, ...)
+            -- Both are EnumItems
+            if (TargetType == "EnumItem") then
+                if (Value == TargetEnum) then
+                    return true, EMPTY_STRING
+                end
+
+                return false, "Expected " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
+            end
+
+            -- TargetType is an Enum
+            if (table.find(TargetEnum:GetEnumItems(), Value) == nil) then
+                return false, "Expected a " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
+            end
+
+            return true, EMPTY_STRING
+        end, TargetEnum)
     end
     EnumCheckerClass.isA = EnumCheckerClass.IsA
 
@@ -967,19 +1424,66 @@ end
 
 
 do
-    type NilTypeCheckerObject = TypeCheckerObject&lt;NilTypeCheckerObject> &amp; {}
+    type NilTypeChecker = TypeChecker<NilTypeChecker> & {};
 
-    local NilChecker: SelfReturn&lt;NilTypeCheckerObject>, NilCheckerClass = TypeGuard.Template("Nil")
+    local NilChecker: TypeCheckerConstructor<NilTypeChecker>, NilCheckerClass = TypeGuard.Template("Nil")
 
     function NilCheckerClass:_Initial(Value)
         if (Value == nil) then
-            return false, "Expected nil, got " .. typeof(Value)
+            return true, EMPTY_STRING
         end
 
-        return true, EMPTY_STRING
+        return false, "Expected nil, got " .. typeof(Value)
     end
 
     TypeGuard.Nil = NilChecker
+    TypeGuard["nil"] = NilChecker
+end
+
+
+
+
+do
+    type ThreadTypeChecker = TypeChecker<ThreadTypeChecker> & {};
+
+    local ThreadChecker: TypeCheckerConstructor<ThreadTypeChecker>, ThreadCheckerClass = TypeGuard.Template("Thread")
+    ThreadCheckerClass._Initial = CreateStandardInitial("thread")
+
+    function ThreadCheckerClass:IsDead()
+        return self:HasStatus("dead"):AddTag("StatusCheck")
+    end
+
+    function ThreadCheckerClass:IsSuspended()
+        return self:HasStatus("suspended"):AddTag("StatusCheck")
+    end
+
+    function ThreadCheckerClass:IsRunning()
+        return self:HasStatus("running"):AddTag("StatusCheck")
+    end
+
+    function ThreadCheckerClass:IsNormal()
+        return self:HasStatus("normal"):AddTag("StatusCheck")
+    end
+
+    --- Checks the coroutine's status against a given status string
+    function ThreadCheckerClass:HasStatus(Status: string)
+        ExpectType(Status, "string", 1)
+
+        return self:_AddConstraint("HasStatus", function(_, Thread, Status)
+            local CurrentStatus = coroutine.status(Thread)
+
+            if (CurrentStatus == Status) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected thread to have status '" .. Status .. "', got " .. CurrentStatus
+        end, Status)
+    end
+
+    TypeGuard._InitialConstraint = ThreadCheckerClass.HasStatus
+
+    TypeGuard.Thread = ThreadChecker
+    TypeGuard.thread = ThreadChecker
 end
 
 
@@ -1021,11 +1525,11 @@ TypeGuard.Vector3 = TypeGuard.FromTypeName("Vector3")
 TypeGuard.Vector3int16 = TypeGuard.FromTypeName("Vector3int16")
 
 --- Creates a function which checks params as if they were a strict Array checker
-function TypeGuard.Params(...)
+function TypeGuard.Params(...: TypeChecker<any>)
     local Params = {...}
 
-    for _, ParamChecker in ipairs(Params) do
-        TypeGuard._AssertIsTypeBase(ParamChecker)
+    for Index, ParamChecker in ipairs(Params) do
+        TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
     local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
@@ -1037,8 +1541,8 @@ end
 TypeGuard.params = TypeGuard.Params
 
 --- Creates a function which checks variadic params against a single given type checker
-function TypeGuard.VariadicParams(CompareType)
-    TypeGuard._AssertIsTypeBase(CompareType)
+function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
+    TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
 
@@ -1048,17 +1552,52 @@ function TypeGuard.VariadicParams(CompareType)
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
-return TypeGuard</string>
-      </Properties>
-      <Item class="ModuleScript" referent="2">
-        <Properties>
-          <string name="Name">TypeGuard.spec</string>
-          <string name="Source">-- WIP
+-- Wraps a function in a param checker function
+function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
+    ExpectType(Call, "function", 1)
+
+    for Index = 1, select("#", ...) do
+        TypeGuard._AssertIsTypeBase(select(Index, ...), Index)
+    end
+
+    local ParamChecker = TypeGuard.Params(...)
+
+    return function(...)
+        ParamChecker(...)
+        return Call(...)
+    end
+end
+
+-- Wraps a function in a variadic param checker function
+function TypeGuard.WrapFunctionVariadicParams<T>(Call: T, VariadicParamType: TypeChecker<any>)
+    ExpectType(Call, "function", 1)
+    TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
+
+    local ParamChecker = TypeGuard.VariadicParams(VariadicParamType)
+
+    return function(...)
+        ParamChecker(...)
+        return Call(...)
+    end
+end
+
+return TypeGuard]]></ProtectedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f80f</UniqueId>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX0E94F9530CEE425D937D2F7BF8DBDA5F">
+				<Properties>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">TypeGuard.spec</string>
+					<string name="ScriptGuid">{2FCA8DF6-8E73-440E-BDAA-DD58779AC6A6}</string>
+					<ProtectedString name="Source"><![CDATA[-- WIP
 
 return function()
     local TypeGuard = require(script.Parent)
 
-    describe("TypeGuard.Template", function()
+    describe("Template", function()
         it("should reject no Name given", function()
             expect(function()
                 TypeGuard.Template()
@@ -1087,22 +1626,11 @@ return function()
             local TestCreate, TestClass = TypeGuard.Template("Test")
             expect(TestCreate).to.be.a("function")
             expect(TestClass).to.be.a("table")
-
-            expect(TestClass._Copy).to.be.ok()
-            expect(TestClass._AddConstraint).to.be.ok()
-            expect(TestClass.Optional).to.be.ok()
-            expect(TestClass.Or).to.be.ok()
-            expect(TestClass.And).to.be.ok()
-            expect(TestClass.Alias).to.be.ok()
-            expect(TestClass.AddTag).to.be.ok()
-            expect(TestClass.WrapCheck).to.be.ok()
-            expect(TestClass.WrapAssert).to.be.ok()
-            expect(TestClass.Check).to.be.ok()
-            expect(TestClass.Assert).to.be.ok()
+            expect(TestClass._IsTemplate).to.equal(true)
         end)
     end)
 
-    describe("TypeGuard.Params", function()
+    describe("Params", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
                 TypeGuard.Params(1)
@@ -1119,21 +1647,1893 @@ return function()
 
         it("should accept TypeChecker types", function()
             expect(function()
-                
+                TypeGuard.Params(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.Params(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.Params(TypeGuard.Array())
             end).never.to.throw()
         end)
 
         it("should check one type", function()
-        
+            expect(function()
+                TypeGuard.Params(TypeGuard.Number())(1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.Params(TypeGuard.Number())("Test")
+            end).to.throw()
         end)
 
         it("should check multiple types", function()
-        
+            expect(function()
+                TypeGuard.Params(TypeGuard.Number(), TypeGuard.String())(1, "Test")
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.Params(TypeGuard.Number(), TypeGuard.String())(1, 1)
+            end).to.throw()
         end)
     end)
-end</string>
-        </Properties>
-      </Item>
-    </Item>
-  </Item>
+
+    describe("VariadicParams", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParams(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Number())(1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Number())("Test")
+            end).to.throw()
+        end)
+
+        it("should check multiple types", function()
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Number())(1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParams(TypeGuard.Number())(1, "Test")
+            end).to.throw()
+        end)
+    end)
+
+    describe("WrapFunctionParams", function()
+        it("should reject non functions as first arg", function()
+            expect(function()
+                TypeGuard.WrapFunctionParams(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(true)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end)
+            end).never.to.throw()
+        end)
+
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, 1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, {})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionParams(function() end, TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should wrap a function", function()
+            local function TestFunction(_X, _Y, _Z) end
+
+            local TestWrapped = TypeGuard.WrapFunctionParams(TestFunction, TypeGuard.Number(), TypeGuard.String(), TypeGuard.Boolean())
+            expect(TestWrapped).to.be.a("function")
+
+            expect(function()
+                TestWrapped(1, "x", true)
+            end).never.to.throw()
+
+            expect(function()
+                TestWrapped(1, "x", "y")
+            end).to.throw()
+
+            expect(function()
+                TestWrapped(1, "x", true, "y")
+            end).to.throw()
+
+            expect(function()
+                TestWrapped("1", "x", true)
+            end).to.throw()
+        end)
+    end)
+
+    describe("WrapFunctionVariadicParams", function()
+        it("should reject non functions as first arg", function()
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(true)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Number())
+            end).never.to.throw()
+        end)
+
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, 1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, {})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should wrap a function", function()
+            local function TestFunction(_X, ...) end
+
+            local TestWrapped = TypeGuard.WrapFunctionVariadicParams(TestFunction, TypeGuard.Number())
+            expect(TestWrapped).to.be.a("function")
+
+            expect(function()
+                TestWrapped(1)
+            end).never.to.throw()
+
+            expect(function()
+                TestWrapped(1, "x")
+            end).to.throw()
+
+            expect(function()
+                TestWrapped(1, "x", true)
+            end).to.throw()
+
+            expect(function()
+                TestWrapped(9, 8, 7, 6, 5, 4, 3, 2, 1)
+            end).never.to.throw()
+        end)
+    end)
+
+    -- These behaviors extend to all type checker implementations
+    describe("TypeChecker", function()
+        describe("Optional", function()
+            it("should accept nil as a checked value", function()
+                expect(TypeGuard.Number():Optional():Check(nil)).to.equal(true)
+            end)
+
+            it("should accept the target constraint as a checked value if not nil", function()
+                expect(TypeGuard.Number():Optional():Check(1)).to.equal(true)
+                expect(TypeGuard.Number():Optional():Check("Test")).to.equal(false)
+            end)
+        end)
+        describe("Alias", function()
+            it("should reject non-string args", function()
+                expect(function()
+                    TypeGuard.Number():Alias(1)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Alias({})
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Alias(true)
+                end).to.throw()
+            end)
+
+            it("should accept string args", function()
+                expect(function()
+                    TypeGuard.Number():Alias("Test")
+                end).never.to.throw()
+            end)
+
+            it("should give a fail string with the alias", function()
+                local _, Result = TypeGuard.Number():Or(TypeGuard.Array()):Alias("TestAlias"):Check("Test")
+                expect(Result).to.be.a("string")
+                expect(Result:match("TestAlias")).to.be.ok()
+            end)
+        end)
+        describe("Or", function()
+            it("should reject non-TypeChecker args", function()
+                expect(function()
+                    TypeGuard.Number():Or(1)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Or({})
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Or(true)
+                end).to.throw()
+            end)
+
+            it("should accept TypeChecker args", function()
+                expect(function()
+                    TypeGuard.Number():Or(TypeGuard.Number())
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Or(TypeGuard.String())
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():Or(TypeGuard.Array())
+                end).never.to.throw()
+            end)
+
+            it("should accept inputs if they satisfy a TypeChecker in the or chain", function()
+                local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(true)).to.equal(true)
+                expect(Check:Check(false)).to.equal(true)
+            end)
+
+            it("should reject inputs if they do not satisfy a TypeChecker in the or chain", function()
+                local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
+                expect(Check:Check("Test")).to.equal(false)
+                expect(Check:Check({})).to.equal(false)
+            end)
+        end)
+        describe("And", function()
+            it("should reject non-TypeChecker args", function()
+                expect(function()
+                    TypeGuard.Number():And(1)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():And({})
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():And(true)
+                end).to.throw()
+            end)
+
+            it("should accept TypeChecker args", function()
+                expect(function()
+                    TypeGuard.Number():And(TypeGuard.Number())
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():And(TypeGuard.String())
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():And(TypeGuard.Array())
+                end).never.to.throw()
+            end)
+
+            it("should reject inputs if they do not satisfy at least one TypeChecker in the and chain", function()
+                local Check = TypeGuard.Number():And(TypeGuard.Boolean())
+                expect(Check:Check(1)).to.equal(false)
+                expect(Check:Check(true)).to.equal(false)
+                expect(Check:Check(false)).to.equal(false)
+            end)
+
+            it("should accept inputs if they satisfy all TypeCheckers in the and chain and reject if they do not (for objects)", function()
+                local Check = TypeGuard.Object():OfStructure({X = TypeGuard.Number()})
+                                :And(TypeGuard.Object():OfStructure({Y = TypeGuard.String()}))
+                                :And(TypeGuard.Object():OfStructure({Z = TypeGuard.Boolean()}))
+
+                expect(Check:Check({X = 1, Y = "A", Z = false})).to.equal(true)
+                expect(Check:Check({X = 1})).to.equal(false)
+                expect(Check:Check({X = 1, Y = "A", Z = {}})).to.equal(false)
+            end)
+
+            it("should accept inputs if they satisfy all TypeCheckers in the and chain and reject if they do not (for Instances)", function()
+                local Check = TypeGuard.Instance():OfStructure({Name = TypeGuard.String()})
+                              :And(TypeGuard.Instance():OfStructure({
+                                  SomeChild = TypeGuard.Instance();
+                              }))
+
+                local TestInstance = Instance.new("Folder")
+                    local SomeChild = Instance.new("Folder")
+                    SomeChild.Name = "SomeChild"
+                    SomeChild.Parent = TestInstance
+
+                local TestInstance2 = Instance.new("Folder")
+                    local SomeChild2 = Instance.new("Folder")
+                    SomeChild2.Name = "SomeChild2"
+                    SomeChild2.Parent = TestInstance2
+
+                expect(Check:Check(TestInstance)).to.equal(true)
+                expect(Check:Check(TestInstance2)).to.equal(false)
+            end)
+        end)
+
+        describe("Check", function()
+            it("should return a true boolean and an empty string on success", function()
+                local Check = TypeGuard.Number()
+                local Result, Error = Check:Check(1)
+                expect(Result).to.be.a("boolean")
+                expect(Result).to.equal(true)
+                expect(Error).to.be.a("string")
+                expect(Error).to.equal("")
+            end)
+
+            it("should return a false boolean and a fail string on failure", function()
+                local Check = TypeGuard.Number()
+                local Result, Error = Check:Check("Test")
+                expect(Result).to.be.a("boolean")
+                expect(Result).to.equal(false)
+                expect(Error).to.be.a("string")
+                expect(Error).never.to.equal("")
+            end)
+        end)
+        describe("WrapCheck", function()
+            it("should return a function", function()
+                expect(TypeGuard.Number():WrapCheck()).to.be.a("function")
+            end)
+
+            it("should call Check directly and pass a boolean & status string", function()
+                local Check = TypeGuard.Number():WrapCheck()
+                local Result, Error = Check(1)
+                expect(Result).to.be.a("boolean")
+                expect(Result).to.equal(true)
+                expect(Error).to.be.a("string")
+                expect(Error).to.equal("")
+
+                local Result2, Error2 = Check("Test")
+                expect(Result2).to.be.a("boolean")
+                expect(Result2).to.equal(false)
+                expect(Error2).to.be.a("string")
+                expect(Error2).never.to.equal("")
+            end)
+        end)
+
+        describe("Assert", function()
+            it("should not throw when the type is satisfied", function()
+                expect(function()
+                    TypeGuard.Number():Assert(1)
+                end).never.to.throw()
+            end)
+
+            it("should throw when the type is unsatisfied, giving the status string", function()
+                local Input = "Test"
+                local _, CheckResult = TypeGuard.Number():Check(Input)
+
+                expect(function()
+                    TypeGuard.Number():Assert(Input)
+                end).to.throw(CheckResult)
+            end)
+        end)
+        describe("WrapAssert", function()
+            it("should return a function", function()
+                expect(TypeGuard.Number():WrapAssert()).to.be.a("function")
+            end)
+
+            it("should call Assert directly and pass a boolean & status string", function()
+                local Input = 1
+
+                local _, CheckResult = TypeGuard.Number():Check(Input)
+                local AssertFunction = TypeGuard.Number():WrapAssert()
+
+                expect(function()
+                    AssertFunction(Input)
+                end).never.to.throw()
+
+                expect(function()
+                    AssertFunction("Test")
+                end).to.throw(CheckResult)
+            end)
+        end)
+    end)
+
+    describe("Number", function()
+        local Base = TypeGuard.Number()
+
+        describe("Init", function()
+            it("should reject non-numbers", function()
+                expect(Base:Check("Test")).to.equal(false)
+                expect(Base:Check(true)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check(nil)).to.equal(false)
+                expect(Base:Check({})).to.equal(false)
+            end)
+
+            it("should accept numbers", function()
+                expect(Base:Check(1)).to.equal(true)
+                expect(Base:Check(1.1)).to.equal(true)
+                expect(Base:Check(0)).to.equal(true)
+                expect(Base:Check(-1)).to.equal(true)
+                expect(Base:Check(-1.1)).to.equal(true)
+            end)
+        end)
+
+        describe("Integer", function()
+            it("should reject non-integers", function()
+                expect(Base:Integer():Check(1.1)).to.equal(false)
+            end)
+
+            it("should accept integers", function()
+                expect(Base:Integer():Check(1)).to.equal(true)
+            end)
+
+            it("should accept negative integers", function()
+                expect(Base:Integer():Check(-1)).to.equal(true)
+            end)
+
+            it("should reject non-numbers", function()
+                expect(Base:Integer():Check("Test")).to.equal(false)
+            end)
+        end)
+
+        describe("Decimal", function()
+            it("should reject non-decimals", function()
+                expect(Base:Decimal():Check(1)).to.equal(false)
+            end)
+
+            it("should accept decimals", function()
+                expect(Base:Decimal():Check(1.1)).to.equal(true)
+            end)
+
+            it("should accept negative decimals", function()
+                expect(Base:Decimal():Check(-1.1)).to.equal(true)
+            end)
+
+            it("should reject non-numbers", function()
+                expect(Base:Decimal():Check("Test")).to.equal(false)
+            end)
+        end)
+
+        describe("RangeInclusive", function()
+            it("should reject non-numbers", function()
+                expect(Base:RangeInclusive(1, 2):Check("Test")).to.equal(false)
+            end)
+
+            it("should reject numbers outside of range", function()
+                expect(Base:RangeInclusive(1, 2):Check(0)).to.equal(false)
+                expect(Base:RangeInclusive(1, 2):Check(3)).to.equal(false)
+            end)
+
+            it("should accept numbers inside of range", function()
+                expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
+                expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+            end)
+
+            it("should accept numbers equal to the range bounds", function()
+                expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
+                expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+            end)
+        end)
+
+        describe("RangeExclusive", function()
+            it("should reject non-numbers", function()
+                expect(Base:RangeExclusive(1, 2):Check("Test")).to.equal(false)
+            end)
+
+            it("should reject numbers outside of range", function()
+                expect(Base:RangeExclusive(1, 2):Check(0)).to.equal(false)
+                expect(Base:RangeExclusive(1, 2):Check(3)).to.equal(false)
+            end)
+
+            it("should accept numbers inside of range", function()
+                expect(Base:RangeExclusive(1, 2):Check(1.1)).to.equal(true)
+                expect(Base:RangeExclusive(1, 2):Check(1.9)).to.equal(true)
+            end)
+
+            it("should reject numbers equal to the range bounds", function()
+                expect(Base:RangeExclusive(1, 2):Check(1)).to.equal(false)
+                expect(Base:RangeExclusive(1, 2):Check(2)).to.equal(false)
+            end)
+        end)
+
+        describe("Positive", function()
+            it("should reject non-numbers", function()
+                expect(Base:Positive():Check("Test")).to.equal(false)
+            end)
+
+            it("should reject negative numbers", function()
+                expect(Base:Positive():Check(-1)).to.equal(false)
+            end)
+
+            it("should accept positive numbers", function()
+                expect(Base:Positive():Check(0)).to.equal(true)
+                expect(Base:Positive():Check(1)).to.equal(true)
+            end)
+        end)
+
+        describe("Negative", function()
+            it("should reject non-numbers", function()
+                expect(Base:Negative():Check("Test")).to.equal(false)
+            end)
+
+            it("should reject positive numbers", function()
+                expect(Base:Negative():Check(0)).to.equal(false)
+                expect(Base:Negative():Check(1)).to.equal(false)
+            end)
+
+            it("should accept negative numbers", function()
+                expect(Base:Negative():Check(-1)).to.equal(true)
+            end)
+        end)
+
+        describe("Equals", function()
+            it("should reject non equal inputs", function()
+                expect(Base:Equals(1):Check(2)).to.equal(false)
+            end)
+
+            it("should accept equal inputs", function()
+                expect(Base:Equals(1):Check(1)).to.equal(true)
+            end)
+        end)
+
+        describe("GreaterThan", function()
+            it("should reject numbers less than the first arg", function()
+                expect(Base:GreaterThan(1):Check(0)).to.equal(false)
+            end)
+
+            it("should accept numbers greater than the first arg", function()
+                expect(Base:GreaterThan(1):Check(2)).to.equal(true)
+            end)
+        end)
+
+        describe("IsAKeyIn", function()
+            it("should reject a non table as first arg", function()
+                expect(function()
+                    Base:IsAKeyIn(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:IsAKeyIn("Test")
+                end).to.throw()
+
+                expect(function()
+                    Base:IsAKeyIn(true)
+                end).to.throw()
+            end)
+
+            it("should accept a table as first arg", function()
+                expect(function()
+                    Base:IsAKeyIn({})
+                end).never.to.throw()
+            end)
+
+            it("should reject when the value does not exist as a key", function()
+                expect(Base:IsAKeyIn({}):Check(123)).to.equal(false)
+            end)
+
+            it("should accept when the value does exist as a key", function()
+                expect(Base:IsAKeyIn({[123] = true}):Check(123)).to.equal(true)
+            end)
+        end)
+
+        describe("IsAValueIn", function()
+            it("should reject a non table as first arg", function()
+                expect(function()
+                    Base:IsAValueIn(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:IsAValueIn("Test")
+                end).to.throw()
+
+                expect(function()
+                    Base:IsAValueIn(true)
+                end).to.throw()
+            end)
+
+            it("should accept a table as first arg", function()
+                expect(function()
+                    Base:IsAValueIn({})
+                end).never.to.throw()
+            end)
+
+            it("should reject when the value does not exist in an array", function()
+                expect(Base:IsAValueIn({}):Check(123)).to.equal(false)
+            end)
+
+            it("should accept when the value exists in an array", function()
+                expect(Base:IsAValueIn({123}):Check(123)).to.equal(true)
+            end)
+        end)
+    end)
+
+    describe("Boolean", function()
+        local Base = TypeGuard.Boolean()
+
+        describe("Init", function()
+            it("should reject non-booleans", function()
+                expect(Base:Check("Test")).to.equal(false)
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check(nil)).to.equal(false)
+                expect(Base:Check({})).to.equal(false)
+            end)
+
+            it("should accept booleans", function()
+                expect(Base:Check(true)).to.equal(true)
+                expect(Base:Check(false)).to.equal(true)
+            end)
+        end)
+    end)
+
+    describe("Instance", function()
+        local Base = TypeGuard.Instance()
+
+        describe("Init", function()
+            it("should reject non-Instances", function()
+                expect(Base:Check("Test")).to.equal(false)
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check(nil)).to.equal(false)
+                expect(Base:Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances", function()
+                expect(Base:Check(Instance.new("Model"))).to.equal(true)
+            end)
+
+            it("should use the IsA constraint as the initial constraint", function()
+                local Test = TypeGuard.Instance("Model")
+
+                expect(Test:Check(Instance.new("Model"))).to.equal(true)
+                expect(Test:Check(Instance.new("Part"))).to.equal(false)
+            end)
+        end)
+
+        describe("IsA", function()
+            it("should reject non-Instances", function()
+                expect(Base:IsA("Folder"):Check("Folder")).to.equal(false)
+                expect(Base:IsA("Folder"):Check(1)).to.equal(false)
+                expect(Base:IsA("Folder"):Check(function() end)).to.equal(false)
+                expect(Base:IsA("Folder"):Check(nil)).to.equal(false)
+                expect(Base:IsA("Folder"):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances", function()
+                expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
+            end)
+
+            it("should accept Instances of the specified class", function()
+                expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
+            end)
+
+            it("should reject Instances of other classes", function()
+                expect(Base:IsA("Folder"):Check(Instance.new("Part"))).to.equal(false)
+            end)
+        end)
+
+        describe("OfStructure", function()
+            it("should reject non-Instances", function()
+                expect(function()
+                    Base:OfStructure({Test = "Test"})
+                end).to.throw()
+
+                expect(function()
+                    Base:OfStructure({Test = 1})
+                end).to.throw()
+
+                expect(function()
+                    Base:OfStructure({Test = function() end})
+                end).to.throw()
+            end)
+
+            it("should accept a map of children and/or properties", function()
+                expect(function()
+                    Base:OfStructure({
+                        Test = TypeGuard.Instance("Folder");
+                        Name = TypeGuard.String();
+                    })
+                end).to.never.throw()
+            end)
+
+            it("should reject Instances that do not match the structure", function()
+                expect(
+                    Base:OfStructure({
+                        Test = TypeGuard.Instance("Folder");
+                        Name = TypeGuard.String();
+                    }):Check(Instance.new("Folder"))
+                ).to.equal(false)
+            end)
+
+            it("should accept Instances that match the structure", function()
+                local SampleTree = Instance.new("Folder")
+                    local Test = Instance.new("Folder", SampleTree)
+                    Test.Name = "Test"
+
+                expect(
+                    Base:OfStructure({
+                        Test = TypeGuard.Instance("Folder");
+                        Name = TypeGuard.String();
+                    }):Check(SampleTree)
+                ).to.equal(true)
+            end)
+
+            it("should reject Instances that do not match the structure recursively", function()
+                local SampleTree = Instance.new("Folder")
+                    local Test = Instance.new("Folder", SampleTree)
+                    Test.Name = "Test"
+                        local Test2 = Instance.new("Part", Test)
+                        Test2.Name = "Test2"
+
+                expect(
+                    Base:OfStructure({
+                        Test = TypeGuard.Instance("Folder"):OfStructure({
+                            Test2 = TypeGuard.Instance():OfStructure({
+                                Name = TypeGuard.String():Equals("Incorrect Name");
+                            });
+                            Name = TypeGuard.String():Equals("Test");
+                        });
+                        Name = TypeGuard.String():Equals("Folder");
+                    }):Check(Test)
+                ).to.equal(false)
+            end)
+
+            it("should accept Instances that match the structure recursively", function()
+                local SampleTree = Instance.new("Folder")
+                    local Test = Instance.new("Folder", SampleTree)
+                    Test.Name = "Test"
+                        local Test2 = Instance.new("Part", Test)
+                        Test2.Name = "Test2"
+
+                expect(
+                    Base:OfStructure({
+                        Test = TypeGuard.Instance("Folder"):OfStructure({
+                            Test2 = TypeGuard.Instance():OfStructure({
+                                Name = TypeGuard.String():Equals("Test2");
+                            });
+                            Name = TypeGuard.String():Equals("Test");
+                        });
+                        Name = TypeGuard.String():Equals("Folder");
+                    }):Check(Test)
+                ).to.equal(false)
+            end)
+        end)
+
+        describe("StructuralEquals (Strict + OfStructure)", function()
+            it("should reject extra flat children", function()
+                local SampleTree = Instance.new("Folder")
+                    local Test = Instance.new("Folder", SampleTree)
+                    Test.Name = "Test"
+                    local Test2 = Instance.new("Folder", SampleTree)
+                    Test2.Name = "Test2"
+
+                expect(
+                    Base:StructuralEquals({
+                        Test = TypeGuard.Instance("Folder");
+                    }):Check(SampleTree)
+                ).to.equal(false)
+
+                expect(
+                    Base:StructuralEquals({
+                        Test = TypeGuard.Instance("Folder");
+                        Test2 = TypeGuard.Instance("Folder");
+                    }):Check(SampleTree)
+                ).to.equal(true)
+            end)
+
+            it("should reject extra children recursively", function()
+                local SampleTree = Instance.new("Folder")
+                    local Test = Instance.new("Folder", SampleTree)
+                    Test.Name = "Test"
+                        local Test2 = Instance.new("Folder", Test)
+                        Test2.Name = "Test2"
+                        local Test22 = Instance.new("Folder", Test)
+                        Test22.Name = "Test22"
+
+                expect(
+                    Base:StructuralEquals({
+                        Test = TypeGuard.Instance("Folder"):StructuralEquals({
+                            Test2 = TypeGuard.Instance("Folder");
+                            -- No Test22, should reject
+                        });
+                    }):Check(SampleTree)
+                ).to.equal(false)
+
+                expect(
+                    Base:StructuralEquals({
+                        Test = TypeGuard.Instance("Folder"):StructuralEquals({
+                            Test2 = TypeGuard.Instance("Folder");
+                            Test22 = TypeGuard.Instance("Folder");
+                        });
+                    }):Check(SampleTree)
+                ).to.equal(true)
+            end)
+        end)
+    end)
+
+    describe("String", function()
+        local Base = TypeGuard.String()
+
+        describe("Init", function()
+            it("should accept a string", function()
+                expect(Base:Check("Test")).to.equal(true)
+            end)
+
+            it("should reject non-strings", function()
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check(nil)).to.equal(false)
+                expect(Base:Check({})).to.equal(false)
+            end)
+        end)
+
+        describe("MinLength", function()
+            it("should reject strings shorter than the specified length", function()
+                expect(Base:MinLength(5):Check("Test")).to.equal(false)
+            end)
+
+            it("should accept strings longer than the specified length", function()
+                expect(Base:MinLength(5):Check("Test123")).to.equal(true)
+            end)
+
+            it("should accept strings equal to the specified length", function()
+                expect(Base:MinLength(5):Check("12345")).to.equal(true)
+            end)
+        end)
+
+        describe("MaxLength", function()
+            it("should reject strings longer than the specified length", function()
+                expect(Base:MaxLength(5):Check("Test123")).to.equal(false)
+            end)
+
+            it("should accept strings shorter than the specified length", function()
+                expect(Base:MaxLength(5):Check("Test")).to.equal(true)
+            end)
+
+            it("should accept strings equal to the specified length", function()
+                expect(Base:MaxLength(5):Check("12345")).to.equal(true)
+            end)
+        end)
+
+        describe("Pattern", function()
+            it("should accept strings matching the specified pattern", function()
+                expect(Base:Pattern("[0-9]+"):Check("34789275")).to.equal(true)
+            end)
+
+            it("should reject strings not matching the specified pattern", function()
+                expect(Base:Pattern("[0-9]+"):Check("123h4")).to.equal(false)
+            end)
+        end)
+
+        describe("Contains", function()
+            it("should accept strings containing the specified substring", function()
+                expect(Base:Contains("Test"):Check("------Test123")).to.equal(true)
+            end)
+
+            it("should reject strings not containing the specified substring", function()
+                expect(Base:Contains("Test"):Check("asdfghjkl")).to.equal(false)
+            end)
+        end)
+    end)
+
+    describe("Array", function()
+        local Base = TypeGuard.Array()
+
+        describe("Init", function()
+            it("should accept an array", function()
+                expect(Base:Check({})).to.equal(true)
+                expect(Base:Check({1})).to.equal(true)
+                expect(Base:Check({1, 2})).to.equal(true)
+            end)
+
+            it("should reject non-arrays", function()
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check(nil)).to.equal(false)
+                expect(Base:Check({Test = true})).to.equal(false)
+            end)
+        end)
+
+        describe("OfLength", function()
+            it("should reject arrays shorter than the specified length", function()
+                expect(Base:OfLength(5):Check({1, 2, 3, 4})).to.equal(false)
+            end)
+
+            it("should accept arrays longer than the specified length", function()
+                expect(Base:OfLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+            end)
+
+            it("should reject arrays greater than the specified length", function()
+                expect(Base:OfLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+            end)
+        end)
+
+        describe("MinLength", function()
+            it("should reject arrays shorter than the specified length", function()
+                expect(Base:MinLength(5):Check({1, 2, 3, 4})).to.equal(false)
+            end)
+
+            it("should accept arrays equal to the specified length", function()
+                expect(Base:MinLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+            end)
+
+            it("should accept arrays longer than the specified length", function()
+                expect(Base:MinLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
+            end)
+        end)
+
+        describe("MaxLength", function()
+            it("should reject arrays longer than the specified length", function()
+                expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+            end)
+
+            it("should accept arrays equal to the specified length", function()
+                expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+            end)
+
+            it("should accept arrays shorter than the specified length", function()
+                expect(Base:MaxLength(5):Check({1, 2, 3, 4})).to.equal(true)
+            end)
+        end)
+
+        describe("Contains", function()
+            it("should accept arrays containing the specified element", function()
+                expect(Base:Contains(1):Check({1, 2, 3, 4})).to.equal(true)
+            end)
+
+            it("should reject arrays not containing the specified element", function()
+                expect(Base:Contains(1):Check({2, 3, 4})).to.equal(false)
+            end)
+        end)
+
+        describe("OfType", function()
+            it("should accept arrays containing only the specified type", function()
+                expect(Base:OfType(TypeGuard.Number()):Check({1, 2, 3, 4})).to.equal(true)
+            end)
+
+            it("should reject arrays containing elements of other types", function()
+                expect(Base:OfType(TypeGuard.Number()):Check({1, "Test", 3, 4})).to.equal(false)
+            end)
+        end)
+
+        describe("OfStructure", function()
+            it("should throw for non type checkers inside the template array", function()
+                expect(function()
+                    Base:OfStructure({1})
+                end).to.throw()
+
+                expect(function()
+                    Base:OfStructure({function() end})
+                end).to.throw()
+
+                expect(function()
+                    Base:OfStructure({{}})
+                end).to.throw()
+            end)
+
+            it("should not throw for type checkers inside the template array", function()
+                expect(function()
+                    Base:OfStructure({TypeGuard.Number()})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:OfStructure({TypeGuard.String()})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:OfStructure({TypeGuard.Array()})
+                end).never.to.throw()
+            end)
+
+            it("should accept arrays with additional contents", function()
+                expect(Base:OfStructure({TypeGuard.Number(), TypeGuard.Number()}):Check({1, 2, 3})).to.equal(true)
+            end)
+
+            it("should accept an array of a correct type (numerical)", function()
+                expect(Base:OfStructure({
+                    TypeGuard.Number(), TypeGuard.Number(),
+                    TypeGuard.Number(), TypeGuard.Number()
+                }):Check({1, 2, 3, 4})).to.equal(true)
+            end)
+
+            it("should reject an array of a incorrect type (numerical)", function()
+                expect(Base:OfStructure({
+                    TypeGuard.Number(), TypeGuard.Number(),
+                    TypeGuard.Number(), TypeGuard.Number()
+                }):Check({1, 2, "Test", 4})).to.equal(false)
+            end)
+
+            it("should check recursively", function()
+                expect(Base:OfStructure({
+                    [1] = Base:OfStructure({TypeGuard.String()});
+                    [2] = Base:OfStructure({TypeGuard.Boolean()});
+                }):Check({ {"Test"}, {true} })).to.equal(true)
+            end)
+        end)
+
+        describe("StructuralEquals (Strict + OfStructure)", function()
+            it("should reject arrays with additional contents", function()
+                local Checker = Base:StructuralEquals({TypeGuard.Number(), TypeGuard.Number()})
+                expect(Checker:Check({1, 2})).to.equal(true)
+                expect(Checker:Check({1, 2, 3})).to.equal(false)
+            end)
+        end)
+    end)
+
+    describe("Nil", function()
+        describe("Init", function()
+            it("should accept nil", function()
+                expect(TypeGuard.Nil():Check(nil)).to.equal(true)
+            end)
+
+            it("should reject non-nil", function()
+                expect(TypeGuard.Nil():Check(1)).to.equal(false)
+                expect(TypeGuard.Nil():Check(function() end)).to.equal(false)
+                expect(TypeGuard.Nil():Check({})).to.equal(false)
+                expect(TypeGuard.Nil():Check(false)).to.equal(false)
+            end)
+        end)
+    end)
+
+    describe("Enum", function()
+        describe("Init", function()
+            it("should throw given non-EnumItem, non-Enum values", function()
+                expect(function()
+                    TypeGuard.Enum(1)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Enum(function() end)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Enum({})
+                end).to.throw()
+            end)
+
+            it("should not throw given EnumItem or Enum values", function()
+                expect(function()
+                    TypeGuard.Enum(Enum.AccessoryType)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Enum(Enum.AccessoryType.Shirt)
+                end).never.to.throw()
+            end)
+        end)
+
+        describe("IsA", function()
+            it("should accept an Enum item if the respective EnumItem is a sub-item", function()
+                expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AccessoryType.Shirt)).to.equal(true)
+            end)
+
+            it("should reject EnumItems which are not part of the Enum class", function()
+                expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AlphaMode.Overlay)).to.equal(false)
+            end)
+
+            it("should accept EnumItems which are equal", function()
+                expect(TypeGuard.Enum(Enum.AccessoryType.Face):Check(Enum.AccessoryType.Face)).to.equal(true)
+            end)
+        end)
+    end)
+
+    describe("Thread", function()
+        local Base = TypeGuard.Thread()
+
+        describe("Init", function()
+            it("should reject non-thread values", function()
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check({})).to.equal(false)
+            end)
+
+            it("should accept thread values", function()
+                expect(Base:Check(coroutine.create(function() end))).to.equal(true)
+            end)
+        end)
+
+        describe("HasStatus", function()
+            it("should accept running threads given 'running'", function()
+                local Thread = coroutine.running()
+
+                expect(Base:HasStatus("suspended"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("running"):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+            end)
+
+            it("should accept suspended threads given 'suspended'", function()
+                local Thread = task.spawn(function()
+                    task.wait(1)
+                end)
+
+                expect(Base:HasStatus("suspended"):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+            end)
+
+            it("should accept threads given 'dead'", function()
+                local Thread = task.spawn(function() end)
+
+                expect(Base:HasStatus("suspended"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus("dead"):Check(Thread)).to.equal(true)
+            end)
+
+            it("should accept threads given 'normal'", function()
+                local DidRun = false
+                local TestCoroutine = coroutine.create(function(Callback)
+                    Callback()
+                end)
+
+                task.spawn(function()
+                    local Thread = coroutine.running()
+
+                    task.spawn(TestCoroutine, function()
+                        expect(Base:HasStatus("suspended"):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus("normal"):Check(Thread)).to.equal(true)
+                        expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+                        DidRun = true
+                    end)
+                end)
+
+                expect(DidRun).to.equal(true)
+            end)
+        end)
+    end)
+
+    describe("Object", function()
+        local Base = TypeGuard.Object()
+
+        describe("Init", function()
+            it("should reject non-object values", function()
+                expect(Base:Check(1)).to.equal(false)
+                expect(Base:Check(function() end)).to.equal(false)
+                expect(Base:Check({1})).to.equal(false)
+            end)
+
+            it("should accept object values", function()
+                expect(Base:Check({})).to.equal(true)
+                expect(Base:Check({Test = 123})).to.equal(true)
+                expect(Base:Check({Test = false})).to.equal(true)
+            end)
+        end)
+
+        describe("OfValueType", function()
+            it("should accept an object with the given value type", function()
+                expect(Base:OfValueType(TypeGuard.Number()):Check({Test = 123})).to.equal(true)
+                expect(Base:OfValueType(TypeGuard.Number()):Check({Test = 123, Another = 987})).to.equal(true)
+            end)
+
+            it("should reject an object with a different value type", function()
+                expect(Base:OfValueType(TypeGuard.Number()):Check({Test1 = 123, Test2 = "123"})).to.equal(false)
+                expect(Base:OfValueType(TypeGuard.Number()):Check({Test = "123", Another = "987"})).to.equal(false)
+            end)
+        end)
+
+        describe("OfKeyType", function()
+            it("should accept an object with the given key type", function()
+                expect(Base:OfKeyType(TypeGuard.String()):Check({Test = 123})).to.equal(true)
+                expect(Base:OfKeyType(TypeGuard.String()):Check({Test = 123, Another = 987})).to.equal(true)
+            end)
+
+            it("should reject an object with a different key type", function()
+                expect(Base:OfKeyType(TypeGuard.String()):Check({[{}] = true})).to.equal(false)
+                expect(Base:OfKeyType(TypeGuard.String()):Check({[Instance.new("Part")] = true})).to.equal(false)
+            end)
+        end)
+
+        describe("OfStructure", function()
+            it("should accept an object with the given structure", function()
+                expect(Base:OfStructure({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = true})).to.equal(true)
+            end)
+
+            it("should reject an object with a different structure", function()
+                expect(Base:OfStructure({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = "true"})).to.equal(false)
+            end)
+
+            it("should accept additional fields when not in strict mode", function()
+                expect(Base:OfStructure({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = true, Test2 = "123"})).to.equal(true)
+            end)
+
+            it("should recurse given sub object TypeCheckers", function()
+                expect(Base:OfStructure({
+                    Test = TypeGuard.Object({
+                        Test = TypeGuard.Number(),
+                        Another = TypeGuard.Boolean()
+                    })
+                }):Check({Test = {Test = 123, Another = true}})).to.equal(true)
+            end)
+        end)
+
+        describe("StructuralEquals (OfStructure + Strict)", function()
+            it("should accept an object with the given structure", function()
+                expect(Base:StructuralEquals({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = true})).to.equal(true)
+            end)
+
+            it("should reject an object with a different structure", function()
+                expect(Base:StructuralEquals({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = "true"})).to.equal(false)
+            end)
+
+            it("should reject additional fields when not in strict mode", function()
+                expect(Base:StructuralEquals({
+                    Test = TypeGuard.Number(),
+                    Another = TypeGuard.Boolean()
+                }):Check({Test = 123, Another = true, Test2 = "123"})).to.equal(false)
+            end)
+
+            it("should recurse given sub object TypeCheckers but not enforce strict recursively", function()
+                expect(Base:StructuralEquals({
+                    Test = TypeGuard.Object({
+                        Test = TypeGuard.Number(),
+                        Another = TypeGuard.Boolean()
+                    })
+                }):Check({Test = {Test = 123, Another = true, Final = {}}})).to.equal(true)
+            end)
+        end)
+    end)
+end]]></ProtectedString>
+					<int64 name="SourceAssetId">-1</int64>
+					<BinaryString name="Tags"></BinaryString>
+					<UniqueId name="UniqueId">1eccb021694683f202a5941b0002ca2d</UniqueId>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="TweenService" referent="RBXFE4CE50286004065A58B559F8E71A5D2">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">TweenService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f76c</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="MaterialService" referent="RBX839FE6FD9C4F490C80ABDA55BA0EAB8E">
+		<Properties>
+			<string name="AsphaltName">Asphalt</string>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="BasaltName">Basalt</string>
+			<Ref name="Brick">null</Ref>
+			<string name="BrickName">Brick</string>
+			<Ref name="Cobblestone">null</Ref>
+			<string name="CobblestoneName">Cobblestone</string>
+			<Ref name="Concrete">null</Ref>
+			<string name="ConcreteName">Concrete</string>
+			<Ref name="CorrodedMetal">null</Ref>
+			<string name="CorrodedMetalName">CorrodedMetal</string>
+			<string name="CrackedLavaName">CrackedLava</string>
+			<Ref name="DiamondPlate">null</Ref>
+			<string name="DiamondPlateName">DiamondPlate</string>
+			<Ref name="Fabric">null</Ref>
+			<string name="FabricName">Fabric</string>
+			<Ref name="Foil">null</Ref>
+			<string name="FoilName">Foil</string>
+			<string name="GlacierName">Glacier</string>
+			<Ref name="Granite">null</Ref>
+			<string name="GraniteName">Granite</string>
+			<Ref name="Grass">null</Ref>
+			<string name="GrassName">Grass</string>
+			<string name="GroundName">Ground</string>
+			<Ref name="Ice">null</Ref>
+			<string name="IceName">Ice</string>
+			<string name="LeafyGrassName">LeafyGrass</string>
+			<string name="LimestoneName">Limestone</string>
+			<Ref name="Marble">null</Ref>
+			<string name="MarbleName">Marble</string>
+			<Ref name="Metal">null</Ref>
+			<string name="MetalName">Metal</string>
+			<string name="MudName">Mud</string>
+			<string name="Name">MaterialService</string>
+			<string name="PavementName">Pavement</string>
+			<Ref name="Pebble">null</Ref>
+			<string name="PebbleName">Pebble</string>
+			<Ref name="Plastic">null</Ref>
+			<string name="PlasticName">Plastic</string>
+			<string name="RockName">Rock</string>
+			<string name="SaltName">Salt</string>
+			<Ref name="Sand">null</Ref>
+			<string name="SandName">Sand</string>
+			<string name="SandstoneName">Sandstone</string>
+			<Ref name="Slate">null</Ref>
+			<string name="SlateName">Slate</string>
+			<Ref name="SmoothPlastic">null</Ref>
+			<string name="SmoothPlasticName">SmoothPlastic</string>
+			<string name="SnowName">Snow</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<Ref name="TerrainAsphalt">null</Ref>
+			<Ref name="TerrainBasalt">null</Ref>
+			<Ref name="TerrainBrick">null</Ref>
+			<Ref name="TerrainCobblestone">null</Ref>
+			<Ref name="TerrainConcrete">null</Ref>
+			<Ref name="TerrainCrackedLava">null</Ref>
+			<Ref name="TerrainGlacier">null</Ref>
+			<Ref name="TerrainGrass">null</Ref>
+			<Ref name="TerrainGround">null</Ref>
+			<Ref name="TerrainIce">null</Ref>
+			<Ref name="TerrainLeafyGrass">null</Ref>
+			<Ref name="TerrainLimestone">null</Ref>
+			<Ref name="TerrainMud">null</Ref>
+			<Ref name="TerrainPavement">null</Ref>
+			<Ref name="TerrainRock">null</Ref>
+			<Ref name="TerrainSalt">null</Ref>
+			<Ref name="TerrainSand">null</Ref>
+			<Ref name="TerrainSandstone">null</Ref>
+			<Ref name="TerrainSlate">null</Ref>
+			<Ref name="TerrainSnow">null</Ref>
+			<Ref name="TerrainWoodPlanks">null</Ref>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f76d</UniqueId>
+			<bool name="Use2022MaterialsXml">false</bool>
+			<Ref name="Wood">null</Ref>
+			<string name="WoodName">Wood</string>
+			<Ref name="WoodPlanks">null</Ref>
+			<string name="WoodPlanksName">WoodPlanks</string>
+		</Properties>
+	</Item>
+	<Item class="TextChatService" referent="RBXA586805CC56542D883E9AB19154C0EA7">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<token name="ChatVersion">0</token>
+			<bool name="CreateDefaultCommands">true</bool>
+			<bool name="CreateDefaultTextChannels">true</bool>
+			<string name="Name">TextChatService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f76e</UniqueId>
+		</Properties>
+		<Item class="ChatWindowConfiguration" referent="RBXBD0B6961F3554770946180F9A7286905">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<bool name="Enabled">true</bool>
+				<string name="Name">ChatWindowConfiguration</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f814</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ChatInputBarConfiguration" referent="RBX54A13FD696B043919818B346CD62C299">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<bool name="Enabled">true</bool>
+				<string name="Name">ChatInputBarConfiguration</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<Ref name="TargetTextChannel">null</Ref>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f815</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="PermissionsService" referent="RBX2D7532AEBC8A48569848129C7A986868">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">PermissionsService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f772</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="PlayerEmulatorService" referent="RBX6468A1E5080B4D04B14582E8A6BBEB75">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="CustomPoliciesEnabled">false</bool>
+			<string name="EmulatedCountryCode"></string>
+			<string name="EmulatedGameLocale"></string>
+			<string name="Name">PlayerEmulatorService</string>
+			<bool name="PlayerEmulationEnabled">false</bool>
+			<BinaryString name="SerializedEmulatedPolicyInfo"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f774</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StudioData" referent="RBX309CB5B79E0C47C39E366F742F0F1DE3">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<int64 name="CommitInflightAuthorId">0</int64>
+			<string name="CommitInflightGuid"></string>
+			<int name="CommitInflightPlaceVersion">0</int>
+			<bool name="EnableScriptCollabByDefaultOnLoad">false</bool>
+			<string name="Name">StudioData</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<int64 name="SrcPlaceId">0</int64>
+			<int64 name="SrcUniverseId">0</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f776</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StarterPlayer" referent="RBXE8F28444ACEF43DE82C690EA7D229B82">
+		<Properties>
+			<bool name="AllowCustomAnimations">true</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="AutoJumpEnabled">true</bool>
+			<float name="CameraMaxZoomDistance">400</float>
+			<float name="CameraMinZoomDistance">0.5</float>
+			<token name="CameraMode">0</token>
+			<float name="CharacterJumpHeight">7.19999981</float>
+			<float name="CharacterJumpPower">50</float>
+			<float name="CharacterMaxSlopeAngle">89</float>
+			<bool name="CharacterUseJumpPower">true</bool>
+			<float name="CharacterWalkSpeed">16</float>
+			<token name="DevCameraOcclusionMode">0</token>
+			<token name="DevComputerCameraMovementMode">0</token>
+			<token name="DevComputerMovementMode">0</token>
+			<token name="DevTouchCameraMovementMode">0</token>
+			<token name="DevTouchMovementMode">0</token>
+			<bool name="EnableMouseLockOption">true</bool>
+			<int64 name="GameSettingsAssetIDFace">0</int64>
+			<int64 name="GameSettingsAssetIDHead">0</int64>
+			<int64 name="GameSettingsAssetIDLeftArm">0</int64>
+			<int64 name="GameSettingsAssetIDLeftLeg">0</int64>
+			<int64 name="GameSettingsAssetIDPants">0</int64>
+			<int64 name="GameSettingsAssetIDRightArm">0</int64>
+			<int64 name="GameSettingsAssetIDRightLeg">0</int64>
+			<int64 name="GameSettingsAssetIDShirt">0</int64>
+			<int64 name="GameSettingsAssetIDTeeShirt">0</int64>
+			<int64 name="GameSettingsAssetIDTorso">0</int64>
+			<token name="GameSettingsAvatar">1</token>
+			<token name="GameSettingsR15Collision">0</token>
+			<NumberRange name="GameSettingsScaleRangeBodyType">0 1 </NumberRange>
+			<NumberRange name="GameSettingsScaleRangeHead">0.95 1 </NumberRange>
+			<NumberRange name="GameSettingsScaleRangeHeight">0.9 1.05 </NumberRange>
+			<NumberRange name="GameSettingsScaleRangeProportion">0 1 </NumberRange>
+			<NumberRange name="GameSettingsScaleRangeWidth">0.7 1 </NumberRange>
+			<float name="HealthDisplayDistance">100</float>
+			<bool name="LoadCharacterAppearance">true</bool>
+			<token name="LoadCharacterLayeredClothing">0</token>
+			<string name="Name">StarterPlayer</string>
+			<float name="NameDisplayDistance">100</float>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f777</UniqueId>
+			<bool name="UserEmotesEnabled">true</bool>
+		</Properties>
+		<Item class="StarterPlayerScripts" referent="RBX46BCB375470C494C95DA8C35AC7E0DED">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<string name="Name">StarterPlayerScripts</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f812</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="StarterCharacterScripts" referent="RBX2D1560C4EAB043A6B5DC2C46296487E3">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<string name="Name">StarterCharacterScripts</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f813</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="StarterPack" referent="RBX39B80323EEFC43B3B90ECA43D8590CF9">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">StarterPack</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f778</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StarterGui" referent="RBXBBA0ABAAAC5448E495DF29D89055D4D6">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">StarterGui</string>
+			<bool name="ResetPlayerGuiOnSpawn">true</bool>
+			<token name="ScreenOrientation">2</token>
+			<bool name="ShowDevelopmentGui">true</bool>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f779</UniqueId>
+			<token name="VirtualCursorMode">0</token>
+		</Properties>
+	</Item>
+	<Item class="LocalizationService" referent="RBXF89E7DA8E8E740FCA9A430DB5D95CA14">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">LocalizationService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f77b</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TeleportService" referent="RBXCBCCF907EA384B2FA975C45B76A02E82">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Teleport Service</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f77f</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CollectionService" referent="RBX0CD593E2A8034C82967ECF62450C2598">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">CollectionService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f781</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="PhysicsService" referent="RBXE7B4CA8426DB4B21B4601E2861476D1E">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">PhysicsService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f782</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Geometry" referent="RBX436F22B0910C4D0D98D293E7FE2B5F04">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Geometry</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f784</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="InsertService" referent="RBX77F2F305F6844A0C9B3CE45D1FF57041">
+		<Properties>
+			<bool name="AllowClientInsertModels">false</bool>
+			<bool name="AllowInsertFreeModels">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">InsertService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f786</UniqueId>
+		</Properties>
+		<Item class="StringValue" referent="RBX3DEC76F2BE804EFA99556EB97DD597D4">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<string name="Name">InsertionHash</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+				<UniqueId name="UniqueId">1eccb021694683f202a5941b0002ca7a</UniqueId>
+				<string name="Value">{042F8A92-0450-4FD7-BC5F-EC8CB9582199}</string>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="GamePassService" referent="RBX4387697A03744E38B54E8B91A6ACF082">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">GamePassService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f787</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Debris" referent="RBX5E89A1CCD3614E60A5C2A3D78D0AA7B5">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<int name="MaxItems">1000</int>
+			<string name="Name">Debris</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f788</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CookiesService" referent="RBXD2AE6E63255345CFAF481381BA9EF182">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">CookiesService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f789</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="VRService" referent="RBX065A31BEBFD44EFF87311D91A0360306">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">VRService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f793</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ContextActionService" referent="RBXB1C7ACD901E3468F947A205389810DCA">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">ContextActionService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f795</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ScriptService" referent="RBX0BA41F4C140348769655846D95EDC83F">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Instance</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f797</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="AssetService" referent="RBX9CB1109D21374F3A9F3E7DA7C6CD4313">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">AssetService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f798</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TouchInputService" referent="RBX1CC50CDB36D540E89F950B4147620AC9">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">TouchInputService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f799</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="AnalyticsService" referent="RBXCE78BACE53444389909A37DFB06B936C">
+		<Properties>
+			<string name="ApiKey"></string>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">AnalyticsService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f79c</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Selection" referent="RBXA60FBE93CF5246839042DEBEE0CE88C1">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Selection</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f79f</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ServerScriptService" referent="RBXE2C5127FD5554230B6DF1DEFB26AA107">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="LoadStringEnabled">false</bool>
+			<string name="Name">ServerScriptService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7a1</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ServerStorage" referent="RBX266981CDAB0A45E99B3FDA4CE4012016">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">ServerStorage</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7a2</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ReplicatedStorage" referent="RBXC7D8D20C059A4774BED8D4A871BE5626">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">ReplicatedStorage</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7a3</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="LuaWebService" referent="RBX42381171782F424EBED8E259791EEF06">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Instance</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7af</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ProcessInstancePhysicsService" referent="RBX996014756EA24A18B080631267E8B51D">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">ProcessInstancePhysicsService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7b2</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Lighting" referent="RBX381D1CCA34814D578BED952695587F5A">
+		<Properties>
+			<Color3 name="Ambient">
+				<R>0.5</R>
+				<G>0.5</G>
+				<B>0.5</B>
+			</Color3>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<float name="Brightness">1</float>
+			<Color3 name="ColorShift_Bottom">
+				<R>0</R>
+				<G>0</G>
+				<B>0</B>
+			</Color3>
+			<Color3 name="ColorShift_Top">
+				<R>0</R>
+				<G>0</G>
+				<B>0</B>
+			</Color3>
+			<float name="EnvironmentDiffuseScale">0</float>
+			<float name="EnvironmentSpecularScale">0</float>
+			<float name="ExposureCompensation">0</float>
+			<Color3 name="FogColor">
+				<R>0.75</R>
+				<G>0.75</G>
+				<B>0.75</B>
+			</Color3>
+			<float name="FogEnd">100000</float>
+			<float name="FogStart">0</float>
+			<float name="GeographicLatitude">41.7332993</float>
+			<bool name="GlobalShadows">false</bool>
+			<string name="Name">Lighting</string>
+			<Color3 name="OutdoorAmbient">
+				<R>0.5</R>
+				<G>0.5</G>
+				<B>0.5</B>
+			</Color3>
+			<bool name="Outlines">true</bool>
+			<float name="ShadowSoftness">0.5</float>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<token name="Technology">2</token>
+			<string name="TimeOfDay">14:00:00</string>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7de</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="LodDataService" referent="RBXF2BAA5DEE8894A748F934D38D38B8586">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Instance</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0001f7e1</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="HttpService" referent="RBX92792015D25745DF85CBD0C60B6F71F0">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="HttpEnabled">false</bool>
+			<string name="Name">HttpService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b00024bb2</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Teams" referent="RBX85AD302E14AD4B26AE363E75536CD120">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">Teams</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0002afbc</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="VirtualInputManager" referent="RBX83AC9E2937C64127A769C59C64C1615A">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">VirtualInputManager</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0002afda</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="LanguageService" referent="RBX281857CA2F924D44950426752A453C53">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<string name="Name">LanguageService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0002b231</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ProximityPromptService" referent="RBX01496C37C0AB479987A6D465218E3D0D">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="Enabled">true</bool>
+			<int name="MaxPromptsVisible">16</int>
+			<string name="Name">ProximityPromptService</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0002b362</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TestService" referent="RBXF34A46BE53734459BA649F5F6AB26C33">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<bool name="AutoRuns">true</bool>
+			<string name="Description"></string>
+			<bool name="ExecuteWithStudioRun">false</bool>
+			<bool name="Is30FpsThrottleEnabled">true</bool>
+			<bool name="IsPhysicsEnvironmentalThrottled">true</bool>
+			<bool name="IsSleepAllowed">true</bool>
+			<string name="Name">TestService</string>
+			<int name="NumberOfPlayers">0</int>
+			<double name="SimulateSecondsLag">0</double>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+			<double name="Timeout">10</double>
+			<UniqueId name="UniqueId">1eccb021694683f202a5941b0002c333</UniqueId>
+		</Properties>
+	</Item>
+	<SharedStrings>
+		<SharedString md5="yuZpQdnvvUBOTYh1jqZ2cA=="></SharedString>
+	</SharedStrings>
 </roblox>
