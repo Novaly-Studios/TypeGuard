@@ -93,8 +93,9 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
 
 -- EXTRA FUN
     local Predicate = TypeGuard.Instance("Model"):OfStructure({
-        Humanoid = TypeGuard.Instance("Humanoid")
-                    :CheckProperty("Health", TypeGuard.Number():GreaterThan(0));
+        Humanoid = TypeGuard.Instance("Humanoid"):OfStructure({ -- Can scan children recursively
+            Health = TypeGuard.Number():GreaterThan(0); -- Also can scan properties
+        });
     }):WrapCheck()
 
     local AliveHumanoids = TableUtil.Array.Filter1D(Workspace:GetChildren(), Predicate)
