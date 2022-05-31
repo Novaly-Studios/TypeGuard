@@ -753,6 +753,19 @@ return function()
                 expect(Test:Check(Instance.new("Model"))).to.equal(true)
                 expect(Test:Check(Instance.new("Part"))).to.equal(false)
             end)
+
+            it("should use the IsA constraint + the OfStructure constraint if two values are passed", function()
+                local Test = TypeGuard.Instance("Model", {
+                    Name = TypeGuard.String():Equals("TestName");
+                })
+
+                expect(Test:Check(Instance.new("Model"))).to.equal(false)
+
+                local Sample = Instance.new("Model")
+                Sample.Name = "TestName"
+
+                expect(Test:Check(Sample)).to.equal(true)
+            end)
         end)
 
         describe("IsA", function()

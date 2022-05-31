@@ -75,9 +75,9 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     }) -- Fail (strict check, unexpected field in W: H)
 
     -- 3: Check the structure of Workspace on a blank baseplate game
-    local Test = TypeGuard.Instance("Workspace"):OfStructure({
+    local Test = TypeGuard.Instance("Workspace", {
         Camera = TypeGuard.Instance("Camera");
-        Baseplate = TypeGuard.Instance("BasePart"):OfStructure({
+        Baseplate = TypeGuard.Instance("BasePart", {
             Texture = TypeGuard.Instance("Texture");
         });
         SpawnLocation = TypeGuard.Instance("BasePart");

@@ -17,7 +17,7 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true, EMPTY_STRING
         end
 
-        return false, "Expected" .. ExpectedTypeName .. ", got " .. ItemType
+        return false, "Expected " .. ExpectedTypeName .. ", got " .. ItemType
     end
 end
 
@@ -341,8 +341,8 @@ function TypeGuard.Template(Name: string)
     end
 
     --- Throws an error if the check is unsatisfied
-    function TemplateClass:Assert(...)
-        assert(self:Check(...))
+    function TemplateClass:Assert(Value)
+        assert(self:Check(Value))
     end
 
     function TemplateClass:__tostring()
@@ -977,7 +977,7 @@ do
         return nil
     end
 
-    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     --- Ensures that an Instance has specific children (this is not for properties)
