@@ -81,27 +81,27 @@
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>4.88433933</X>
-					<Y>19.694294</Y>
-					<Z>19.7644558</Z>
-					<R00>0.981099486</R00>
-					<R01>-0.119033337</R01>
-					<R02>0.152561113</R02>
-					<R10>-0</R10>
-					<R11>0.788412988</R11>
-					<R12>0.615146339</R12>
-					<R20>-0.193504095</R20>
-					<R21>-0.603519738</R21>
-					<R22>0.773511529</R22>
+					<X>27.6142292</X>
+					<Y>9.98359013</Y>
+					<Z>-9.60163689</Z>
+					<R00>0.15711914</R00>
+					<R01>-0.161117867</R01>
+					<R02>0.974348307</R02>
+					<R10>1.86264537e-09</R10>
+					<R11>0.986602306</R11>
+					<R12>0.163144156</R12>
+					<R20>-0.987579763</R20>
+					<R21>-0.0256330669</R21>
+					<R22>0.155014068</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
 				<float name="FieldOfView">70</float>
 				<token name="FieldOfViewMode">0</token>
 				<CoordinateFrame name="Focus">
-					<X>0</X>
-					<Y>0</Y>
-					<Z>-5</Z>
+					<X>25.6655331</X>
+					<Y>9.6573019</Y>
+					<Z>-9.91166496</Z>
 					<R00>1</R00>
 					<R01>0</R01>
 					<R02>0</R02>
@@ -302,12 +302,12 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<BinaryString name="Tags"></BinaryString>
 			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76a</UniqueId>
 		</Properties>
-		<Item class="ModuleScript" referent="1">
+		<Item class="ModuleScript" referent="RBX420716EF9DB54A6BB3B0C2FBA2B55E42">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<Content name="LinkedSource"><null></null></Content>
 				<string name="Name">TypeGuard</string>
-				<string name="ScriptGuid">{E9F89FC0-8389-4957-A462-AC07D6514C8E}</string>
+				<string name="ScriptGuid">{5620E735-00B8-4812-A230-34EABB0E3339}</string>
 				<ProtectedString name="Source"><![CDATA[-- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
@@ -327,7 +327,7 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true, EMPTY_STRING
         end
 
-        return false, "Expected" .. ExpectedTypeName .. ", got " .. ItemType
+        return false, "Expected " .. ExpectedTypeName .. ", got " .. ItemType
     end
 end
 
@@ -651,8 +651,8 @@ function TypeGuard.Template(Name: string)
     end
 
     --- Throws an error if the check is unsatisfied
-    function TemplateClass:Assert(...)
-        assert(self:Check(...))
+    function TemplateClass:Assert(Value)
+        assert(self:Check(Value))
     end
 
     function TemplateClass:__tostring()
@@ -1287,7 +1287,7 @@ do
         return nil
     end
 
-    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     --- Ensures that an Instance has specific children (this is not for properties)
@@ -1599,14 +1599,14 @@ end
 return TypeGuard]]></ProtectedString>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f80f</UniqueId>
+				<UniqueId name="UniqueId">24e5d31798239fa602a7e8f60002c4d0</UniqueId>
 			</Properties>
-			<Item class="ModuleScript" referent="2">
+			<Item class="ModuleScript" referent="RBX2F5D534847024A00A3613BF718D2DFC4">
 				<Properties>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<Content name="LinkedSource"><null></null></Content>
 					<string name="Name">TypeGuard.spec</string>
-					<string name="ScriptGuid">{3BF47D07-2FC8-4358-8D25-009C8834E45D}</string>
+					<string name="ScriptGuid">{587EE706-05D2-4A5D-963D-A2193CCA31DF}</string>
 					<ProtectedString name="Source"><![CDATA[return function()
     local TypeGuard = require(script.Parent)
 
@@ -2362,6 +2362,19 @@ return TypeGuard]]></ProtectedString>
                 expect(Test:Check(Instance.new("Model"))).to.equal(true)
                 expect(Test:Check(Instance.new("Part"))).to.equal(false)
             end)
+
+            it("should use the IsA constraint + the OfStructure constraint if two values are passed", function()
+                local Test = TypeGuard.Instance("Model", {
+                    Name = TypeGuard.String():Equals("TestName");
+                })
+
+                expect(Test:Check(Instance.new("Model"))).to.equal(false)
+
+                local Sample = Instance.new("Model")
+                Sample.Name = "TestName"
+
+                expect(Test:Check(Sample)).to.equal(true)
+            end)
         end)
 
         describe("IsA", function()
@@ -2967,7 +2980,7 @@ return TypeGuard]]></ProtectedString>
 end]]></ProtectedString>
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
-					<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f810</UniqueId>
+					<UniqueId name="UniqueId">24e5d31798239fa602a7e8f60002c4d1</UniqueId>
 				</Properties>
 			</Item>
 		</Item>
