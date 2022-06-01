@@ -30,7 +30,7 @@ return function()
             local TestCreate, TestClass = TypeGuard.Template("Test")
             expect(TestCreate).to.be.a("function")
             expect(TestClass).to.be.a("table")
-            expect(TestClass._IsTemplate).to.equal(true)
+            expect(TestClass.IsTemplate).to.equal(true)
         end)
     end)
 
@@ -344,6 +344,12 @@ return function()
                 end).never.to.throw()
             end)
 
+            it("should accept function args", function()
+                expect(function()
+                    TypeGuard.Number():Or(function() end)
+                end).never.to.throw()
+            end)
+
             it("should accept inputs if they satisfy a TypeChecker in the or chain", function()
                 local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
                 expect(Check:Check(1)).to.equal(true)
@@ -355,6 +361,55 @@ return function()
                 local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
                 expect(Check:Check("Test")).to.equal(false)
                 expect(Check:Check({})).to.equal(false)
+            end)
+
+            it("should accept functional inputs if they return a TypeChecker which satisfies the or chain", function()
+                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(true)).to.equal(true)
+                expect(Check:Check(false)).to.equal(true)
+            end)
+
+            it("should reject functional inputs if they return a TypeChecker which does not satisfy the or chain", function()
+                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
+                expect(Check:Check("Test")).to.equal(false)
+                expect(Check:Check({})).to.equal(false)
+            end)
+
+            it("should allow self-references with functional or", function()
+                local CleanableChecker = TypeGuard.Array():OfType(
+                    TypeGuard.RBXScriptConnection()
+                    :Or(TypeGuard.Instance())
+                    :Or(TypeGuard.FindFirstParent("Array"))
+                )
+
+                expect(CleanableChecker:Check({
+                    [1] = Instance.new("Model");
+                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
+                    [3] = {
+                        [1] = Instance.new("Folder");
+                        [2] = Instance.new("Folder");
+                        [3] = Instance.new("Folder");
+                        [4] = {};
+                        [5] = {
+                            [1] = Instance.new("Folder");
+                        };
+                    };
+                })).to.equal(true)
+
+                expect(CleanableChecker:Check({
+                    [1] = Instance.new("Model");
+                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
+                    [3] = {
+                        [1] = Instance.new("Folder");
+                        [2] = Instance.new("Folder");
+                        [3] = Instance.new("Folder");
+                        [4] = {};
+                        [5] = {
+                            [1] = 1;
+                        };
+                    };
+                })).to.equal(false)
             end)
         end)
         describe("And", function()

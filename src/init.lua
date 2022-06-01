@@ -145,14 +145,38 @@ type TypeChecker<T> = {
 
 local TypeGuard = {}
 
+function TypeGuard.FindFirstParent(TypeName: string)
+    local Found = nil
+
+    return function(self)
+        if (Found) then
+            return Found
+        end
+
+        while (true) do
+            self = self.LastParent
+
+            if (self == nil) then
+                error("No parent found for type " .. TypeName)
+            end
+
+            if (self.Type == TypeName) then
+                Found = self
+                return Found
+            end
+        end
+    end
+end
+
 function TypeGuard.Template(Name: string)
     ExpectType(Name, "string", 1)
 
     local TemplateClass = {}
     TemplateClass.__index = TemplateClass
-    TemplateClass._IsTemplate = true
+    TemplateClass._InitialConstraints = nil
     TemplateClass._InitialConstraint = nil
-    TemplateClass._Type = Name
+    TemplateClass.IsTemplate = true
+    TemplateClass.Type = Name
 
     function TemplateClass.new(...)
         local self = {
@@ -160,6 +184,8 @@ function TypeGuard.Template(Name: string)
             _Disjunction = {};
             _Conjunction = {};
             _ActiveConstraints = {};
+
+            LastParent = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -187,7 +213,7 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
-    function TemplateClass:_Copy()
+    function TemplateClass:Copy()
         local New = TemplateClass.new()
 
         -- Copy tags
@@ -210,6 +236,8 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
+        New.LastParent = self.Parent
+
         return New
     end
 
@@ -218,11 +246,20 @@ function TypeGuard.Template(Name: string)
         ExpectType(ConstraintName, "string", 1)
         ExpectType(Constraint, "function", 2)
 
-        self = self:_Copy()
+        self = self:Copy()
+
+        local Args = {...}
+
+        -- Establish parent reference in the children
+        for _, Value in ipairs(Args) do
+            if (typeof(Value) == "table" and Value.IsTemplate) then
+                Value.LastParent = self
+            end
+        end
 
         local ActiveConstraints = self._ActiveConstraints
         assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
-        ActiveConstraints[ConstraintName] = {Constraint, {...}}
+        ActiveConstraints[ConstraintName] = {Constraint, Args}
         return self
     end
 
@@ -233,9 +270,12 @@ function TypeGuard.Template(Name: string)
 
     --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
     function TemplateClass:Or(OtherType)
-        TypeGuard._AssertIsTypeBase(OtherType, 1)
+        if (typeof(OtherType) ~= "function") then
+            TypeGuard._AssertIsTypeBase(OtherType, 1)
+            OtherType.LastParent = self.LastParent
+        end
 
-        self = self:_Copy()
+        self = self:Copy()
         table.insert(self._Disjunction, OtherType)
         return self
     end
@@ -243,8 +283,9 @@ function TypeGuard.Template(Name: string)
     --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
         TypeGuard._AssertIsTypeBase(OtherType, 1)
+        OtherType.LastParent = self.LastParent
 
-        self = self:_Copy()
+        self = self:Copy()
         table.insert(self._Conjunction, OtherType)
         return self
     end
@@ -253,7 +294,7 @@ function TypeGuard.Template(Name: string)
     function TemplateClass:Alias(AliasName)
         ExpectType(AliasName, "string", 1)
 
-        self = self:_Copy()
+        self = self:Copy()
         self._Alias = AliasName
         return self
     end
@@ -265,7 +306,7 @@ function TypeGuard.Template(Name: string)
 
         assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
 
-        self = self:_Copy()
+        self = self:Copy()
         self._Tags[TagName] = true
         return self
     end
@@ -292,7 +333,7 @@ function TypeGuard.Template(Name: string)
         local DidTryDisjunction = (Disjunctions[1] ~= nil)
 
         for _, AlternateType in ipairs(Disjunctions) do
-            local Success, _ = AlternateType:Check(Value)
+            local Success, _ = (typeof(AlternateType) == "function" and AlternateType(self) or AlternateType):Check(Value)
 
             if (Success) then
                 return true, EMPTY_STRING
@@ -397,7 +438,7 @@ function TypeGuard.Template(Name: string)
             table.insert(Fields, "Tags = {" .. ConcatWithToString(Tags, ", ") .. "}")
         end
 
-        return self._Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
+        return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
     end
 
     TemplateClass.Equals = Equals
@@ -430,7 +471,7 @@ end
 function TypeGuard._AssertIsTypeBase<T>(Subject: T, Position: number | string)
     ExpectType(Subject, "table", Position)
 
-    assert(Subject._IsTemplate, "Subject is not a type template")
+    assert(Subject.IsTemplate, "Subject is not a type template")
 end
 
 --- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
@@ -1094,12 +1135,7 @@ do
         assert(GotType == "Enum" or GotType == "EnumItem", INVALID_ARGUMENT:format("1", "Enum or EnumItem", GotType))
 
         return self:_AddConstraint("IsA", function(_, Value, TargetEnum)
-            local PassedType = typeof(Value)
             local TargetType = typeof(TargetEnum)
-
-            if (PassedType ~= "EnumItem" and PassedType ~= "Enum") then
-                return false, "Expected EnumItem, got " .. PassedType
-            end
 
             -- Both are EnumItems
             if (TargetType == "EnumItem") then
@@ -1228,6 +1264,9 @@ TypeGuard.Vector2 = TypeGuard.FromTypeName("Vector2")
 TypeGuard.Vector2int16 = TypeGuard.FromTypeName("Vector2int16")
 TypeGuard.Vector3 = TypeGuard.FromTypeName("Vector3")
 TypeGuard.Vector3int16 = TypeGuard.FromTypeName("Vector3int16")
+
+TypeGuard.Function = TypeGuard.FromTypeName("function")
+TypeGuard["function"] = TypeGuard.Function
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
