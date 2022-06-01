@@ -98,7 +98,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
             :Or(TypeGuard.FindFirstParent("Array"))
     )
 
-    expect(CleanableChecker:Check({
+    CleanableChecker:Check({
         [1] = Instance.new("Model");
         [2] = Instance.new("Part").ChildAdded:Connect(function() end);
         [3] = {
@@ -110,7 +110,11 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
                 [1] = Instance.new("Folder");
             };
         };
-    })).to.equal(true)
+    }) -- Pass
+
+    CleanableChecker:Check({
+        {{{Instance.new("Part"), 1}}}
+    }) -- Fail
 
 -- EXTRA FUN
     local Predicate = TypeGuard.Instance("Model"):OfStructure({
