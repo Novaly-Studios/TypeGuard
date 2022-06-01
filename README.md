@@ -91,6 +91,27 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     Checker:Assert(Enum.Material.Air) -- Pass
     Checker:Assert(Enum.AccessoryType.Hat) -- Pass
 
+    -- 5: Self-reference with "Or"
+    local CleanableChecker = TypeGuard.Array():OfType(
+        TypeGuard.RBXScriptConnection()
+            :Or(TypeGuard.Instance())
+            :Or(TypeGuard.FindFirstParent("Array"))
+    )
+
+    expect(CleanableChecker:Check({
+        [1] = Instance.new("Model");
+        [2] = Instance.new("Part").ChildAdded:Connect(function() end);
+        [3] = {
+            [1] = Instance.new("Folder");
+            [2] = Instance.new("Folder");
+            [3] = Instance.new("Folder");
+            [4] = {};
+            [5] = {
+                [1] = Instance.new("Folder");
+            };
+        };
+    })).to.equal(true)
+
 -- EXTRA FUN
     local Predicate = TypeGuard.Instance("Model"):OfStructure({
         Humanoid = TypeGuard.Instance("Humanoid"):OfStructure({ -- Can scan children recursively
