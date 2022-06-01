@@ -464,7 +464,7 @@ function TypeGuard.FindFirstParent(TypeName: string)
         end
 
         while (true) do
-            self = self.Parent
+            self = self.LastParent
 
             if (self == nil) then
                 error("No parent found for type " .. TypeName)
@@ -483,8 +483,9 @@ function TypeGuard.Template(Name: string)
 
     local TemplateClass = {}
     TemplateClass.__index = TemplateClass
-    TemplateClass._IsTemplate = true
+    TemplateClass._InitialConstraints = nil
     TemplateClass._InitialConstraint = nil
+    TemplateClass.IsTemplate = true
     TemplateClass.Type = Name
 
     function TemplateClass.new(...)
@@ -494,7 +495,7 @@ function TypeGuard.Template(Name: string)
             _Conjunction = {};
             _ActiveConstraints = {};
 
-            Parent = nil;
+            LastParent = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -522,7 +523,7 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
-    function TemplateClass:_Copy()
+    function TemplateClass:Copy()
         local New = TemplateClass.new()
 
         -- Copy tags
@@ -545,7 +546,7 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
-        New.Parent = self.Parent
+        New.LastParent = self.Parent
 
         return New
     end
@@ -555,20 +556,20 @@ function TypeGuard.Template(Name: string)
         ExpectType(ConstraintName, "string", 1)
         ExpectType(Constraint, "function", 2)
 
-        self = self:_Copy()
+        self = self:Copy()
+
+        local Args = {...}
 
         -- Establish parent reference in the children
-        for Index = 1, select("#", ...) do
-            local Value = select(Index, ...)
-
-            if (typeof(Value) == "table" and Value._IsTemplate) then
-                Value.Parent = self
+        for _, Value in ipairs(Args) do
+            if (typeof(Value) == "table" and Value.IsTemplate) then
+                Value.LastParent = self
             end
         end
 
         local ActiveConstraints = self._ActiveConstraints
         assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
-        ActiveConstraints[ConstraintName] = {Constraint, {...}}
+        ActiveConstraints[ConstraintName] = {Constraint, Args}
         return self
     end
 
@@ -581,9 +582,10 @@ function TypeGuard.Template(Name: string)
     function TemplateClass:Or(OtherType)
         if (typeof(OtherType) ~= "function") then
             TypeGuard._AssertIsTypeBase(OtherType, 1)
+            OtherType.LastParent = self.LastParent
         end
 
-        self = self:_Copy()
+        self = self:Copy()
         table.insert(self._Disjunction, OtherType)
         return self
     end
@@ -591,8 +593,9 @@ function TypeGuard.Template(Name: string)
     --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
         TypeGuard._AssertIsTypeBase(OtherType, 1)
+        OtherType.LastParent = self.LastParent
 
-        self = self:_Copy()
+        self = self:Copy()
         table.insert(self._Conjunction, OtherType)
         return self
     end
@@ -601,7 +604,7 @@ function TypeGuard.Template(Name: string)
     function TemplateClass:Alias(AliasName)
         ExpectType(AliasName, "string", 1)
 
-        self = self:_Copy()
+        self = self:Copy()
         self._Alias = AliasName
         return self
     end
@@ -613,7 +616,7 @@ function TypeGuard.Template(Name: string)
 
         assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
 
-        self = self:_Copy()
+        self = self:Copy()
         self._Tags[TagName] = true
         return self
     end
@@ -778,7 +781,7 @@ end
 function TypeGuard._AssertIsTypeBase<T>(Subject: T, Position: number | string)
     ExpectType(Subject, "table", Position)
 
-    assert(Subject._IsTemplate, "Subject is not a type template")
+    assert(Subject.IsTemplate, "Subject is not a type template")
 end
 
 --- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
@@ -1675,7 +1678,7 @@ return TypeGuard]]></ProtectedString>
             local TestCreate, TestClass = TypeGuard.Template("Test")
             expect(TestCreate).to.be.a("function")
             expect(TestClass).to.be.a("table")
-            expect(TestClass._IsTemplate).to.equal(true)
+            expect(TestClass.IsTemplate).to.equal(true)
         end)
     end)
 
@@ -2025,7 +2028,7 @@ return TypeGuard]]></ProtectedString>
                 local CleanableChecker = TypeGuard.Array():OfType(
                     TypeGuard.RBXScriptConnection()
                     :Or(TypeGuard.Instance())
-                    :Or(TypeGuard.SelfReference("Array"))
+                    :Or(TypeGuard.FindFirstParent("Array"))
                 )
 
                 expect(CleanableChecker:Check({
