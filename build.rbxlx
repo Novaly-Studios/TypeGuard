@@ -81,18 +81,18 @@
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>27.6142292</X>
-					<Y>9.98359013</Y>
-					<Z>-9.60163689</Z>
-					<R00>0.15711914</R00>
-					<R01>-0.161117867</R01>
-					<R02>0.974348307</R02>
-					<R10>1.86264537e-09</R10>
-					<R11>0.986602306</R11>
-					<R12>0.163144156</R12>
-					<R20>-0.987579763</R20>
-					<R21>-0.0256330669</R21>
-					<R22>0.155014068</R22>
+					<X>26.2137356</X>
+					<Y>10.1436205</Y>
+					<Z>-11.7725697</Z>
+					<R00>-0.959243059</R00>
+					<R01>-0.0687126219</R01>
+					<R02>0.274101317</R02>
+					<R10>-0</R10>
+					<R11>0.969986498</R11>
+					<R12>0.243159354</R12>
+					<R20>-0.28258267</R20>
+					<R21>0.233248919</R21>
+					<R22>-0.930452585</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
@@ -455,6 +455,29 @@ type TypeChecker<T> = {
 
 local TypeGuard = {}
 
+function TypeGuard.FindFirstParent(TypeName: string)
+    local Found = nil
+
+    return function(self)
+        if (Found) then
+            return Found
+        end
+
+        while (true) do
+            self = self.Parent
+
+            if (self == nil) then
+                error("No parent found for type " .. TypeName)
+            end
+
+            if (self.Type == TypeName) then
+                Found = self
+                return Found
+            end
+        end
+    end
+end
+
 function TypeGuard.Template(Name: string)
     ExpectType(Name, "string", 1)
 
@@ -462,7 +485,7 @@ function TypeGuard.Template(Name: string)
     TemplateClass.__index = TemplateClass
     TemplateClass._IsTemplate = true
     TemplateClass._InitialConstraint = nil
-    TemplateClass._Type = Name
+    TemplateClass.Type = Name
 
     function TemplateClass.new(...)
         local self = {
@@ -470,6 +493,8 @@ function TypeGuard.Template(Name: string)
             _Disjunction = {};
             _Conjunction = {};
             _ActiveConstraints = {};
+
+            Parent = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -520,6 +545,8 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
+        New.Parent = self.Parent
+
         return New
     end
 
@@ -529,6 +556,15 @@ function TypeGuard.Template(Name: string)
         ExpectType(Constraint, "function", 2)
 
         self = self:_Copy()
+
+        -- Establish parent reference in the children
+        for Index = 1, select("#", ...) do
+            local Value = select(Index, ...)
+
+            if (typeof(Value) == "table" and Value._IsTemplate) then
+                Value.Parent = self
+            end
+        end
 
         local ActiveConstraints = self._ActiveConstraints
         assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
@@ -543,7 +579,9 @@ function TypeGuard.Template(Name: string)
 
     --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
     function TemplateClass:Or(OtherType)
-        TypeGuard._AssertIsTypeBase(OtherType, 1)
+        if (typeof(OtherType) ~= "function") then
+            TypeGuard._AssertIsTypeBase(OtherType, 1)
+        end
 
         self = self:_Copy()
         table.insert(self._Disjunction, OtherType)
@@ -602,7 +640,7 @@ function TypeGuard.Template(Name: string)
         local DidTryDisjunction = (Disjunctions[1] ~= nil)
 
         for _, AlternateType in ipairs(Disjunctions) do
-            local Success, _ = AlternateType:Check(Value)
+            local Success, _ = (typeof(AlternateType) == "function" and AlternateType(self) or AlternateType):Check(Value)
 
             if (Success) then
                 return true, EMPTY_STRING
@@ -707,7 +745,7 @@ function TypeGuard.Template(Name: string)
             table.insert(Fields, "Tags = {" .. ConcatWithToString(Tags, ", ") .. "}")
         end
 
-        return self._Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
+        return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
     end
 
     TemplateClass.Equals = Equals
@@ -1404,12 +1442,7 @@ do
         assert(GotType == "Enum" or GotType == "EnumItem", INVALID_ARGUMENT:format("1", "Enum or EnumItem", GotType))
 
         return self:_AddConstraint("IsA", function(_, Value, TargetEnum)
-            local PassedType = typeof(Value)
             local TargetType = typeof(TargetEnum)
-
-            if (PassedType ~= "EnumItem" and PassedType ~= "Enum") then
-                return false, "Expected EnumItem, got " .. PassedType
-            end
 
             -- Both are EnumItems
             if (TargetType == "EnumItem") then
@@ -1538,6 +1571,9 @@ TypeGuard.Vector2 = TypeGuard.FromTypeName("Vector2")
 TypeGuard.Vector2int16 = TypeGuard.FromTypeName("Vector2int16")
 TypeGuard.Vector3 = TypeGuard.FromTypeName("Vector3")
 TypeGuard.Vector3int16 = TypeGuard.FromTypeName("Vector3int16")
+
+TypeGuard.Function = TypeGuard.FromTypeName("function")
+TypeGuard["function"] = TypeGuard.Function
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
@@ -1953,6 +1989,12 @@ return TypeGuard]]></ProtectedString>
                 end).never.to.throw()
             end)
 
+            it("should accept function args", function()
+                expect(function()
+                    TypeGuard.Number():Or(function() end)
+                end).never.to.throw()
+            end)
+
             it("should accept inputs if they satisfy a TypeChecker in the or chain", function()
                 local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
                 expect(Check:Check(1)).to.equal(true)
@@ -1964,6 +2006,55 @@ return TypeGuard]]></ProtectedString>
                 local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
                 expect(Check:Check("Test")).to.equal(false)
                 expect(Check:Check({})).to.equal(false)
+            end)
+
+            it("should accept functional inputs if they return a TypeChecker which satisfies the or chain", function()
+                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(true)).to.equal(true)
+                expect(Check:Check(false)).to.equal(true)
+            end)
+
+            it("should reject functional inputs if they return a TypeChecker which does not satisfy the or chain", function()
+                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
+                expect(Check:Check("Test")).to.equal(false)
+                expect(Check:Check({})).to.equal(false)
+            end)
+
+            it("should allow self-references with functional or", function()
+                local CleanableChecker = TypeGuard.Array():OfType(
+                    TypeGuard.RBXScriptConnection()
+                    :Or(TypeGuard.Instance())
+                    :Or(TypeGuard.SelfReference("Array"))
+                )
+
+                expect(CleanableChecker:Check({
+                    [1] = Instance.new("Model");
+                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
+                    [3] = {
+                        [1] = Instance.new("Folder");
+                        [2] = Instance.new("Folder");
+                        [3] = Instance.new("Folder");
+                        [4] = {};
+                        [5] = {
+                            [1] = Instance.new("Folder");
+                        };
+                    };
+                })).to.equal(true)
+
+                expect(CleanableChecker:Check({
+                    [1] = Instance.new("Model");
+                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
+                    [3] = {
+                        [1] = Instance.new("Folder");
+                        [2] = Instance.new("Folder");
+                        [3] = Instance.new("Folder");
+                        [4] = {};
+                        [5] = {
+                            [1] = 1;
+                        };
+                    };
+                })).to.equal(false)
             end)
         end)
         describe("And", function()
