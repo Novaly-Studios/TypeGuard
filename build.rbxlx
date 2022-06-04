@@ -81,27 +81,27 @@
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>26.2137356</X>
-					<Y>10.1436205</Y>
-					<Z>-11.7725697</Z>
-					<R00>-0.959243059</R00>
-					<R01>-0.0687126219</R01>
-					<R02>0.274101317</R02>
-					<R10>-0</R10>
-					<R11>0.969986498</R11>
-					<R12>0.243159354</R12>
-					<R20>-0.28258267</R20>
-					<R21>0.233248919</R21>
-					<R22>-0.930452585</R22>
+					<X>147.355774</X>
+					<Y>109.597351</Y>
+					<Z>243.191116</Z>
+					<R00>0.913344204</R00>
+					<R01>-0.0349307694</R01>
+					<R02>0.405687302</R02>
+					<R10>-3.72528985e-09</R10>
+					<R11>0.996313691</R11>
+					<R12>0.0857853144</R12>
+					<R20>-0.407188267</R20>
+					<R21>-0.07835152</R21>
+					<R22>0.909977376</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
 				<float name="FieldOfView">70</float>
 				<token name="FieldOfViewMode">0</token>
 				<CoordinateFrame name="Focus">
-					<X>25.6655331</X>
-					<Y>9.6573019</Y>
-					<Z>-9.91166496</Z>
+					<X>146.544403</X>
+					<Y>109.425781</Y>
+					<Z>241.37117</Z>
 					<R00>1</R00>
 					<R01>0</R01>
 					<R02>0</R02>
@@ -302,21 +302,40 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<BinaryString name="Tags"></BinaryString>
 			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76a</UniqueId>
 		</Properties>
-		<Item class="ModuleScript" referent="RBX420716EF9DB54A6BB3B0C2FBA2B55E42">
+		<Item class="ModuleScript" referent="RBXF506E730DA9642DA87FCB8304454323B">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<Content name="LinkedSource"><null></null></Content>
 				<string name="Name">TypeGuard</string>
-				<string name="ScriptGuid">{5620E735-00B8-4812-A230-34EABB0E3339}</string>
+				<string name="ScriptGuid">{885FC615-AE81-407E-93D0-6EDD1553F26B}</string>
 				<ProtectedString name="Source"><![CDATA[-- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
 local INVALID_ARGUMENT = "Invalid argument #%s (%s expected, got %s)"
 
+-- Cache up here so these arrays aren't re-created with every function call for the simple checking system
+local EXPECT_TABLE = {"table"}
+local EXPECT_STRING = {"string"}
+local EXPECT_FUNCTION = {"function"}
+local EXPECT_SOMETHING = {"something"}
+local EXPECT_TABLE_OR_FUNCTION = {"table", "function"}
+local EXPECT_NUMBER_OR_FUNCTION = {"number", "function"}
+local EXPECT_STRING_OR_FUNCTION = {"string", "function"}
+local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {"Enum", "EnumItem", "function"}
+
 --- This is only really for type checking internally for data passed to constraints and util functions
-local function ExpectType<T>(PassedArg: T, ExpectedType: string, ArgKey: number | string)
+local function ExpectType<T>(PassedArg: T, ExpectedTypes: {string}, ArgKey: number | string)
     local GotType = typeof(PassedArg)
-    assert(GotType == ExpectedType, INVALID_ARGUMENT:format(tostring(ArgKey), ExpectedType, GotType))
+    local Satisfied = false
+
+    for _, PossibleType in ipairs(ExpectedTypes) do
+        if (GotType == PossibleType) then
+            Satisfied = true
+            break
+        end
+    end
+
+    assert(Satisfied, INVALID_ARGUMENT:format(tostring(ArgKey), table.concat(ExpectedTypes, " or "), GotType))
 end
 
 local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string))
@@ -360,7 +379,7 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
 
 -- Standard re-usable functions throughout all type checkers
     local function IsAKeyIn(self, Store)
-        ExpectType(Store, "table", 1)
+        ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
             return Store[Key] ~= nil, "No key found in table: " .. tostring(Store)
@@ -368,7 +387,7 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
     end
 
     local function IsAValueIn(self, Store)
-        ExpectType(Store, "table", 1)
+        ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsAValueIn", function(_, TargetValue, Store)
             for _, Value in pairs(Store) do
@@ -423,6 +442,7 @@ type TypeChecker<T> = {
     And: SelfReturn<T, TypeChecker<any>>;
     Alias: SelfReturn<T, string>;
     AddTag: SelfReturn<T, string>;
+    Negate: SelfReturn<T>;
     Optional: SelfReturn<T>;
 
     WrapCheck: (T) -> ((any) -> (boolean, string));
@@ -440,17 +460,17 @@ type TypeChecker<T> = {
     IsAKeyIn: SelfReturn<T, any>;
     isAKeyIn: SelfReturn<T, any>;
 
-    GreaterThan: SelfReturn<T, number>;
-    greaterThan: SelfReturn<T, number>;
+    GreaterThan: SelfReturn<T, number | () -> number>;
+    greaterThan: SelfReturn<T, number | () -> number>;
 
-    LessThan: SelfReturn<T, number>;
-    lessThan: SelfReturn<T, number>;
+    LessThan: SelfReturn<T, number | () -> number>;
+    lessThan: SelfReturn<T, number | () -> number>;
 
-    GreaterThanOrEqualTo: SelfReturn<T, number>;
-    greaterThanOrEqualTo: SelfReturn<T, number>;
+    GreaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    greaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
 
-    LessThanOrEqualTo: SelfReturn<T, number>;
-    lessThanOrEqualTo: SelfReturn<T, number>;
+    LessThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    lessThanOrEqualTo: SelfReturn<T, number | () -> number>;
 };
 
 local TypeGuard = {}
@@ -464,7 +484,7 @@ function TypeGuard.FindFirstParent(TypeName: string)
         end
 
         while (true) do
-            self = self.LastParent
+            self = self._LastParent
 
             if (self == nil) then
                 error("No parent found for type " .. TypeName)
@@ -479,7 +499,7 @@ function TypeGuard.FindFirstParent(TypeName: string)
 end
 
 function TypeGuard.Template(Name: string)
-    ExpectType(Name, "string", 1)
+    ExpectType(Name, EXPECT_STRING, 1)
 
     local TemplateClass = {}
     TemplateClass.__index = TemplateClass
@@ -495,7 +515,9 @@ function TypeGuard.Template(Name: string)
             _Conjunction = {};
             _ActiveConstraints = {};
 
-            LastParent = nil;
+            _LastConstraint = "";
+
+            _LastParent = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -546,30 +568,65 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
-        New.LastParent = self.Parent
+        New._LastParent = self._LastParent
+        New._LastConstraint = self._LastConstraint
 
         return New
     end
 
-    -- TODO: only 1 constraint of each type
-    function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
-        ExpectType(ConstraintName, "string", 1)
-        ExpectType(Constraint, "function", 2)
-
+    --- Wraps & negates the last constraint
+    --- Untested
+    function TemplateClass:Negate()
         self = self:Copy()
 
-        local Args = {...}
+        local LastConstraint = self._LastConstraint
+        assert(LastConstraint ~= EMPTY_STRING, "Nothing to negate! (No constraints active)")
 
-        -- Establish parent reference in the children
+        self._ActiveConstraints[LastConstraint][4] = true
+
+        --[[ local WrappedFunction = Constraint[1]
+
+        Constraint[1] = function(...)
+            local Success, _ = WrappedFunction(...)
+
+            if (Success) then
+                return false, "Constraint '" .. LastConstraint .. "' succeeded but was expected to fail on " .. tostring(select(1, ...))
+            end
+
+            return true, ""
+        end ]]
+
+        return self
+    end
+
+    -- TODO: only 1 constraint of each type
+    function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
+        ExpectType(ConstraintName, EXPECT_STRING, 1)
+        ExpectType(Constraint, EXPECT_FUNCTION, 2)
+
+        self = self:Copy()
+        self._LastConstraint = ConstraintName
+
+        local Args = {...}
+        local HasFunctions = false
+
+        -- Establish parent reference in the children & check for any functions
         for _, Value in ipairs(Args) do
-            if (typeof(Value) == "table" and Value.IsTemplate) then
-                Value.LastParent = self
+            local ArgType = typeof(Value)
+
+            if (ArgType == "function") then
+                HasFunctions = true
+                continue
+            end
+
+            if (ArgType == "table" and Value.IsTemplate) then
+                Value._LastParent = self
             end
         end
 
         local ActiveConstraints = self._ActiveConstraints
         assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
-        ActiveConstraints[ConstraintName] = {Constraint, Args}
+        ActiveConstraints[ConstraintName] = {Constraint, Args, HasFunctions, false}
         return self
     end
 
@@ -582,7 +639,7 @@ function TypeGuard.Template(Name: string)
     function TemplateClass:Or(OtherType)
         if (typeof(OtherType) ~= "function") then
             TypeGuard._AssertIsTypeBase(OtherType, 1)
-            OtherType.LastParent = self.LastParent
+            OtherType._LastParent = self._LastParent
         end
 
         self = self:Copy()
@@ -593,7 +650,7 @@ function TypeGuard.Template(Name: string)
     --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
         TypeGuard._AssertIsTypeBase(OtherType, 1)
-        OtherType.LastParent = self.LastParent
+        OtherType._LastParent = self._LastParent
 
         self = self:Copy()
         table.insert(self._Conjunction, OtherType)
@@ -602,7 +659,7 @@ function TypeGuard.Template(Name: string)
 
     --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing
     function TemplateClass:Alias(AliasName)
-        ExpectType(AliasName, "string", 1)
+        ExpectType(AliasName, EXPECT_STRING, 1)
 
         self = self:Copy()
         self._Alias = AliasName
@@ -612,8 +669,7 @@ function TypeGuard.Template(Name: string)
     --- Adds a tag (for internal purposes)
     --- @todo Make this private?
     function TemplateClass:AddTag(TagName)
-        ExpectType(TagName, "string", 1)
-
+        ExpectType(TagName, EXPECT_STRING, 1)
         assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
 
         self = self:Copy()
@@ -676,8 +732,34 @@ function TypeGuard.Template(Name: string)
         end
 
         -- Handle active constraints
-        for _, Constraint in pairs(self._ActiveConstraints) do
-            local SubSuccess, SubMessage = Constraint[1](self, Value, unpack(Constraint[2]))
+        for ConstraintName, Constraint in pairs(self._ActiveConstraints) do
+            local Call = Constraint[1]
+            local Args = Constraint[2]
+            local HasFunctionalParams = Constraint[3]
+            local ShouldNegate = Constraint[4]
+
+            -- Functional params -> transform into values when type checking
+            if (HasFunctionalParams) then
+                Args = table.clone(Args)
+
+                for Index, Arg in ipairs(Args) do
+                    if (typeof(Arg) == "function") then
+                        Args[Index] = Arg()
+                    end
+                end
+            end
+
+            -- Call the constraint to verify it is satisfied
+            local SubSuccess, SubMessage = Call(self, Value, unpack(Args))
+
+            if (ShouldNegate) then
+                SubMessage = if (SubSuccess) then
+                                "Constraint '" .. ConstraintName .. "' succeeded but was expected to fail on value " .. tostring(Value)
+                             else
+                                EMPTY_STRING
+
+                SubSuccess = not SubSuccess
+            end
 
             if (not SubSuccess) then
                 if (DidTryDisjunction) then
@@ -779,14 +861,14 @@ end
 
 --- Checks if an object contains the fields which define a type template from this module
 function TypeGuard._AssertIsTypeBase<T>(Subject: T, Position: number | string)
-    ExpectType(Subject, "table", Position)
+    ExpectType(Subject, EXPECT_TABLE, Position)
 
     assert(Subject.IsTemplate, "Subject is not a type template")
 end
 
 --- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
 function TypeGuard.FromTypeName(TypeName: string)
-    ExpectType(TypeName, "string", 1)
+    ExpectType(TypeName, EXPECT_STRING, 1)
 
     local CheckerFunction, CheckerClass = TypeGuard.Template(TypeName)
     CheckerClass._Initial = CreateStandardInitial(TypeName)
@@ -826,7 +908,11 @@ do
     --- Checks if the value is whole
     function NumberClass:Integer()
         return self:_AddConstraint("Integer", function(_, Item)
-            return math.floor(Item) == Item, "Expected integer form, got " .. tostring(Item)
+            if (Item % 1 == 0) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected integer form, got " .. tostring(Item)
         end)
     end
     NumberClass.integer = NumberClass.Integer
@@ -834,15 +920,19 @@ do
     --- Checks if the number is a decimal
     function NumberClass:Decimal()
         return self:_AddConstraint("Decimal", function(_, Item)
-            return math.floor(Item) ~= Item, "Expected decimal form, got " .. tostring(Item)
+            if (Item % 1 ~= 0) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected decimal form, got " .. tostring(Item)
         end)
     end
     NumberClass.decimal = NumberClass.Decimal
 
     --- Ensures a number is between or equal to a minimum and maxmimu value
     function NumberClass:RangeInclusive(Min, Max)
-        ExpectType(Min, "number", 1)
-        ExpectType(Max, "number", 2)
+        ExpectType(Min, EXPECT_NUMBER_OR_FUNCTION, 1)
+        ExpectType(Max, EXPECT_NUMBER_OR_FUNCTION, 2)
 
         return self:GreaterThanOrEqualTo(Min):LessThanOrEqualTo(Max)
     end
@@ -895,6 +985,9 @@ do
 
         Pattern: SelfReturn<StringTypeChecker, string>;
         pattern: SelfReturn<StringTypeChecker, string>;
+
+        Contains: SelfReturn<StringTypeChecker, string>;
+        contains: SelfReturn<StringTypeChecker, string>;
     };
 
     local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
@@ -902,7 +995,7 @@ do
 
     --- Ensures a string is at least a certain length
     function StringClass:MinLength(MinLength)
-        ExpectType(MinLength, "number", 1)
+        ExpectType(MinLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
         return self:_AddConstraint("MinLength", function(_, Item, MinLength)
             if (#Item < MinLength) then
@@ -916,7 +1009,7 @@ do
 
     --- Ensures a string is at most a certain length
     function StringClass:MaxLength(MaxLength)
-        ExpectType(MaxLength, "number", 1)
+        ExpectType(MaxLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
         return self:_AddConstraint("MaxLength", function(_, Item, MaxLength)
             if (#Item > MaxLength) then
@@ -930,7 +1023,7 @@ do
 
     --- Ensures a string matches a pattern
     function StringClass:Pattern(PatternString)
-        ExpectType(PatternString, "string", 1)
+        ExpectType(PatternString, EXPECT_STRING_OR_FUNCTION, 1)
 
         return self:_AddConstraint("Pattern", function(_, Item, Pattern)
             if (string.match(Item, Pattern) ~= Item) then
@@ -944,7 +1037,7 @@ do
 
     --- Ensures a string contains a certain substring
     function StringClass:Contains(SubstringValue)
-        ExpectType(SubstringValue, "string", 1)
+        ExpectType(SubstringValue, EXPECT_STRING_OR_FUNCTION, 1)
 
         return self:_AddConstraint("Contains", function(_, Item, Substring)
             if (string.find(Item, Substring) == nil) then
@@ -1021,7 +1114,7 @@ do
 
     --- Ensures an array is of a certain length
     function ArrayClass:OfLength(Length)
-        ExpectType(Length, "number", 1)
+        ExpectType(Length, EXPECT_NUMBER_OR_FUNCTION, 1)
 
         return self:_AddConstraint("Length", function(_, TargetArray, Length)
             if (#TargetArray ~= Length) then
@@ -1035,7 +1128,7 @@ do
 
     --- Ensures an array is at least a certain length
     function ArrayClass:MinLength(MinLength)
-        ExpectType(MinLength, "number", 1)
+        ExpectType(MinLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
         return self:_AddConstraint("MinLength", function(_, TargetArray, MinLength)
             if (#TargetArray < MinLength) then
@@ -1049,7 +1142,7 @@ do
 
     --- Ensures an array is at most a certain length
     function ArrayClass:MaxLength(MaxLength)
-        ExpectType(MaxLength, "number", 1)
+        ExpectType(MaxLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
         return self:_AddConstraint("MaxLength", function(_, TargetArray, MaxLength)
             if (#TargetArray > MaxLength) then
@@ -1064,11 +1157,11 @@ do
     --- Ensures an array contains some given value
     function ArrayClass:Contains(Value, StartPoint)
         if (Value == nil) then
-            ExpectType(Value, "something", 1)
+            ExpectType(Value, EXPECT_SOMETHING, 1)
         end
 
         if (StartPoint) then
-            ExpectType(StartPoint, "number", 2)
+            ExpectType(StartPoint, EXPECT_NUMBER_OR_FUNCTION, 2)
         end
 
         return self:_AddConstraint("Contains", function(_, TargetArray, Value, StartPoint)
@@ -1101,10 +1194,10 @@ do
 
     -- Takes an array of types and checks it against the passed array
     function ArrayClass:OfStructure(SubTypesAtPositions)
-        ExpectType(SubTypesAtPositions, "table", 1)
+        ExpectType(SubTypesAtPositions, EXPECT_TABLE, 1)
 
         -- Just in case the user does any weird mutation
-        local SubTypesCopy = {}
+        local SubTypesCopy = table.create(#SubTypesAtPositions)
 
         for Index, Value in ipairs(SubTypesAtPositions) do
             TypeGuard._AssertIsTypeBase(Value, Index)
@@ -1201,6 +1294,8 @@ do
 
     --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs
     function ObjectClass:OfStructure(OriginalSubTypes)
+        ExpectType(OriginalSubTypes, EXPECT_TABLE, 1)
+
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
@@ -1334,6 +1429,8 @@ do
     --- Ensures that an Instance has specific children (this is not for properties)
     --- @todo Check properties too
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
+        ExpectType(OriginalSubTypes, EXPECT_TABLE, 1)
+
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
@@ -1374,7 +1471,7 @@ do
 
     --- Uses Instance.IsA to assert the type of an Instance
     function InstanceCheckerClass:IsA(InstanceIsA)
-        ExpectType(InstanceIsA, "string", 1)
+        ExpectType(InstanceIsA, EXPECT_STRING_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsA", function(_, InstanceRoot, InstanceIsA)
             if (not InstanceRoot:IsA(InstanceIsA)) then
@@ -1441,8 +1538,7 @@ do
 
     --- Ensures that a passed EnumItem is either equivalent to an EnumItem or a sub-item of an Enum class
     function EnumCheckerClass:IsA(TargetEnum)
-        local GotType = typeof(TargetEnum)
-        assert(GotType == "Enum" or GotType == "EnumItem", INVALID_ARGUMENT:format("1", "Enum or EnumItem", GotType))
+        ExpectType(TargetEnum, EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsA", function(_, Value, TargetEnum)
             local TargetType = typeof(TargetEnum)
@@ -1518,7 +1614,7 @@ do
 
     --- Checks the coroutine's status against a given status string
     function ThreadCheckerClass:HasStatus(Status: string)
-        ExpectType(Status, "string", 1)
+        ExpectType(Status, EXPECT_STRING_OR_FUNCTION, 1)
 
         return self:_AddConstraint("HasStatus", function(_, Thread, Status)
             local CurrentStatus = coroutine.status(Thread)
@@ -1539,7 +1635,7 @@ end
 
 
 
-
+-- Luau data types
 TypeGuard.Axes = TypeGuard.FromTypeName("Axes")
 TypeGuard.BrickColor = TypeGuard.FromTypeName("BrickColor")
 TypeGuard.CatalogSearchParams = TypeGuard.FromTypeName("CatalogSearchParams")
@@ -1575,8 +1671,12 @@ TypeGuard.Vector2int16 = TypeGuard.FromTypeName("Vector2int16")
 TypeGuard.Vector3 = TypeGuard.FromTypeName("Vector3")
 TypeGuard.Vector3int16 = TypeGuard.FromTypeName("Vector3int16")
 
+-- Extra base Lua data types
 TypeGuard.Function = TypeGuard.FromTypeName("function")
 TypeGuard["function"] = TypeGuard.Function
+
+TypeGuard.Userdata = TypeGuard.FromTypeName("userdata")
+TypeGuard["userdata"] = TypeGuard.Userdata
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
@@ -1608,7 +1708,7 @@ TypeGuard.variadicParams = TypeGuard.VariadicParams
 
 -- Wraps a function in a param checker function
 function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
-    ExpectType(Call, "function", 1)
+    ExpectType(Call, EXPECT_FUNCTION, 1)
 
     for Index = 1, select("#", ...) do
         TypeGuard._AssertIsTypeBase(select(Index, ...), Index)
@@ -1624,7 +1724,7 @@ end
 
 -- Wraps a function in a variadic param checker function
 function TypeGuard.WrapFunctionVariadicParams<T>(Call: T, VariadicParamType: TypeChecker<any>)
-    ExpectType(Call, "function", 1)
+    ExpectType(Call, EXPECT_FUNCTION, 1)
     TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
 
     local ParamChecker = TypeGuard.VariadicParams(VariadicParamType)
@@ -1638,15 +1738,19 @@ end
 return TypeGuard]]></ProtectedString>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">24e5d31798239fa602a7e8f60002c4d0</UniqueId>
+				<UniqueId name="UniqueId">1517529a80f16a5b02ac39be0002c94a</UniqueId>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX2F5D534847024A00A3613BF718D2DFC4">
+			<Item class="ModuleScript" referent="RBX2CEA88B9CAF443E7ABF98F701A974480">
 				<Properties>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<Content name="LinkedSource"><null></null></Content>
 					<string name="Name">TypeGuard.spec</string>
-					<string name="ScriptGuid">{587EE706-05D2-4A5D-963D-A2193CCA31DF}</string>
-					<ProtectedString name="Source"><![CDATA[return function()
+					<string name="ScriptGuid">{2E7952C8-F610-49DA-94AC-8D794778E66C}</string>
+					<ProtectedString name="Source"><![CDATA[-- TODO: finish off functional input tests
+-- TODO: Negate() tests
+-- TODO: turn Or, And into constraints?
+
+return function()
     local TypeGuard = require(script.Parent)
 
     describe("Template", function()
@@ -1936,6 +2040,7 @@ return TypeGuard]]></ProtectedString>
                 expect(TypeGuard.Number():Optional():Check("Test")).to.equal(false)
             end)
         end)
+
         describe("Alias", function()
             it("should reject non-string args", function()
                 expect(function()
@@ -1963,6 +2068,7 @@ return TypeGuard]]></ProtectedString>
                 expect(Result:match("TestAlias")).to.be.ok()
             end)
         end)
+
         describe("Or", function()
             it("should reject non-TypeChecker args", function()
                 expect(function()
@@ -2060,6 +2166,7 @@ return TypeGuard]]></ProtectedString>
                 })).to.equal(false)
             end)
         end)
+
         describe("And", function()
             it("should reject non-TypeChecker args", function()
                 expect(function()
@@ -2183,6 +2290,7 @@ return TypeGuard]]></ProtectedString>
                 end).to.throw(CheckResult)
             end)
         end)
+
         describe("WrapAssert", function()
             it("should return a function", function()
                 expect(TypeGuard.Number():WrapAssert()).to.be.a("function")
@@ -2201,6 +2309,28 @@ return TypeGuard]]></ProtectedString>
                 expect(function()
                     AssertFunction("Test")
                 end).to.throw(CheckResult)
+            end)
+        end)
+
+        describe("Negate", function()
+            it("should throw an exception if there are no constraints", function()
+                expect(function()
+                    TypeGuard.Number():Negate()
+                end).to.throw()
+            end)
+
+            it("should invert the result of the TypeChecker", function()
+                local Check = TypeGuard.Number():Equals(5):Negate()
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(5)).to.equal(false)
+                expect(Check:Check(10)).to.equal(true)
+            end)
+
+            it("should invert only the last constraint", function()
+                local Check = TypeGuard.Number():GreaterThan(1):Equals(10):Negate()
+                expect(Check:Check(2)).to.equal(true)
+                expect(Check:Check(10)).to.equal(false)
+                expect(Check:Check(20)).to.equal(true)
             end)
         end)
     end)
@@ -2268,18 +2398,43 @@ return TypeGuard]]></ProtectedString>
             end)
 
             it("should reject numbers outside of range", function()
-                expect(Base:RangeInclusive(1, 2):Check(0)).to.equal(false)
-                expect(Base:RangeInclusive(1, 2):Check(3)).to.equal(false)
+                local Range = Base:RangeInclusive(1, 2)
+                expect(Range:Check(0)).to.equal(false)
+                expect(Range:Check(3)).to.equal(false)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(0)).to.equal(false)
+                expect(FuncRange:Check(3)).to.equal(false)
             end)
 
             it("should accept numbers inside of range", function()
-                expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
-                expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+                local Range = Base:RangeInclusive(1, 2)
+                expect(Range:Check(1)).to.equal(true)
+                expect(Range:Check(2)).to.equal(true)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(2)).to.equal(true)
             end)
 
             it("should accept numbers equal to the range bounds", function()
                 expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
                 expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1)).to.equal(true)
+                expect(FuncRange:Check(2)).to.equal(true)
             end)
         end)
 
@@ -2291,16 +2446,40 @@ return TypeGuard]]></ProtectedString>
             it("should reject numbers outside of range", function()
                 expect(Base:RangeExclusive(1, 2):Check(0)).to.equal(false)
                 expect(Base:RangeExclusive(1, 2):Check(3)).to.equal(false)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(0)).to.equal(false)
+                expect(FuncRange:Check(3)).to.equal(false)
             end)
 
             it("should accept numbers inside of range", function()
                 expect(Base:RangeExclusive(1, 2):Check(1.1)).to.equal(true)
                 expect(Base:RangeExclusive(1, 2):Check(1.9)).to.equal(true)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1.1)).to.equal(true)
+                expect(FuncRange:Check(1.9)).to.equal(true)
             end)
 
             it("should reject numbers equal to the range bounds", function()
                 expect(Base:RangeExclusive(1, 2):Check(1)).to.equal(false)
                 expect(Base:RangeExclusive(1, 2):Check(2)).to.equal(false)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1)).to.equal(false)
+                expect(FuncRange:Check(2)).to.equal(false)
             end)
         end)
 
@@ -2337,20 +2516,32 @@ return TypeGuard]]></ProtectedString>
         describe("Equals", function()
             it("should reject non equal inputs", function()
                 expect(Base:Equals(1):Check(2)).to.equal(false)
+                expect(Base:Equals(function()
+                    return 1
+                end):Check(2)).to.equal(false)
             end)
 
             it("should accept equal inputs", function()
                 expect(Base:Equals(1):Check(1)).to.equal(true)
+                expect(Base:Equals(function()
+                    return 1
+                end):Check(1)).to.equal(true)
             end)
         end)
 
         describe("GreaterThan", function()
             it("should reject numbers less than the first arg", function()
                 expect(Base:GreaterThan(1):Check(0)).to.equal(false)
+                expect(Base:GreaterThan(function()
+                    return 1
+                end):Check(1)).to.equal(false)
             end)
 
             it("should accept numbers greater than the first arg", function()
                 expect(Base:GreaterThan(1):Check(2)).to.equal(true)
+                expect(Base:GreaterThan(function()
+                    return 1
+                end):Check(2)).to.equal(true)
             end)
         end)
 
@@ -2369,18 +2560,28 @@ return TypeGuard]]></ProtectedString>
                 end).to.throw()
             end)
 
-            it("should accept a table as first arg", function()
+            it("should accept a table or function as first arg", function()
                 expect(function()
                     Base:IsAKeyIn({})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:IsAKeyIn(function() end)
                 end).never.to.throw()
             end)
 
             it("should reject when the value does not exist as a key", function()
                 expect(Base:IsAKeyIn({}):Check(123)).to.equal(false)
+                expect(Base:IsAKeyIn(function()
+                    return {}
+                end):Check(123)).to.equal(false)
             end)
 
             it("should accept when the value does exist as a key", function()
                 expect(Base:IsAKeyIn({[123] = true}):Check(123)).to.equal(true)
+                expect(Base:IsAKeyIn(function()
+                    return {[123] = true}
+                end):Check(123)).to.equal(true)
             end)
         end)
 
@@ -2399,18 +2600,28 @@ return TypeGuard]]></ProtectedString>
                 end).to.throw()
             end)
 
-            it("should accept a table as first arg", function()
+            it("should accept a table or function as first arg", function()
                 expect(function()
                     Base:IsAValueIn({})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:IsAValueIn(function() end)
                 end).never.to.throw()
             end)
 
             it("should reject when the value does not exist in an array", function()
                 expect(Base:IsAValueIn({}):Check(123)).to.equal(false)
+                expect(Base:IsAValueIn(function()
+                    return {}
+                end):Check(123)).to.equal(false)
             end)
 
             it("should accept when the value exists in an array", function()
                 expect(Base:IsAValueIn({123}):Check(123)).to.equal(true)
+                expect(Base:IsAValueIn(function()
+                    return {123}
+                end):Check(123)).to.equal(true)
             end)
         end)
     end)
@@ -2480,16 +2691,18 @@ return TypeGuard]]></ProtectedString>
                 expect(Base:IsA("Folder"):Check({})).to.equal(false)
             end)
 
-            it("should accept Instances", function()
+            it("should accept Instances of the specified type string (or function returning type string)", function()
                 expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
-            end)
-
-            it("should accept Instances of the specified class", function()
-                expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
+                expect(Base:IsA(function()
+                    return "Folder"
+                end):Check(Instance.new("Folder"))).to.equal(true)
             end)
 
             it("should reject Instances of other classes", function()
                 expect(Base:IsA("Folder"):Check(Instance.new("Part"))).to.equal(false)
+                expect(Base:IsA(function()
+                    return "Folder"
+                end):Check(Instance.new("Part"))).to.equal(false)
             end)
         end)
 
@@ -2651,48 +2864,78 @@ return TypeGuard]]></ProtectedString>
         describe("MinLength", function()
             it("should reject strings shorter than the specified length", function()
                 expect(Base:MinLength(5):Check("Test")).to.equal(false)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("Test")).to.equal(false)
             end)
 
             it("should accept strings longer than the specified length", function()
                 expect(Base:MinLength(5):Check("Test123")).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("Test123")).to.equal(true)
             end)
 
             it("should accept strings equal to the specified length", function()
                 expect(Base:MinLength(5):Check("12345")).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("12345")).to.equal(true)
             end)
         end)
 
         describe("MaxLength", function()
             it("should reject strings longer than the specified length", function()
                 expect(Base:MaxLength(5):Check("Test123")).to.equal(false)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("Test123")).to.equal(false)
             end)
 
             it("should accept strings shorter than the specified length", function()
                 expect(Base:MaxLength(5):Check("Test")).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("Test")).to.equal(true)
             end)
 
             it("should accept strings equal to the specified length", function()
                 expect(Base:MaxLength(5):Check("12345")).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("12345")).to.equal(true)
             end)
         end)
 
         describe("Pattern", function()
             it("should accept strings matching the specified pattern", function()
                 expect(Base:Pattern("[0-9]+"):Check("34789275")).to.equal(true)
+                expect(Base:Pattern(function()
+                    return "[0-9]+"
+                end):Check("34789275")).to.equal(true)
             end)
 
             it("should reject strings not matching the specified pattern", function()
                 expect(Base:Pattern("[0-9]+"):Check("123h4")).to.equal(false)
+                expect(Base:Pattern(function()
+                    return "[0-9]+"
+                end):Check("123h4")).to.equal(false)
             end)
         end)
 
         describe("Contains", function()
             it("should accept strings containing the specified substring", function()
                 expect(Base:Contains("Test"):Check("------Test123")).to.equal(true)
+                expect(Base:Contains(function()
+                    return "Test"
+                end):Check("------Test123")).to.equal(true)
             end)
 
             it("should reject strings not containing the specified substring", function()
                 expect(Base:Contains("Test"):Check("asdfghjkl")).to.equal(false)
+                expect(Base:Contains(function()
+                    return "Test"
+                end):Check("asdfghjkl")).to.equal(false)
             end)
         end)
     end)
@@ -2718,52 +2961,85 @@ return TypeGuard]]></ProtectedString>
         describe("OfLength", function()
             it("should reject arrays shorter than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4})).to.equal(false)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(false)
             end)
 
             it("should accept arrays longer than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should reject arrays greater than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
             end)
         end)
 
         describe("MinLength", function()
             it("should reject arrays shorter than the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4})).to.equal(false)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(false)
             end)
 
             it("should accept arrays equal to the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should accept arrays longer than the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
             end)
         end)
 
         describe("MaxLength", function()
             it("should reject arrays longer than the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
             end)
 
             it("should accept arrays equal to the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should accept arrays shorter than the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4})).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(true)
             end)
         end)
 
         describe("Contains", function()
             it("should accept arrays containing the specified element", function()
                 expect(Base:Contains(1):Check({1, 2, 3, 4})).to.equal(true)
+                expect(Base:Contains(function()
+                    return 1
+                end):Check({1, 2, 3, 4})).to.equal(true)
             end)
 
             it("should reject arrays not containing the specified element", function()
                 expect(Base:Contains(1):Check({2, 3, 4})).to.equal(false)
+                expect(Base:Contains(function()
+                    return 1
+                end):Check({2, 3, 4})).to.equal(false)
             end)
         end)
 
@@ -2864,7 +3140,7 @@ return TypeGuard]]></ProtectedString>
                 end).to.throw()
 
                 expect(function()
-                    TypeGuard.Enum(function() end)
+                    TypeGuard.Enum(true)
                 end).to.throw()
 
                 expect(function()
@@ -2872,7 +3148,7 @@ return TypeGuard]]></ProtectedString>
                 end).to.throw()
             end)
 
-            it("should not throw given EnumItem or Enum values", function()
+            it("should not throw given EnumItem or Enum (or function) values", function()
                 expect(function()
                     TypeGuard.Enum(Enum.AccessoryType)
                 end).never.to.throw()
@@ -2880,20 +3156,35 @@ return TypeGuard]]></ProtectedString>
                 expect(function()
                     TypeGuard.Enum(Enum.AccessoryType.Shirt)
                 end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Enum(function()
+                        return Enum.AccessoryType.Shirt
+                    end)
+                end).never.to.throw()
             end)
         end)
 
         describe("IsA", function()
             it("should accept an Enum item if the respective EnumItem is a sub-item", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AccessoryType.Shirt)).to.equal(true)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType
+                end):Check(Enum.AccessoryType.Shirt)).to.equal(true)
             end)
 
             it("should reject EnumItems which are not part of the Enum class", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AlphaMode.Overlay)).to.equal(false)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType
+                end):Check(Enum.AlphaMode.Overlay)).to.equal(false)
             end)
 
             it("should accept EnumItems which are equal", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType.Face):Check(Enum.AccessoryType.Face)).to.equal(true)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType.Face
+                end):Check(Enum.AccessoryType.Face)).to.equal(true)
             end)
         end)
     end)
@@ -2921,6 +3212,11 @@ return TypeGuard]]></ProtectedString>
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(true)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
             end)
 
             it("should accept suspended threads given 'suspended'", function()
@@ -2932,6 +3228,11 @@ return TypeGuard]]></ProtectedString>
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
             end)
 
             it("should accept threads given 'dead'", function()
@@ -2941,6 +3242,11 @@ return TypeGuard]]></ProtectedString>
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(true)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(true)
             end)
 
             it("should accept threads given 'normal'", function()
@@ -2957,6 +3263,11 @@ return TypeGuard]]></ProtectedString>
                         expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                         expect(Base:HasStatus("normal"):Check(Thread)).to.equal(true)
                         expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                        expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(true)
+                        expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
                         DidRun = true
                     end)
                 end)
@@ -3074,7 +3385,7 @@ return TypeGuard]]></ProtectedString>
 end]]></ProtectedString>
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
-					<UniqueId name="UniqueId">24e5d31798239fa602a7e8f60002c4d1</UniqueId>
+					<UniqueId name="UniqueId">1517529a80f16a5b02ac39be0002c94b</UniqueId>
 				</Properties>
 			</Item>
 		</Item>
@@ -3093,80 +3404,40 @@ end]]></ProtectedString>
 			<string name="AsphaltName">Asphalt</string>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="BasaltName">Basalt</string>
-			<Ref name="Brick">null</Ref>
 			<string name="BrickName">Brick</string>
-			<Ref name="Cobblestone">null</Ref>
 			<string name="CobblestoneName">Cobblestone</string>
-			<Ref name="Concrete">null</Ref>
 			<string name="ConcreteName">Concrete</string>
-			<Ref name="CorrodedMetal">null</Ref>
 			<string name="CorrodedMetalName">CorrodedMetal</string>
 			<string name="CrackedLavaName">CrackedLava</string>
-			<Ref name="DiamondPlate">null</Ref>
 			<string name="DiamondPlateName">DiamondPlate</string>
-			<Ref name="Fabric">null</Ref>
 			<string name="FabricName">Fabric</string>
-			<Ref name="Foil">null</Ref>
 			<string name="FoilName">Foil</string>
 			<string name="GlacierName">Glacier</string>
-			<Ref name="Granite">null</Ref>
 			<string name="GraniteName">Granite</string>
-			<Ref name="Grass">null</Ref>
 			<string name="GrassName">Grass</string>
 			<string name="GroundName">Ground</string>
-			<Ref name="Ice">null</Ref>
 			<string name="IceName">Ice</string>
 			<string name="LeafyGrassName">LeafyGrass</string>
 			<string name="LimestoneName">Limestone</string>
-			<Ref name="Marble">null</Ref>
 			<string name="MarbleName">Marble</string>
-			<Ref name="Metal">null</Ref>
 			<string name="MetalName">Metal</string>
 			<string name="MudName">Mud</string>
 			<string name="Name">MaterialService</string>
 			<string name="PavementName">Pavement</string>
-			<Ref name="Pebble">null</Ref>
 			<string name="PebbleName">Pebble</string>
-			<Ref name="Plastic">null</Ref>
 			<string name="PlasticName">Plastic</string>
 			<string name="RockName">Rock</string>
 			<string name="SaltName">Salt</string>
-			<Ref name="Sand">null</Ref>
 			<string name="SandName">Sand</string>
 			<string name="SandstoneName">Sandstone</string>
-			<Ref name="Slate">null</Ref>
 			<string name="SlateName">Slate</string>
-			<Ref name="SmoothPlastic">null</Ref>
 			<string name="SmoothPlasticName">SmoothPlastic</string>
 			<string name="SnowName">Snow</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<Ref name="TerrainAsphalt">null</Ref>
-			<Ref name="TerrainBasalt">null</Ref>
-			<Ref name="TerrainBrick">null</Ref>
-			<Ref name="TerrainCobblestone">null</Ref>
-			<Ref name="TerrainConcrete">null</Ref>
-			<Ref name="TerrainCrackedLava">null</Ref>
-			<Ref name="TerrainGlacier">null</Ref>
-			<Ref name="TerrainGrass">null</Ref>
-			<Ref name="TerrainGround">null</Ref>
-			<Ref name="TerrainIce">null</Ref>
-			<Ref name="TerrainLeafyGrass">null</Ref>
-			<Ref name="TerrainLimestone">null</Ref>
-			<Ref name="TerrainMud">null</Ref>
-			<Ref name="TerrainPavement">null</Ref>
-			<Ref name="TerrainRock">null</Ref>
-			<Ref name="TerrainSalt">null</Ref>
-			<Ref name="TerrainSand">null</Ref>
-			<Ref name="TerrainSandstone">null</Ref>
-			<Ref name="TerrainSlate">null</Ref>
-			<Ref name="TerrainSnow">null</Ref>
-			<Ref name="TerrainWoodPlanks">null</Ref>
 			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76d</UniqueId>
 			<bool name="Use2022MaterialsXml">false</bool>
-			<Ref name="Wood">null</Ref>
 			<string name="WoodName">Wood</string>
-			<Ref name="WoodPlanks">null</Ref>
 			<string name="WoodPlanksName">WoodPlanks</string>
 		</Properties>
 	</Item>
