@@ -377,7 +377,7 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
     end;
 }
 
--- Standard re-usable functions throughout all type checkers
+-- Standard re-usable functions throughout all TypeCheckers
     local function IsAKeyIn(self, Store)
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
@@ -438,12 +438,13 @@ type SelfReturn<T, P...> = ((T, P...) -> T)
 type TypeCheckerConstructor<T, P...> = ((P...) -> T)
 
 type TypeChecker<T> = {
-    Or: SelfReturn<T, TypeChecker<any>>;
+    Or: SelfReturn<T, TypeChecker<any> | () -> TypeChecker<any>>;
     And: SelfReturn<T, TypeChecker<any>>;
     Alias: SelfReturn<T, string>;
-    AddTag: SelfReturn<T, string>;
     Negate: SelfReturn<T>;
     Optional: SelfReturn<T>;
+
+    _AddTag: SelfReturn<T, string>;
 
     WrapCheck: (T) -> ((any) -> (boolean, string));
     WrapAssert: (T) -> ((any) -> ());
@@ -475,6 +476,7 @@ type TypeChecker<T> = {
 
 local TypeGuard = {}
 
+-- Needs refactoring, there should be a different way to self-reference in future
 function TypeGuard.FindFirstParent(TypeName: string)
     local Found = nil
 
@@ -498,6 +500,7 @@ function TypeGuard.FindFirstParent(TypeName: string)
     end
 end
 
+--- Creates a template TypeChecker object that can be used to extend behaviors via constraints
 function TypeGuard.Template(Name: string)
     ExpectType(Name, EXPECT_STRING, 1)
 
@@ -574,32 +577,17 @@ function TypeGuard.Template(Name: string)
         return New
     end
 
-    --- Wraps & negates the last constraint
-    --- Untested
+    --- Wraps & negates the last constraint (i.e. if it originally would fail, it passes, and vice versa)
     function TemplateClass:Negate()
         self = self:Copy()
 
         local LastConstraint = self._LastConstraint
         assert(LastConstraint ~= EMPTY_STRING, "Nothing to negate! (No constraints active)")
-
         self._ActiveConstraints[LastConstraint][4] = true
-
-        --[[ local WrappedFunction = Constraint[1]
-
-        Constraint[1] = function(...)
-            local Success, _ = WrappedFunction(...)
-
-            if (Success) then
-                return false, "Constraint '" .. LastConstraint .. "' succeeded but was expected to fail on " .. tostring(select(1, ...))
-            end
-
-            return true, ""
-        end ]]
 
         return self
     end
 
-    -- TODO: only 1 constraint of each type
     function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
         ExpectType(ConstraintName, EXPECT_STRING, 1)
         ExpectType(Constraint, EXPECT_FUNCTION, 2)
@@ -632,7 +620,7 @@ function TypeGuard.Template(Name: string)
 
     --- Calling this will only check the type of the passed value if that value is not nil, i.e. it's an optional value so nothing can be passed, but if it is not nothing then it will be checked
     function TemplateClass:Optional()
-        return self:AddTag("Optional")
+        return self:_AddTag("Optional")
     end
 
     --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
@@ -667,8 +655,7 @@ function TypeGuard.Template(Name: string)
     end
 
     --- Adds a tag (for internal purposes)
-    --- @todo Make this private?
-    function TemplateClass:AddTag(TagName)
+    function TemplateClass:_AddTag(TagName)
         ExpectType(TagName, EXPECT_STRING, 1)
         assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
 
@@ -889,11 +876,11 @@ do
         Decimal: SelfReturn<NumberTypeChecker>;
         decimal: SelfReturn<NumberTypeChecker>;
 
-        RangeInclusive: SelfReturn<NumberTypeChecker, number, number>;
-        rangeInclusive: SelfReturn<NumberTypeChecker, number, number>;
+        RangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        rangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
 
-        RangeExclusive: SelfReturn<NumberTypeChecker, number, number>;
-        rangeExclusive: SelfReturn<NumberTypeChecker, number, number>;
+        RangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        rangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
 
         Positive: SelfReturn<NumberTypeChecker>;
         positive: SelfReturn<NumberTypeChecker>;
@@ -977,17 +964,17 @@ end
 
 do
     type StringTypeChecker = TypeChecker<StringTypeChecker> & {
-        MinLength: SelfReturn<StringTypeChecker, number>;
-        minLength: SelfReturn<StringTypeChecker, number>;
+        MinLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        minLength: SelfReturn<StringTypeChecker, number | () -> number>;
 
-        MaxLength: SelfReturn<StringTypeChecker, number>;
-        maxLength: SelfReturn<StringTypeChecker, number>;
+        MaxLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        maxLength: SelfReturn<StringTypeChecker, number | () -> number>;
 
-        Pattern: SelfReturn<StringTypeChecker, string>;
-        pattern: SelfReturn<StringTypeChecker, string>;
+        Pattern: SelfReturn<StringTypeChecker, string | () -> string>;
+        pattern: SelfReturn<StringTypeChecker, string | () -> string>;
 
-        Contains: SelfReturn<StringTypeChecker, string>;
-        contains: SelfReturn<StringTypeChecker, string>;
+        Contains: SelfReturn<StringTypeChecker, string | () -> string>;
+        contains: SelfReturn<StringTypeChecker, string | () -> string>;
     };
 
     local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
@@ -1062,14 +1049,14 @@ do
     local ERR_UNEXPECTED_VALUE = ERR_PREFIX .. " Unexpected value (strict tag is present)"
 
     type ArrayTypeChecker = TypeChecker<ArrayTypeChecker> & {
-        OfLength: SelfReturn<ArrayTypeChecker, number>;
-        ofLength: SelfReturn<ArrayTypeChecker, number>;
+        OfLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        ofLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
 
-        MinLength: SelfReturn<ArrayTypeChecker, number>;
-        minLength: SelfReturn<ArrayTypeChecker, number>;
+        MinLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        minLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
 
-        MaxLength: SelfReturn<ArrayTypeChecker, number>;
-        maxLength: SelfReturn<ArrayTypeChecker, number>;
+        MaxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        maxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
 
         Contains: SelfReturn<ArrayTypeChecker, any>;
         contains: SelfReturn<ArrayTypeChecker, any>;
@@ -1174,7 +1161,7 @@ do
     end
     ArrayClass.contains = ArrayClass.Contains
 
-    --- Ensures each value in the template array satisfies the passed type checker
+    --- Ensures each value in the template array satisfies the passed TypeChecker
     function ArrayClass:OfType(SubType)
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
@@ -1240,13 +1227,13 @@ do
 
     --- Tags this ArrayTypeChecker as strict i.e. no extra indexes allowed in OfStructure constraint
     function ArrayClass:Strict()
-        return self:AddTag("Strict")
+        return self:_AddTag("Strict")
     end
     ArrayClass.strict = ArrayClass.Strict
 
     --- Tags this ArrayTypeChecker as a params call (just for better information when using TypeGuard.Params)
     function ArrayClass:DenoteParams()
-        return self:AddTag("DenoteParams")
+        return self:_AddTag("DenoteParams")
     end
     ArrayClass.denoteParams = ArrayClass.DenoteParams
 
@@ -1276,7 +1263,7 @@ do
         ofKeyType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
     };
 
-    local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}>, ObjectClass = TypeGuard.Template("Object")
+    local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}?>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass:_Initial(TargetObject)
         if (typeof(TargetObject) ~= "table") then
@@ -1376,7 +1363,7 @@ do
 
     --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure
     function ObjectClass:Strict()
-        return self:AddTag("Strict")
+        return self:_AddTag("Strict")
     end
     ObjectClass.strict = ObjectClass.Strict
 
@@ -1402,8 +1389,8 @@ do
         StructuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
         structuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
 
-        IsA: SelfReturn<InstanceTypeChecker, string>;
-        isA: SelfReturn<InstanceTypeChecker, string>;
+        IsA: SelfReturn<InstanceTypeChecker, string | () -> string>;
+        isA: SelfReturn<InstanceTypeChecker, string | () -> string>;
 
         Strict: SelfReturn<InstanceTypeChecker>;
         strict: SelfReturn<InstanceTypeChecker>;
@@ -1423,11 +1410,10 @@ do
         return nil
     end
 
-    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string?, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | () -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     --- Ensures that an Instance has specific children (this is not for properties)
-    --- @todo Check properties too
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
         ExpectType(OriginalSubTypes, EXPECT_TABLE, 1)
 
@@ -1485,7 +1471,7 @@ do
 
     --- Activates strict tag for OfStructure
     function InstanceCheckerClass:Strict()
-        return self:AddTag("Strict")
+        return self:_AddTag("Strict")
     end
     InstanceCheckerClass.strict = InstanceCheckerClass.Strict
 
@@ -1506,7 +1492,7 @@ end
 do
     type BooleanTypeChecker = TypeChecker<BooleanTypeChecker> & {};
 
-    local Boolean: TypeCheckerConstructor<BooleanTypeChecker>, BooleanClass = TypeGuard.Template("Boolean")
+    local Boolean: TypeCheckerConstructor<BooleanTypeChecker, boolean?>, BooleanClass = TypeGuard.Template("Boolean")
     BooleanClass._Initial = CreateStandardInitial("boolean")
 
     BooleanClass._InitialConstraint = BooleanClass.Equals
@@ -1520,8 +1506,8 @@ end
 
 do
     type EnumTypeChecker = TypeChecker<EnumTypeChecker> & {
-        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem>;
-        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem>;
+        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
+        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
     };
 
     local EnumChecker: TypeCheckerConstructor<EnumTypeChecker>, EnumCheckerClass = TypeGuard.Template("Enum")
@@ -1591,29 +1577,44 @@ end
 
 
 do
-    type ThreadTypeChecker = TypeChecker<ThreadTypeChecker> & {};
+    type ThreadTypeChecker = TypeChecker<ThreadTypeChecker> & {
+        IsDead: SelfReturn<ThreadTypeChecker>;
+        isDead: SelfReturn<ThreadTypeChecker>;
+
+        IsSuspended: SelfReturn<ThreadTypeChecker>;
+        isSuspended: SelfReturn<ThreadTypeChecker>;
+
+        IsRunning: SelfReturn<ThreadTypeChecker>;
+        isRunning: SelfReturn<ThreadTypeChecker>;
+
+        IsNormal: SelfReturn<ThreadTypeChecker>;
+        isNormal: SelfReturn<ThreadTypeChecker>;
+
+        HasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
+        hasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
+    };
 
     local ThreadChecker: TypeCheckerConstructor<ThreadTypeChecker>, ThreadCheckerClass = TypeGuard.Template("Thread")
     ThreadCheckerClass._Initial = CreateStandardInitial("thread")
 
     function ThreadCheckerClass:IsDead()
-        return self:HasStatus("dead"):AddTag("StatusCheck")
+        return self:HasStatus("dead"):_AddTag("StatusCheck")
     end
 
     function ThreadCheckerClass:IsSuspended()
-        return self:HasStatus("suspended"):AddTag("StatusCheck")
+        return self:HasStatus("suspended"):_AddTag("StatusCheck")
     end
 
     function ThreadCheckerClass:IsRunning()
-        return self:HasStatus("running"):AddTag("StatusCheck")
+        return self:HasStatus("running"):_AddTag("StatusCheck")
     end
 
     function ThreadCheckerClass:IsNormal()
-        return self:HasStatus("normal"):AddTag("StatusCheck")
+        return self:HasStatus("normal"):_AddTag("StatusCheck")
     end
 
     --- Checks the coroutine's status against a given status string
-    function ThreadCheckerClass:HasStatus(Status: string)
+    function ThreadCheckerClass:HasStatus(Status)
         ExpectType(Status, EXPECT_STRING_OR_FUNCTION, 1)
 
         return self:_AddConstraint("HasStatus", function(_, Thread, Status)
@@ -1694,7 +1695,7 @@ function TypeGuard.Params(...: TypeChecker<any>)
 end
 TypeGuard.params = TypeGuard.Params
 
---- Creates a function which checks variadic params against a single given type checker
+--- Creates a function which checks variadic params against a single given TypeChecker
 function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
@@ -2028,7 +2029,7 @@ return function()
         end)
     end)
 
-    -- These behaviors extend to all type checker implementations
+    -- These behaviors extend to all TypeChecker implementations
     describe("TypeChecker", function()
         describe("Optional", function()
             it("should accept nil as a checked value", function()
@@ -3054,7 +3055,7 @@ return function()
         end)
 
         describe("OfStructure", function()
-            it("should throw for non type checkers inside the template array", function()
+            it("should throw for non TypeCheckers inside the template array", function()
                 expect(function()
                     Base:OfStructure({1})
                 end).to.throw()
@@ -3068,7 +3069,7 @@ return function()
                 end).to.throw()
             end)
 
-            it("should not throw for type checkers inside the template array", function()
+            it("should not throw for TypeCheckers inside the template array", function()
                 expect(function()
                     Base:OfStructure({TypeGuard.Number()})
                 end).never.to.throw()
