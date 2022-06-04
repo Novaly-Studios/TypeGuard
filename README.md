@@ -116,6 +116,32 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         {{{Instance.new("Part"), 1}}}
     }) -- Fail
 
+    -- 6: Passing functions to constraints (they evaluate when checking)
+    local Checker = TypeGuard.String():IsAKeyIn(function()
+        local WorkspaceChildren = {}
+
+        for _, Item in pairs(Workspace:GetChildren()) do
+            WorkspaceChildren[Item.Name] = true
+        end
+
+        return WorkspaceChildren
+    end)
+
+    Checker:Check("Terrain") -- Pass
+    Checker:Check("NonExistentInstance") -- Fail
+
+    -- 7: Constraint "not" or "inverse" operation (flips the last constraint in the sequence)
+    local Checker = TypeGuard.String()
+                        :IsAValueIn({"1", "2"}):Negate()
+                        :Contains("3"):Negate()
+                        :Pattern("%d+")
+    
+    print(Checker:Check("100")) -- Pass
+    print(Checker:Check("2")) -- Fail
+    print(Checker:Check("3")) -- Fail
+    print(Checker:Check("AHHHH")) -- Fail
+    print(Checker:Check("498545")) -- Pass
+
 -- EXTRA FUN
     local Predicate = TypeGuard.Instance("Model"):OfStructure({
         Humanoid = TypeGuard.Instance("Humanoid"):OfStructure({ -- Can scan children recursively

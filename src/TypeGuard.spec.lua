@@ -1,3 +1,7 @@
+-- TODO: finish off functional input tests
+-- TODO: Negate() tests
+-- TODO: turn Or, And into constraints?
+
 return function()
     local TypeGuard = require(script.Parent)
 
@@ -276,7 +280,7 @@ return function()
         end)
     end)
 
-    -- These behaviors extend to all type checker implementations
+    -- These behaviors extend to all TypeChecker implementations
     describe("TypeChecker", function()
         describe("Optional", function()
             it("should accept nil as a checked value", function()
@@ -288,6 +292,7 @@ return function()
                 expect(TypeGuard.Number():Optional():Check("Test")).to.equal(false)
             end)
         end)
+
         describe("Alias", function()
             it("should reject non-string args", function()
                 expect(function()
@@ -315,6 +320,7 @@ return function()
                 expect(Result:match("TestAlias")).to.be.ok()
             end)
         end)
+
         describe("Or", function()
             it("should reject non-TypeChecker args", function()
                 expect(function()
@@ -412,6 +418,7 @@ return function()
                 })).to.equal(false)
             end)
         end)
+
         describe("And", function()
             it("should reject non-TypeChecker args", function()
                 expect(function()
@@ -535,6 +542,7 @@ return function()
                 end).to.throw(CheckResult)
             end)
         end)
+
         describe("WrapAssert", function()
             it("should return a function", function()
                 expect(TypeGuard.Number():WrapAssert()).to.be.a("function")
@@ -553,6 +561,28 @@ return function()
                 expect(function()
                     AssertFunction("Test")
                 end).to.throw(CheckResult)
+            end)
+        end)
+
+        describe("Negate", function()
+            it("should throw an exception if there are no constraints", function()
+                expect(function()
+                    TypeGuard.Number():Negate()
+                end).to.throw()
+            end)
+
+            it("should invert the result of the TypeChecker", function()
+                local Check = TypeGuard.Number():Equals(5):Negate()
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(5)).to.equal(false)
+                expect(Check:Check(10)).to.equal(true)
+            end)
+
+            it("should invert only the last constraint", function()
+                local Check = TypeGuard.Number():GreaterThan(1):Equals(10):Negate()
+                expect(Check:Check(2)).to.equal(true)
+                expect(Check:Check(10)).to.equal(false)
+                expect(Check:Check(20)).to.equal(true)
             end)
         end)
     end)
@@ -620,18 +650,43 @@ return function()
             end)
 
             it("should reject numbers outside of range", function()
-                expect(Base:RangeInclusive(1, 2):Check(0)).to.equal(false)
-                expect(Base:RangeInclusive(1, 2):Check(3)).to.equal(false)
+                local Range = Base:RangeInclusive(1, 2)
+                expect(Range:Check(0)).to.equal(false)
+                expect(Range:Check(3)).to.equal(false)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(0)).to.equal(false)
+                expect(FuncRange:Check(3)).to.equal(false)
             end)
 
             it("should accept numbers inside of range", function()
-                expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
-                expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+                local Range = Base:RangeInclusive(1, 2)
+                expect(Range:Check(1)).to.equal(true)
+                expect(Range:Check(2)).to.equal(true)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(2)).to.equal(true)
             end)
 
             it("should accept numbers equal to the range bounds", function()
                 expect(Base:RangeInclusive(1, 2):Check(1)).to.equal(true)
                 expect(Base:RangeInclusive(1, 2):Check(2)).to.equal(true)
+
+                local FuncRange = Base:RangeInclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1)).to.equal(true)
+                expect(FuncRange:Check(2)).to.equal(true)
             end)
         end)
 
@@ -643,16 +698,40 @@ return function()
             it("should reject numbers outside of range", function()
                 expect(Base:RangeExclusive(1, 2):Check(0)).to.equal(false)
                 expect(Base:RangeExclusive(1, 2):Check(3)).to.equal(false)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(0)).to.equal(false)
+                expect(FuncRange:Check(3)).to.equal(false)
             end)
 
             it("should accept numbers inside of range", function()
                 expect(Base:RangeExclusive(1, 2):Check(1.1)).to.equal(true)
                 expect(Base:RangeExclusive(1, 2):Check(1.9)).to.equal(true)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1.1)).to.equal(true)
+                expect(FuncRange:Check(1.9)).to.equal(true)
             end)
 
             it("should reject numbers equal to the range bounds", function()
                 expect(Base:RangeExclusive(1, 2):Check(1)).to.equal(false)
                 expect(Base:RangeExclusive(1, 2):Check(2)).to.equal(false)
+
+                local FuncRange = Base:RangeExclusive(function()
+                    return 1
+                end, function()
+                    return 2
+                end)
+                expect(FuncRange:Check(1)).to.equal(false)
+                expect(FuncRange:Check(2)).to.equal(false)
             end)
         end)
 
@@ -689,20 +768,32 @@ return function()
         describe("Equals", function()
             it("should reject non equal inputs", function()
                 expect(Base:Equals(1):Check(2)).to.equal(false)
+                expect(Base:Equals(function()
+                    return 1
+                end):Check(2)).to.equal(false)
             end)
 
             it("should accept equal inputs", function()
                 expect(Base:Equals(1):Check(1)).to.equal(true)
+                expect(Base:Equals(function()
+                    return 1
+                end):Check(1)).to.equal(true)
             end)
         end)
 
         describe("GreaterThan", function()
             it("should reject numbers less than the first arg", function()
                 expect(Base:GreaterThan(1):Check(0)).to.equal(false)
+                expect(Base:GreaterThan(function()
+                    return 1
+                end):Check(1)).to.equal(false)
             end)
 
             it("should accept numbers greater than the first arg", function()
                 expect(Base:GreaterThan(1):Check(2)).to.equal(true)
+                expect(Base:GreaterThan(function()
+                    return 1
+                end):Check(2)).to.equal(true)
             end)
         end)
 
@@ -721,18 +812,28 @@ return function()
                 end).to.throw()
             end)
 
-            it("should accept a table as first arg", function()
+            it("should accept a table or function as first arg", function()
                 expect(function()
                     Base:IsAKeyIn({})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:IsAKeyIn(function() end)
                 end).never.to.throw()
             end)
 
             it("should reject when the value does not exist as a key", function()
                 expect(Base:IsAKeyIn({}):Check(123)).to.equal(false)
+                expect(Base:IsAKeyIn(function()
+                    return {}
+                end):Check(123)).to.equal(false)
             end)
 
             it("should accept when the value does exist as a key", function()
                 expect(Base:IsAKeyIn({[123] = true}):Check(123)).to.equal(true)
+                expect(Base:IsAKeyIn(function()
+                    return {[123] = true}
+                end):Check(123)).to.equal(true)
             end)
         end)
 
@@ -751,18 +852,28 @@ return function()
                 end).to.throw()
             end)
 
-            it("should accept a table as first arg", function()
+            it("should accept a table or function as first arg", function()
                 expect(function()
                     Base:IsAValueIn({})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:IsAValueIn(function() end)
                 end).never.to.throw()
             end)
 
             it("should reject when the value does not exist in an array", function()
                 expect(Base:IsAValueIn({}):Check(123)).to.equal(false)
+                expect(Base:IsAValueIn(function()
+                    return {}
+                end):Check(123)).to.equal(false)
             end)
 
             it("should accept when the value exists in an array", function()
                 expect(Base:IsAValueIn({123}):Check(123)).to.equal(true)
+                expect(Base:IsAValueIn(function()
+                    return {123}
+                end):Check(123)).to.equal(true)
             end)
         end)
     end)
@@ -832,16 +943,18 @@ return function()
                 expect(Base:IsA("Folder"):Check({})).to.equal(false)
             end)
 
-            it("should accept Instances", function()
+            it("should accept Instances of the specified type string (or function returning type string)", function()
                 expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
-            end)
-
-            it("should accept Instances of the specified class", function()
-                expect(Base:IsA("Folder"):Check(Instance.new("Folder"))).to.equal(true)
+                expect(Base:IsA(function()
+                    return "Folder"
+                end):Check(Instance.new("Folder"))).to.equal(true)
             end)
 
             it("should reject Instances of other classes", function()
                 expect(Base:IsA("Folder"):Check(Instance.new("Part"))).to.equal(false)
+                expect(Base:IsA(function()
+                    return "Folder"
+                end):Check(Instance.new("Part"))).to.equal(false)
             end)
         end)
 
@@ -1003,48 +1116,78 @@ return function()
         describe("MinLength", function()
             it("should reject strings shorter than the specified length", function()
                 expect(Base:MinLength(5):Check("Test")).to.equal(false)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("Test")).to.equal(false)
             end)
 
             it("should accept strings longer than the specified length", function()
                 expect(Base:MinLength(5):Check("Test123")).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("Test123")).to.equal(true)
             end)
 
             it("should accept strings equal to the specified length", function()
                 expect(Base:MinLength(5):Check("12345")).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check("12345")).to.equal(true)
             end)
         end)
 
         describe("MaxLength", function()
             it("should reject strings longer than the specified length", function()
                 expect(Base:MaxLength(5):Check("Test123")).to.equal(false)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("Test123")).to.equal(false)
             end)
 
             it("should accept strings shorter than the specified length", function()
                 expect(Base:MaxLength(5):Check("Test")).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("Test")).to.equal(true)
             end)
 
             it("should accept strings equal to the specified length", function()
                 expect(Base:MaxLength(5):Check("12345")).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check("12345")).to.equal(true)
             end)
         end)
 
         describe("Pattern", function()
             it("should accept strings matching the specified pattern", function()
                 expect(Base:Pattern("[0-9]+"):Check("34789275")).to.equal(true)
+                expect(Base:Pattern(function()
+                    return "[0-9]+"
+                end):Check("34789275")).to.equal(true)
             end)
 
             it("should reject strings not matching the specified pattern", function()
                 expect(Base:Pattern("[0-9]+"):Check("123h4")).to.equal(false)
+                expect(Base:Pattern(function()
+                    return "[0-9]+"
+                end):Check("123h4")).to.equal(false)
             end)
         end)
 
         describe("Contains", function()
             it("should accept strings containing the specified substring", function()
                 expect(Base:Contains("Test"):Check("------Test123")).to.equal(true)
+                expect(Base:Contains(function()
+                    return "Test"
+                end):Check("------Test123")).to.equal(true)
             end)
 
             it("should reject strings not containing the specified substring", function()
                 expect(Base:Contains("Test"):Check("asdfghjkl")).to.equal(false)
+                expect(Base:Contains(function()
+                    return "Test"
+                end):Check("asdfghjkl")).to.equal(false)
             end)
         end)
     end)
@@ -1070,52 +1213,85 @@ return function()
         describe("OfLength", function()
             it("should reject arrays shorter than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4})).to.equal(false)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(false)
             end)
 
             it("should accept arrays longer than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should reject arrays greater than the specified length", function()
                 expect(Base:OfLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+                expect(Base:OfLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
             end)
         end)
 
         describe("MinLength", function()
             it("should reject arrays shorter than the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4})).to.equal(false)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(false)
             end)
 
             it("should accept arrays equal to the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should accept arrays longer than the specified length", function()
                 expect(Base:MinLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
+                expect(Base:MinLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
             end)
         end)
 
         describe("MaxLength", function()
             it("should reject arrays longer than the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
             end)
 
             it("should accept arrays equal to the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4, 5})).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4, 5})).to.equal(true)
             end)
 
             it("should accept arrays shorter than the specified length", function()
                 expect(Base:MaxLength(5):Check({1, 2, 3, 4})).to.equal(true)
+                expect(Base:MaxLength(function()
+                    return 5
+                end):Check({1, 2, 3, 4})).to.equal(true)
             end)
         end)
 
         describe("Contains", function()
             it("should accept arrays containing the specified element", function()
                 expect(Base:Contains(1):Check({1, 2, 3, 4})).to.equal(true)
+                expect(Base:Contains(function()
+                    return 1
+                end):Check({1, 2, 3, 4})).to.equal(true)
             end)
 
             it("should reject arrays not containing the specified element", function()
                 expect(Base:Contains(1):Check({2, 3, 4})).to.equal(false)
+                expect(Base:Contains(function()
+                    return 1
+                end):Check({2, 3, 4})).to.equal(false)
             end)
         end)
 
@@ -1130,7 +1306,7 @@ return function()
         end)
 
         describe("OfStructure", function()
-            it("should throw for non type checkers inside the template array", function()
+            it("should throw for non TypeCheckers inside the template array", function()
                 expect(function()
                     Base:OfStructure({1})
                 end).to.throw()
@@ -1144,7 +1320,7 @@ return function()
                 end).to.throw()
             end)
 
-            it("should not throw for type checkers inside the template array", function()
+            it("should not throw for TypeCheckers inside the template array", function()
                 expect(function()
                     Base:OfStructure({TypeGuard.Number()})
                 end).never.to.throw()
@@ -1216,7 +1392,7 @@ return function()
                 end).to.throw()
 
                 expect(function()
-                    TypeGuard.Enum(function() end)
+                    TypeGuard.Enum(true)
                 end).to.throw()
 
                 expect(function()
@@ -1224,7 +1400,7 @@ return function()
                 end).to.throw()
             end)
 
-            it("should not throw given EnumItem or Enum values", function()
+            it("should not throw given EnumItem or Enum (or function) values", function()
                 expect(function()
                     TypeGuard.Enum(Enum.AccessoryType)
                 end).never.to.throw()
@@ -1232,20 +1408,35 @@ return function()
                 expect(function()
                     TypeGuard.Enum(Enum.AccessoryType.Shirt)
                 end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Enum(function()
+                        return Enum.AccessoryType.Shirt
+                    end)
+                end).never.to.throw()
             end)
         end)
 
         describe("IsA", function()
             it("should accept an Enum item if the respective EnumItem is a sub-item", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AccessoryType.Shirt)).to.equal(true)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType
+                end):Check(Enum.AccessoryType.Shirt)).to.equal(true)
             end)
 
             it("should reject EnumItems which are not part of the Enum class", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType):Check(Enum.AlphaMode.Overlay)).to.equal(false)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType
+                end):Check(Enum.AlphaMode.Overlay)).to.equal(false)
             end)
 
             it("should accept EnumItems which are equal", function()
                 expect(TypeGuard.Enum(Enum.AccessoryType.Face):Check(Enum.AccessoryType.Face)).to.equal(true)
+                expect(TypeGuard.Enum(function()
+                    return Enum.AccessoryType.Face
+                end):Check(Enum.AccessoryType.Face)).to.equal(true)
             end)
         end)
     end)
@@ -1273,6 +1464,11 @@ return function()
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(true)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
             end)
 
             it("should accept suspended threads given 'suspended'", function()
@@ -1284,6 +1480,11 @@ return function()
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(true)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
             end)
 
             it("should accept threads given 'dead'", function()
@@ -1293,6 +1494,11 @@ return function()
                 expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("normal"):Check(Thread)).to.equal(false)
                 expect(Base:HasStatus("dead"):Check(Thread)).to.equal(true)
+
+                expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(false)
+                expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(true)
             end)
 
             it("should accept threads given 'normal'", function()
@@ -1309,6 +1515,11 @@ return function()
                         expect(Base:HasStatus("running"):Check(Thread)).to.equal(false)
                         expect(Base:HasStatus("normal"):Check(Thread)).to.equal(true)
                         expect(Base:HasStatus("dead"):Check(Thread)).to.equal(false)
+
+                        expect(Base:HasStatus(function() return "suspended" end):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus(function() return "running" end):Check(Thread)).to.equal(false)
+                        expect(Base:HasStatus(function() return "normal" end):Check(Thread)).to.equal(true)
+                        expect(Base:HasStatus(function() return "dead" end):Check(Thread)).to.equal(false)
                         DidRun = true
                     end)
                 end)
