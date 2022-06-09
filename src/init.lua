@@ -1142,7 +1142,7 @@ do
     local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | (any?) -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
-    --- Ensures that an Instance has specific children (this is not for properties)
+    --- Ensures that an Instance has specific children and/or properties
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
         ExpectType(OriginalSubTypes, EXPECT_TABLE, 1)
 
