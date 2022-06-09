@@ -1,14 +1,14 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
 	<External>null</External>
 	<External>nil</External>
-	<Item class="Workspace" referent="RBX855CEF8AD2564643848A831EA2C5B8F1">
+	<Item class="Workspace" referent="RBX5863B464AFEC4545908B60EBA4032140">
 		<Properties>
 			<bool name="AllowThirdPartySales">false</bool>
 			<token name="AnimationWeightedBlendFix">0</token>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<token name="ClientAnimatorThrottling">0</token>
 			<string name="CollisionGroups">Default^0^-1</string>
-			<Ref name="CurrentCamera">RBX85DCEEEB70F14DB59243044D5FB880CD</Ref>
+			<Ref name="CurrentCamera">RBX07105E2D3C704DFBB795252260D1A175</Ref>
 			<double name="DistributedGameTime">0</double>
 			<bool name="ExplicitAutoJoints">true</bool>
 			<float name="FallenPartsDestroyHeight">-500</float>
@@ -59,7 +59,7 @@
 			<BinaryString name="Tags"></BinaryString>
 			<bool name="TerrainWeldsFixed">true</bool>
 			<bool name="TouchesUseCollisionGroups">false</bool>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001de26</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001dca0</UniqueId>
 			<OptionalCoordinateFrame name="WorldPivotData">
 				<CFrame>
 					<X>0</X>
@@ -77,31 +77,31 @@
 				</CFrame>
 			</OptionalCoordinateFrame>
 		</Properties>
-		<Item class="Camera" referent="RBX85DCEEEB70F14DB59243044D5FB880CD">
+		<Item class="Camera" referent="RBX07105E2D3C704DFBB795252260D1A175">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>147.355774</X>
-					<Y>109.597351</Y>
-					<Z>243.191116</Z>
-					<R00>0.913344204</R00>
-					<R01>-0.0349307694</R01>
-					<R02>0.405687302</R02>
-					<R10>-3.72528985e-09</R10>
-					<R11>0.996313691</R11>
-					<R12>0.0857853144</R12>
-					<R20>-0.407188267</R20>
-					<R21>-0.07835152</R21>
-					<R22>0.909977376</R22>
+					<X>2.50915027</X>
+					<Y>19.5779667</Y>
+					<Z>20.2072964</Z>
+					<R00>0.995082378</R00>
+					<R01>-0.060571041</R01>
+					<R02>0.0783726797</R02>
+					<R10>-0</R10>
+					<R11>0.791234612</R11>
+					<R12>0.61151284</R12>
+					<R20>-0.0990511328</R20>
+					<R21>-0.608505666</R21>
+					<R22>0.787343562</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
 				<float name="FieldOfView">70</float>
 				<token name="FieldOfViewMode">0</token>
 				<CoordinateFrame name="Focus">
-					<X>146.544403</X>
-					<Y>109.425781</Y>
-					<Z>241.37117</Z>
+					<X>0</X>
+					<Y>0</Y>
+					<Z>-5</Z>
 					<R00>1</R00>
 					<R01>0</R01>
 					<R02>0</R02>
@@ -117,10 +117,10 @@
 				<string name="Name">Camera</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f79d</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f50f</UniqueId>
 			</Properties>
 		</Item>
-		<Item class="Terrain" referent="RBXE96F4CE9E3614B4DBC5E94068301C5CB">
+		<Item class="Terrain" referent="RBX439701A3BF91498EABDECB3D18209339">
 			<Properties>
 				<token name="AcquisitionMethod">0</token>
 				<bool name="Anchored">true</bool>
@@ -206,7 +206,7 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 				<token name="TopSurface">3</token>
 				<token name="TopSurfaceInput">0</token>
 				<float name="Transparency">0</float>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f811</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f583</UniqueId>
 				<Vector3 name="Velocity">
 					<X>0</X>
 					<Y>0</Y>
@@ -229,7 +229,7 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="SoundService" referent="RBX476FC74317464B3BBFD31E1C49E9CC89">
+	<Item class="SoundService" referent="RBX29FAD5F9EE2A4224B48CE56C967C1620">
 		<Properties>
 			<token name="AmbientReverb">0</token>
 			<BinaryString name="AttributesSerialize"></BinaryString>
@@ -240,28 +240,28 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<float name="RolloffScale">1</float>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f751</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4c3</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="NonReplicatedCSGDictionaryService" referent="RBXD224AC2F9AEF4A2A86955AE13C82EC67">
+	<Item class="NonReplicatedCSGDictionaryService" referent="RBX53140F5235114F0880E6E5BE7B4477DB">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">NonReplicatedCSGDictionaryService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f75d</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4cf</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="CSGDictionaryService" referent="RBXA0363397035E4FEA93C8025140FAA19C">
+	<Item class="CSGDictionaryService" referent="RBX43EF5A41B2854A9BA2CD28AFA0A21E20">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">CSGDictionaryService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f75e</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4d0</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Chat" referent="RBX43CD28B1B087451B8AA3900D92783275">
+	<Item class="Chat" referent="RBXFD30BD855A93493DAD4349E273253EB9">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="BubbleChatEnabled">false</bool>
@@ -269,19 +269,19 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<string name="Name">Chat</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f763</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4d5</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="TimerService" referent="RBX24EA1E42C0AC4D08B283FB3D04DDE1EE">
+	<Item class="TimerService" referent="RBX7E83A04EFA2741C5A63C5C287BFF2BAD">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Instance</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f764</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4d6</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Players" referent="RBX518F2ADAA9B84E8FB6E1B36609FC9610">
+	<Item class="Players" referent="RBX8745F51286F54B7F9E118946A636FA78">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="CharacterAutoLoads">true</bool>
@@ -291,7 +291,7 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<float name="RespawnTime">5</float>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f766</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4d8</UniqueId>
 		</Properties>
 	</Item>
 	<Item class="ReplicatedFirst" referent="0">
@@ -300,15 +300,16 @@ gcLgc4RKxr21zq2UlJSM]]></BinaryString>
 			<string name="Name">ReplicatedFirst</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76a</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4dc</UniqueId>
 		</Properties>
-		<Item class="ModuleScript" referent="RBXF506E730DA9642DA87FCB8304454323B">
+		<Item class="ModuleScript" referent="1">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<Content name="LinkedSource"><null></null></Content>
 				<string name="Name">TypeGuard</string>
-				<string name="ScriptGuid">{885FC615-AE81-407E-93D0-6EDD1553F26B}</string>
-				<ProtectedString name="Source"><![CDATA[-- @TODO This script really needs splitting up into sub-modules
+				<string name="ScriptGuid">{1EB36DB1-6474-4EF7-935D-7B7A289CF25F}</string>
+				<ProtectedString name="Source"><![CDATA[local CollectionService = game:GetService("CollectionService")
+-- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
 local INVALID_ARGUMENT = "Invalid argument #%s (%s expected, got %s)"
@@ -321,6 +322,7 @@ local EXPECT_SOMETHING = {"something"}
 local EXPECT_TABLE_OR_FUNCTION = {"table", "function"}
 local EXPECT_NUMBER_OR_FUNCTION = {"number", "function"}
 local EXPECT_STRING_OR_FUNCTION = {"string", "function"}
+local EXPECT_INSTANCE_OR_FUNCTION = {"Instance", "function"}
 local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {"Enum", "EnumItem", "function"}
 
 --- This is only really for type checking internally for data passed to constraints and util functions
@@ -443,6 +445,7 @@ type TypeChecker<T> = {
     Alias: SelfReturn<T, string>;
     Negate: SelfReturn<T>;
     Optional: SelfReturn<T>;
+    WithContext: SelfReturn<T, any?>;
 
     _AddTag: SelfReturn<T, string>;
 
@@ -461,19 +464,20 @@ type TypeChecker<T> = {
     IsAKeyIn: SelfReturn<T, any>;
     isAKeyIn: SelfReturn<T, any>;
 
-    GreaterThan: SelfReturn<T, number | () -> number>;
-    greaterThan: SelfReturn<T, number | () -> number>;
+    GreaterThan: SelfReturn<T, number | (any?) -> number>;
+    greaterThan: SelfReturn<T, number | (any?) -> number>;
 
-    LessThan: SelfReturn<T, number | () -> number>;
-    lessThan: SelfReturn<T, number | () -> number>;
+    LessThan: SelfReturn<T, number | (any?) -> number>;
+    lessThan: SelfReturn<T, number | (any?) -> number>;
 
-    GreaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
-    greaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    GreaterThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
+    greaterThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
 
-    LessThanOrEqualTo: SelfReturn<T, number | () -> number>;
-    lessThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    LessThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
+    lessThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
 };
 
+local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
 local TypeGuard = {}
 
 -- Needs refactoring, there should be a different way to self-reference in future
@@ -518,8 +522,9 @@ function TypeGuard.Template(Name: string)
             _Conjunction = {};
             _ActiveConstraints = {};
 
-            _LastConstraint = "";
+            _LastConstraint = EMPTY_STRING;
 
+            _Context = nil;
             _LastParent = nil;
         }
 
@@ -571,6 +576,7 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
+        New._Context = self._Context
         New._LastParent = self._LastParent
         New._LastConstraint = self._LastConstraint
 
@@ -664,10 +670,18 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
+    --- Passes down a "context" value to constraints with functional values
+    --- We don't copy here because performance is important at the checking phase
+    function TemplateClass:WithContext(Context)
+        --self = self:Copy()
+        self._Context = Context
+        return self
+    end
+
     --- Wrap Check into its own callable function
     function TemplateClass:WrapCheck()
         return function(Value)
-            return self:Check(Value)
+            return self:_Check(Value)
         end
     end
 
@@ -679,14 +693,18 @@ function TypeGuard.Template(Name: string)
     end
 
     --- Checks if the value is of the correct type
-    function TemplateClass:Check(Value)
+    function TemplateClass:_Check(Value)
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
         local Disjunctions = self._Disjunction
         local DidTryDisjunction = (Disjunctions[1] ~= nil)
 
         for _, AlternateType in ipairs(Disjunctions) do
-            local Success, _ = (typeof(AlternateType) == "function" and AlternateType(self) or AlternateType):Check(Value)
+            if (typeof(AlternateType) == "function") then
+                AlternateType = AlternateType(self)
+            end
+
+            local Success, _ = AlternateType:_Check(Value, RootContext)
 
             if (Success) then
                 return true, EMPTY_STRING
@@ -695,7 +713,7 @@ function TypeGuard.Template(Name: string)
 
         -- Handle "type x and type y and type z ..." - this is only really useful for objects and arrays
         for _, Conjunction in ipairs(self._Conjunction) do
-            local Success, Message = Conjunction:Check(Value)
+            local Success, Message = Conjunction:_Check(Value, RootContext)
 
             if (not Success) then
                 return false, "[Conjunction " .. tostring(Conjunction) .. "] " .. Message
@@ -731,7 +749,7 @@ function TypeGuard.Template(Name: string)
 
                 for Index, Arg in ipairs(Args) do
                     if (typeof(Arg) == "function") then
-                        Args[Index] = Arg()
+                        Args[Index] = Arg(RootContext)
                     end
                 end
             end
@@ -758,6 +776,14 @@ function TypeGuard.Template(Name: string)
         end
 
         return true, EMPTY_STRING
+    end
+
+    --- Check (like above) except sets a universal context for the duration of the check
+    function TemplateClass:Check(Value)
+        RootContext = self._Context
+        local Success, Result = self:_Check(Value)
+        RootContext = nil
+        return Success, Result
     end
 
     --- Throws an error if the check is unsatisfied
@@ -815,6 +841,10 @@ function TypeGuard.Template(Name: string)
             end
 
             table.insert(Fields, "Tags = {" .. ConcatWithToString(Tags, ", ") .. "}")
+        end
+
+        if (self._Context) then
+            table.insert(Fields, "Context = " .. tostring(self._Context))
         end
 
         return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
@@ -876,11 +906,11 @@ do
         Decimal: SelfReturn<NumberTypeChecker>;
         decimal: SelfReturn<NumberTypeChecker>;
 
-        RangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
-        rangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        RangeInclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
+        rangeInclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
 
-        RangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
-        rangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        RangeExclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
+        rangeExclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
 
         Positive: SelfReturn<NumberTypeChecker>;
         positive: SelfReturn<NumberTypeChecker>;
@@ -964,17 +994,17 @@ end
 
 do
     type StringTypeChecker = TypeChecker<StringTypeChecker> & {
-        MinLength: SelfReturn<StringTypeChecker, number | () -> number>;
-        minLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        MinLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
+        minLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
 
-        MaxLength: SelfReturn<StringTypeChecker, number | () -> number>;
-        maxLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        MaxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
+        maxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
 
-        Pattern: SelfReturn<StringTypeChecker, string | () -> string>;
-        pattern: SelfReturn<StringTypeChecker, string | () -> string>;
+        Pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+        pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
 
-        Contains: SelfReturn<StringTypeChecker, string | () -> string>;
-        contains: SelfReturn<StringTypeChecker, string | () -> string>;
+        Contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+        contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     };
 
     local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
@@ -1049,14 +1079,14 @@ do
     local ERR_UNEXPECTED_VALUE = ERR_PREFIX .. " Unexpected value (strict tag is present)"
 
     type ArrayTypeChecker = TypeChecker<ArrayTypeChecker> & {
-        OfLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        ofLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        OfLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        ofLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
-        MinLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        minLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        MinLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        minLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
-        MaxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        maxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        MaxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        maxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
         Contains: SelfReturn<ArrayTypeChecker, any>;
         contains: SelfReturn<ArrayTypeChecker, any>;
@@ -1167,7 +1197,7 @@ do
 
         return self:_AddConstraint("OfType", function(SelfRef, TargetArray, SubType)
             for Index, Value in ipairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Value)
+                local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
                     return false, ERR_PREFIX:format((SelfRef._Tags.DenoteParams and PREFIX_PARAM or PREFIX_ARRAY), tostring(Index)) .. SubMessage
@@ -1196,7 +1226,7 @@ do
         return self:_AddConstraint("OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
             for Index, Checker in ipairs(SubTypesAtPositions) do
-                local Success, SubMessage = Checker:Check(TargetArray[Index])
+                local Success, SubMessage = Checker:_Check(TargetArray[Index])
 
                 if (not Success) then
                     return false, SelfRef:_PrefixError(ERR_PREFIX, tostring(Index)) .. SubMessage
@@ -1302,7 +1332,7 @@ do
                     return false, "[Key '" .. tostring(Key) .. "'] is nil"
                 end
 
-                local Success, SubMessage = Checker:Check(RespectiveValue)
+                local Success, SubMessage = Checker:_Check(RespectiveValue)
 
                 if (not Success) then
                     return false, "[Key '" .. tostring(Key) .. "'] " .. SubMessage
@@ -1331,7 +1361,7 @@ do
 
         return self:_AddConstraint("OfValueType", function(_, TargetArray, SubType)
             for Index, Value in pairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Value)
+                local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
                     return false, "[OfValueType: Key '" .. tostring(Index) .. "'] " .. SubMessage
@@ -1349,7 +1379,7 @@ do
 
         return self:_AddConstraint("OfKeyType", function(_, TargetArray, SubType)
             for Key in pairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Key)
+                local Success, SubMessage = SubType:_Check(Key)
 
                 if (not Success) then
                     return false, "[OfKeyType: Key '" .. tostring(Key) .. "'] " .. SubMessage
@@ -1389,11 +1419,20 @@ do
         StructuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
         structuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
 
-        IsA: SelfReturn<InstanceTypeChecker, string | () -> string>;
-        isA: SelfReturn<InstanceTypeChecker, string | () -> string>;
+        IsA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        isA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
 
         Strict: SelfReturn<InstanceTypeChecker>;
         strict: SelfReturn<InstanceTypeChecker>;
+
+        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+
+        IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+        isDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+
+        IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+        isAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
     };
 
     local function Get(Inst, Key)
@@ -1410,7 +1449,7 @@ do
         return nil
     end
 
-    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | () -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | (any?) -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     --- Ensures that an Instance has specific children (this is not for properties)
@@ -1431,7 +1470,7 @@ do
             -- Check all properties and children which should be in the Instance exist (unless optional) and the type check for each passes
             for Key, Checker in pairs(SubTypes) do
                 local Value = TryGet(InstanceRoot, Key)
-                local Success, SubMessage = Checker:Check(Value)
+                local Success, SubMessage = Checker:_Check(Value)
 
                 if (not Success) then
                     return false, (typeof(Value) == "Instance" and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
@@ -1481,6 +1520,45 @@ do
     end
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
+    --- Checks if an Instance has a particular tag
+    function InstanceCheckerClass:HasTag(Tag: string)
+        ExpectType(Tag, EXPECT_STRING_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("HasTag", function(_, InstanceRoot, Tag)
+            if (CollectionService:HasTag(InstanceRoot, Tag)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+        end, Tag)
+    end
+
+    --- Checks if an Instance is a descendant of a particular Instance
+    function InstanceCheckerClass:IsDescendantOf(Instance)
+        ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("IsDescendantOf", function(_, SubjectInstance, Instance)
+            if (SubjectInstance:IsDescendantOf(Instance)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be a descendant of " .. Instance:GetFullName()
+        end, Instance)
+    end
+
+    --- Checks if an Instance is an ancestor of a particular Instance
+    function InstanceCheckerClass:IsAncestorOf(Instance)
+        ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("IsAncestorOf", function(_, SubjectInstance, Instance)
+            if (SubjectInstance:IsAncestorOf(Instance)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be an ancestor of " .. Instance:GetFullName()
+        end, Instance)
+    end
+
     InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
     TypeGuard.Instance = InstanceChecker
@@ -1506,8 +1584,8 @@ end
 
 do
     type EnumTypeChecker = TypeChecker<EnumTypeChecker> & {
-        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
-        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
+        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem | (any?) -> Enum | EnumItem>;
+        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem | (any?) -> Enum | EnumItem>;
     };
 
     local EnumChecker: TypeCheckerConstructor<EnumTypeChecker>, EnumCheckerClass = TypeGuard.Template("Enum")
@@ -1590,8 +1668,8 @@ do
         IsNormal: SelfReturn<ThreadTypeChecker>;
         isNormal: SelfReturn<ThreadTypeChecker>;
 
-        HasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
-        hasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
+        HasStatus: SelfReturn<ThreadTypeChecker, string | (any?) -> string>;
+        hasStatus: SelfReturn<ThreadTypeChecker, string | (any?) -> string>;
     };
 
     local ThreadChecker: TypeCheckerConstructor<ThreadTypeChecker>, ThreadCheckerClass = TypeGuard.Template("Thread")
@@ -1707,7 +1785,34 @@ function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
--- Wraps a function in a param checker function
+
+--- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
+function TypeGuard.ParamsWithContext(...: TypeChecker<any>)
+    local Params = {...}
+
+    for Index, ParamChecker in ipairs(Params) do
+        TypeGuard._AssertIsTypeBase(ParamChecker, Index)
+    end
+
+    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
+
+    return function(Context: any?, ...)
+        Checker:WithContext(Context):Assert({...})
+    end
+end
+
+--- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args
+function TypeGuard.VariadicParamsWithContext(CompareType: TypeChecker<any>)
+    TypeGuard._AssertIsTypeBase(CompareType, 1)
+
+    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
+
+    return function(Context: any?, ...)
+        Checker:WithContext(Context):Assert({...})
+    end
+end
+
+--- Wraps a function in a param checker function
 function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
 
@@ -1723,7 +1828,7 @@ function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
     end
 end
 
--- Wraps a function in a variadic param checker function
+--- Wraps a function in a variadic param checker function
 function TypeGuard.WrapFunctionVariadicParams<T>(Call: T, VariadicParamType: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
     TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
@@ -1739,15 +1844,16 @@ end
 return TypeGuard]]></ProtectedString>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">1517529a80f16a5b02ac39be0002c94a</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f581</UniqueId>
 			</Properties>
-			<Item class="ModuleScript" referent="RBX2CEA88B9CAF443E7ABF98F701A974480">
+			<Item class="ModuleScript" referent="2">
 				<Properties>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<Content name="LinkedSource"><null></null></Content>
 					<string name="Name">TypeGuard.spec</string>
-					<string name="ScriptGuid">{2E7952C8-F610-49DA-94AC-8D794778E66C}</string>
-					<ProtectedString name="Source"><![CDATA[-- TODO: finish off functional input tests
+					<string name="ScriptGuid">{C6DC4798-DDC2-48D3-930C-1781938F9991}</string>
+					<ProtectedString name="Source"><![CDATA[local CollectionService = game:GetService("CollectionService")
+-- TODO: finish off functional input tests
 -- TODO: Negate() tests
 -- TODO: turn Or, And into constraints?
 
@@ -1837,6 +1943,74 @@ return function()
         end)
     end)
 
+    describe("ParamsWithContext", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, "Test")
+            end).to.throw()
+        end)
+
+        it("should accept a context as first arg (or nil)", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())("Test", 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+        end)
+
+        it("should pass the context down", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1)
+            end).never.to.throw()
+        end)
+
+        it("should check multiple types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number(), TypeGuard.String())(nil, 1, "Test")
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number(), TypeGuard.String())(nil, 1, 1)
+            end).to.throw()
+        end)
+    end)
+
     describe("VariadicParams", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
@@ -1883,6 +2057,80 @@ return function()
 
             expect(function()
                 TypeGuard.VariadicParams(TypeGuard.Number())(1, "Test")
+            end).to.throw()
+        end)
+    end)
+
+    describe("VariadicParamsWithContext", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, "Test")
+            end).to.throw()
+        end)
+
+        it("should accept a context as first arg (or nil)", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())("Test", 1, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1, 1)
+            end).never.to.throw()
+        end)
+
+        it("should pass the context down", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1, 1, 2)
+            end).to.throw()
+        end)
+
+        it("should check multiple types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, "Test")
             end).to.throw()
         end)
     end)
@@ -2332,6 +2580,70 @@ return function()
                 expect(Check:Check(2)).to.equal(true)
                 expect(Check:Check(10)).to.equal(false)
                 expect(Check:Check(20)).to.equal(true)
+            end)
+        end)
+
+        describe("WithContext", function()
+            it("should accept any value", function()
+                expect(function()
+                    TypeGuard.Number():WithContext("Test")
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(1)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(true)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(false)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(nil)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(Instance.new("Folder"))
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext({X = 1, Y = 2})
+                end).never.to.throw()
+            end)
+
+            it("should pass the context to constraints", function()
+                local DidRun = false
+                local Check = TypeGuard.Number():WithContext("Test"):Equals(function(Context)
+                    DidRun = true
+                    expect(Context).to.equal("Test")
+                    return 1
+                end)
+
+                expect(Check:Check(1)).to.equal(true)
+                expect(DidRun).to.equal(true)
+            end)
+
+            it("should pass the root context down even if a new context is given mid-way", function()
+                local DidRun = false
+                local Check = TypeGuard.Object():WithContext("Test0"):OfStructure({
+                    X = TypeGuard.Object():WithContext("Test1"):OfStructure({
+                        Y = TypeGuard.Number():WithContext("Test2"):Equals(function(Context)
+                            DidRun = true
+                            expect(Context).to.equal("Test0")
+                            return 1
+                        end)
+                    });
+                })
+
+                expect(Check:Check({
+                    X = {
+                        Y = 1;
+                    }
+                })).to.equal(true)
+                expect(DidRun).to.equal(true)
             end)
         end)
     end)
@@ -2842,6 +3154,85 @@ return function()
                         });
                     }):Check(SampleTree)
                 ).to.equal(true)
+            end)
+        end)
+
+        describe("HasTag", function()
+            it("should reject non-Instances", function()
+                expect(Base:HasTag("Test"):Check("Test")).to.equal(false)
+                expect(Base:HasTag("Test"):Check(1)).to.equal(false)
+                expect(Base:HasTag("Test"):Check(function() end)).to.equal(false)
+                expect(Base:HasTag("Test"):Check(nil)).to.equal(false)
+                expect(Base:HasTag("Test"):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances with the specified tag", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "TestTag")
+                expect(TypeGuard.Instance():HasTag("TestTag"):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasTag(function()
+                    return "TestTag"
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject Instances without the specified tag", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasTag("TestTag"):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTag(function()
+                    return "TestTag"
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("IsAncestorOf", function()
+            it("should reject non-Instances", function()
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check("Test")).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(1)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(function() end)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(nil)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances that are ancestors of the specified Instance", function()
+                local Test = Instance.new("Folder")
+                local Test2 = Instance.new("Folder", Test)
+                local Test3 = Instance.new("Folder", Test2)
+
+                expect(TypeGuard.Instance():IsAncestorOf(Test2):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():IsAncestorOf(Test3):Check(Test)).to.equal(true)
+
+                expect(TypeGuard.Instance():IsAncestorOf(function()
+                    return Test2
+                end):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():IsAncestorOf(function()
+                    return Test3
+                end):Check(Test)).to.equal(true)
+            end)
+        end)
+
+        describe("IsDescendantOf", function()
+            it("should reject non-Instances", function()
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check("Test")).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(1)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(function() end)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(nil)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances that are descendants of the specified Instance", function()
+                local Test = Instance.new("Folder")
+                local Test2 = Instance.new("Folder", Test)
+                local Test3 = Instance.new("Folder", Test2)
+
+                expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test2)).to.equal(true)
+                expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test3)).to.equal(true)
+
+                expect(TypeGuard.Instance():IsDescendantOf(function()
+                    return Test
+                end):Check(Test2)).to.equal(true)
+                expect(TypeGuard.Instance():IsDescendantOf(function()
+                    return Test
+                end):Check(Test3)).to.equal(true)
             end)
         end)
     end)
@@ -3386,21 +3777,21 @@ return function()
 end]]></ProtectedString>
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
-					<UniqueId name="UniqueId">1517529a80f16a5b02ac39be0002c94b</UniqueId>
+					<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f582</UniqueId>
 				</Properties>
 			</Item>
 		</Item>
 	</Item>
-	<Item class="TweenService" referent="RBX4099A1A4733340E0999C1581CDA1B514">
+	<Item class="TweenService" referent="RBX4ADDF131DF4F4B2D8925EF27E4B55C57">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">TweenService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76c</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4de</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="MaterialService" referent="RBXE3CD94CB0A0D46A7B45527C021AFE453">
+	<Item class="MaterialService" referent="RBX04B083DF1D3748C7888A6FB130B2BC3A">
 		<Properties>
 			<string name="AsphaltName">Asphalt</string>
 			<BinaryString name="AttributesSerialize"></BinaryString>
@@ -3436,13 +3827,13 @@ end]]></ProtectedString>
 			<string name="SnowName">Snow</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76d</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4df</UniqueId>
 			<bool name="Use2022MaterialsXml">false</bool>
 			<string name="WoodName">Wood</string>
 			<string name="WoodPlanksName">WoodPlanks</string>
 		</Properties>
 	</Item>
-	<Item class="TextChatService" referent="RBXF9BB04C9E77A476D9043940DC1264593">
+	<Item class="TextChatService" referent="RBXDE5F5A4B317844F49BBCB075C1937AC6">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<token name="ChatVersion">0</token>
@@ -3451,19 +3842,19 @@ end]]></ProtectedString>
 			<string name="Name">TextChatService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f76e</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4e0</UniqueId>
 		</Properties>
-		<Item class="ChatWindowConfiguration" referent="RBX66DB2E0D135C4BA68FEE97BC699B10B4">
+		<Item class="ChatWindowConfiguration" referent="RBXBA533B4C46134CCAB98BD891866B2601">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<bool name="Enabled">true</bool>
 				<string name="Name">ChatWindowConfiguration</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f814</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f586</UniqueId>
 			</Properties>
 		</Item>
-		<Item class="ChatInputBarConfiguration" referent="RBXA1B9E2CB1D7847E4B00F918A47F3F511">
+		<Item class="ChatInputBarConfiguration" referent="RBX88001CB72BE8439F92AA581BC0DF5154">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<bool name="Enabled">true</bool>
@@ -3471,20 +3862,20 @@ end]]></ProtectedString>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
 				<Ref name="TargetTextChannel">null</Ref>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f815</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f587</UniqueId>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="PermissionsService" referent="RBX875ACCA9D29C47CEBF85642D66FF42AF">
+	<Item class="PermissionsService" referent="RBX722A5E989326419DAF36A88423A41F41">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">PermissionsService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f772</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4e4</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="PlayerEmulatorService" referent="RBX0A7AFF229A4740A0B43A8C24D79A6444">
+	<Item class="PlayerEmulatorService" referent="RBX075F1F77E7854D6DB16E6A90E5782CF7">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="CustomPoliciesEnabled">false</bool>
@@ -3495,10 +3886,10 @@ end]]></ProtectedString>
 			<BinaryString name="SerializedEmulatedPolicyInfo"></BinaryString>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f774</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4e6</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="StudioData" referent="RBX834195337E7B4CABAC99DE3E856A0DA2">
+	<Item class="StudioData" referent="RBX8BB1A6D76E8D4FEFBA2BCED183893813">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<int64 name="CommitInflightAuthorId">0</int64>
@@ -3510,10 +3901,10 @@ end]]></ProtectedString>
 			<int64 name="SrcPlaceId">0</int64>
 			<int64 name="SrcUniverseId">0</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f776</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4e8</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="StarterPlayer" referent="RBX5CA387B8B43A4AE59049771ED386316C">
+	<Item class="StarterPlayer" referent="RBXBE1AA8AB256E48658E2BFE0E95307ED8">
 		<Properties>
 			<bool name="AllowCustomAnimations">true</bool>
 			<BinaryString name="AttributesSerialize"></BinaryString>
@@ -3556,38 +3947,38 @@ end]]></ProtectedString>
 			<float name="NameDisplayDistance">100</float>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f777</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4e9</UniqueId>
 			<bool name="UserEmotesEnabled">true</bool>
 		</Properties>
-		<Item class="StarterPlayerScripts" referent="RBX35122C8638B34CDEA61877E485A1F6A0">
+		<Item class="StarterPlayerScripts" referent="RBX26929F3E28ED473EA930947EBB1F8CF3">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<string name="Name">StarterPlayerScripts</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f812</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f584</UniqueId>
 			</Properties>
 		</Item>
-		<Item class="StarterCharacterScripts" referent="RBXA11D1A5A16F64E38887F01BBB589171B">
+		<Item class="StarterCharacterScripts" referent="RBX1B6D0BC03C144ABA979E3AF44972A842">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<string name="Name">StarterCharacterScripts</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f813</UniqueId>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f585</UniqueId>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="StarterPack" referent="RBXD187E9D5FF974F7FA80659A4EE49EFBC">
+	<Item class="StarterPack" referent="RBXD19C5C4839F24D50BF21FCD5A0129B74">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">StarterPack</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f778</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4ea</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="StarterGui" referent="RBXB91AE065594B44A7A0A970D613D25273">
+	<Item class="StarterGui" referent="RBXEE11E3F093DD40BD95CAB11021F410E9">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">StarterGui</string>
@@ -3596,56 +3987,56 @@ end]]></ProtectedString>
 			<bool name="ShowDevelopmentGui">true</bool>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f779</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4eb</UniqueId>
 			<token name="VirtualCursorMode">0</token>
 		</Properties>
 	</Item>
-	<Item class="LocalizationService" referent="RBXDA924281BA7C4AEDA849A6CC89472A22">
+	<Item class="LocalizationService" referent="RBX0E642C2AABE4453C8E17D1D7ED51613F">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">LocalizationService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f77b</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4ed</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="TeleportService" referent="RBXC59D2E44B6DF4A6C9D82FB79C93316F3">
+	<Item class="TeleportService" referent="RBX2185C43D16DA4798A3EE2097A53F27A2">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Teleport Service</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f77f</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f1</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="CollectionService" referent="RBXB71E8AB0E95C4375A80372BC717709C1">
+	<Item class="CollectionService" referent="RBX279FB1E1631A4C51AA312E59DF2FCA03">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">CollectionService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f781</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f3</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="PhysicsService" referent="RBX0DED57BA68544035B467C79095287CD8">
+	<Item class="PhysicsService" referent="RBX7A315DF34E7E4C8784082428BF0BEC48">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">PhysicsService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f782</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f4</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Geometry" referent="RBX2BB1E775B8254ECBB6CF4ACC97468148">
+	<Item class="Geometry" referent="RBX9295EEBCB3364DFD83189D7EFB539FE3">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Geometry</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f784</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f6</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="InsertService" referent="RBX5D82C4759C144D3289E79D17D3C1126C">
+	<Item class="InsertService" referent="RBXD7BAC4E40BD64311B2CF58A58DD0AADC">
 		<Properties>
 			<bool name="AllowClientInsertModels">false</bool>
 			<bool name="AllowInsertFreeModels">false</bool>
@@ -3653,158 +4044,158 @@ end]]></ProtectedString>
 			<string name="Name">InsertService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f786</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f8</UniqueId>
 		</Properties>
-		<Item class="StringValue" referent="RBXAE681E0F1B124CCAB2EE59FCA64D224D">
+		<Item class="StringValue" referent="RBXCFD8F9B7836347F892D6CE58C56FFC46">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<string name="Name">InsertionHash</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
-				<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002c31a</UniqueId>
-				<string name="Value">{07BA53CB-295D-43D7-B9BF-9C33F2778394}</string>
+				<UniqueId name="UniqueId">52e5ffecaace773302b304a70002bed2</UniqueId>
+				<string name="Value">{595D8723-CE6A-49F5-869E-B374C98C5999}</string>
 			</Properties>
 		</Item>
 	</Item>
-	<Item class="GamePassService" referent="RBX0846C53C804D434DB9B1BEA75957ECD3">
+	<Item class="GamePassService" referent="RBX495941ACED6249E682BB9D10D33082F5">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">GamePassService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f787</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4f9</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Debris" referent="RBX44C92EF7357E4FA9B7948BE3EF11921B">
+	<Item class="Debris" referent="RBXAEA9A626D4004E959CBA8B7CD0B06485">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<int name="MaxItems">1000</int>
 			<string name="Name">Debris</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f788</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4fa</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="CookiesService" referent="RBX7452DCF38D64423EA0DF7D2469771433">
+	<Item class="CookiesService" referent="RBX2D1CDCCF656C44CCA664FF2944769009">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">CookiesService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f789</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f4fb</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="VRService" referent="RBXAC4A8F469A4E4F0A9B75982435735DDC">
+	<Item class="VRService" referent="RBX14910E1E71F74CBC8E9C409154710E26">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">VRService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f793</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f505</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ContextActionService" referent="RBX35208BA046254FC3A0E9A4CC3A4087AC">
+	<Item class="ContextActionService" referent="RBXBE919365ACDC4172871092B019F574FB">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">ContextActionService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f795</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f507</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ScriptService" referent="RBX38AC203014724213B5D1F8587A6EF897">
+	<Item class="ScriptService" referent="RBX4E0119AF2A024A5097AD8443A0083394">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Instance</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f797</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f509</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="AssetService" referent="RBX808C72BBE06A4590A0F63BA2FACB5321">
+	<Item class="AssetService" referent="RBXA93C6CC1C46948578F5C30CF15153911">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">AssetService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f798</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f50a</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="TouchInputService" referent="RBXEFDEE8369674439FA0CFDFB779AE0ADF">
+	<Item class="TouchInputService" referent="RBXBDEBD9B7D7634C88972888A340237E9C">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">TouchInputService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f799</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f50b</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="AnalyticsService" referent="RBX5ADA4BE75D0C4A3BAA7CF3A2A8EE67B4">
+	<Item class="AnalyticsService" referent="RBXC89DF6F3AC894CECACAE434234D39ED6">
 		<Properties>
 			<string name="ApiKey"></string>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">AnalyticsService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f79c</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f50e</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Selection" referent="RBXAFF10D54E0AE4670BBA684E4F784393D">
+	<Item class="Selection" referent="RBXA505260203344F708D199080EF93112C">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Selection</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f79f</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f511</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ServerScriptService" referent="RBXE7FD18AD59CB4128AE9024AB72F1AF09">
+	<Item class="ServerScriptService" referent="RBX351AA9E47F304FCF8E3C5D751F311D36">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="LoadStringEnabled">false</bool>
 			<string name="Name">ServerScriptService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7a1</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f513</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ServerStorage" referent="RBXFCDE742BDC6B45D18ED29625E3F662B7">
+	<Item class="ServerStorage" referent="RBX975FAEB736AF47428066B6E6C0848FD3">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">ServerStorage</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7a2</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f514</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ReplicatedStorage" referent="RBX71559B2953AB481499F54095A0CC93A3">
+	<Item class="ReplicatedStorage" referent="RBXEC057B7497C74CD6A76DDD7218BD4DBB">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">ReplicatedStorage</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7a3</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f515</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="LuaWebService" referent="RBXD7023612EFA34158925971493221603B">
+	<Item class="LuaWebService" referent="RBXE8664139834E46EC8A35CDE5C50CF7E3">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Instance</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7af</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f521</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ProcessInstancePhysicsService" referent="RBXED12A1A00791477584BAEA7DC4472823">
+	<Item class="ProcessInstancePhysicsService" referent="RBXD9DA2838680548858FB9CD61515040CE">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">ProcessInstancePhysicsService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7b2</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f524</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Lighting" referent="RBX3FBCBD1DECD14E0ABF52FD682367B3A5">
+	<Item class="Lighting" referent="RBXE8C2E761EE5447FD897AFD3F4CB0DD24">
 		<Properties>
 			<Color3 name="Ambient">
 				<R>0.5</R>
@@ -3847,56 +4238,56 @@ end]]></ProtectedString>
 			<BinaryString name="Tags"></BinaryString>
 			<token name="Technology">2</token>
 			<string name="TimeOfDay">14:00:00</string>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7de</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f550</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="LodDataService" referent="RBX6117DD4736504A638B07AFE3157F94A9">
+	<Item class="LodDataService" referent="RBX36EB6D989E594D99ACF48B21F405389D">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Instance</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0001f7e1</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70001f553</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="HttpService" referent="RBX137ECBE90879415EAFF27708965331D9">
+	<Item class="HttpService" referent="RBXD82F7F25C6A24083BE5AD9698528BBFC">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="HttpEnabled">false</bool>
 			<string name="Name">HttpService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a00024f16</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a700024c26</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="Teams" referent="RBXD1112A6A762E47249B32657B78AD4DC8">
+	<Item class="Teams" referent="RBX0DA11EF28C3D4C5BB0C1B995EE25C6EE">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">Teams</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002afbc</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70002ad74</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="VirtualInputManager" referent="RBX466E2ADF50B24674ADA2261ABC22AA98">
+	<Item class="VirtualInputManager" referent="RBX6E34EE99085F4224BA8D25FD8CE1C944">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">VirtualInputManager</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002afda</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70002ad92</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="LanguageService" referent="RBX1BD58870C9A14E2AB224A6F55E90F247">
+	<Item class="LanguageService" referent="RBX0FB7A57065CC4C6F8280BD6A0F0E8FD4">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<string name="Name">LanguageService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002b231</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70002afe9</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="ProximityPromptService" referent="RBX814E6E8CE4224D06B7933FC920002B87">
+	<Item class="ProximityPromptService" referent="RBXBF3AF16CA3544D8E832AD65DD04A271A">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="Enabled">true</bool>
@@ -3904,10 +4295,10 @@ end]]></ProtectedString>
 			<string name="Name">ProximityPromptService</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002b256</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70002b05b</UniqueId>
 		</Properties>
 	</Item>
-	<Item class="TestService" referent="RBX34348AC26F704F4B83F3D96D4295EA58">
+	<Item class="TestService" referent="RBXB90CACBB3C6F455E9BE8C6C32FB00274">
 		<Properties>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<bool name="AutoRuns">true</bool>
@@ -3922,7 +4313,7 @@ end]]></ProtectedString>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
 			<double name="Timeout">10</double>
-			<UniqueId name="UniqueId">0e366f9c99871ce002a5f15a0002c1e0</UniqueId>
+			<UniqueId name="UniqueId">52e5ffecaace773302b304a70002bee6</UniqueId>
 		</Properties>
 	</Item>
 	<SharedStrings>

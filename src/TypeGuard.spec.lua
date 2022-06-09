@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 -- TODO: finish off functional input tests
 -- TODO: Negate() tests
 -- TODO: turn Or, And into constraints?
@@ -88,6 +89,74 @@ return function()
         end)
     end)
 
+    describe("ParamsWithContext", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, "Test")
+            end).to.throw()
+        end)
+
+        it("should accept a context as first arg (or nil)", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())("Test", 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+        end)
+
+        it("should pass the context down", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1)
+            end).never.to.throw()
+        end)
+
+        it("should check multiple types", function()
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number(), TypeGuard.String())(nil, 1, "Test")
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.ParamsWithContext(TypeGuard.Number(), TypeGuard.String())(nil, 1, 1)
+            end).to.throw()
+        end)
+    end)
+
     describe("VariadicParams", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
@@ -134,6 +203,80 @@ return function()
 
             expect(function()
                 TypeGuard.VariadicParams(TypeGuard.Number())(1, "Test")
+            end).to.throw()
+        end)
+    end)
+
+    describe("VariadicParamsWithContext", function()
+        it("should reject non-TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(1)
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext({})
+            end).to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(true)
+            end).to.throw()
+        end)
+
+        it("should accept TypeChecker types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.String())
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Array())
+            end).never.to.throw()
+        end)
+
+        it("should check one type", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, "Test")
+            end).to.throw()
+        end)
+
+        it("should accept a context as first arg (or nil)", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())("Test", 1, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1, 1)
+            end).never.to.throw()
+        end)
+
+        it("should pass the context down", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                    return Context.MustEqual
+                end))({MustEqual = 1}, 1, 1, 2)
+            end).to.throw()
+        end)
+
+        it("should check multiple types", function()
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1)
+            end).never.to.throw()
+
+            expect(function()
+                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, "Test")
             end).to.throw()
         end)
     end)
@@ -583,6 +726,70 @@ return function()
                 expect(Check:Check(2)).to.equal(true)
                 expect(Check:Check(10)).to.equal(false)
                 expect(Check:Check(20)).to.equal(true)
+            end)
+        end)
+
+        describe("WithContext", function()
+            it("should accept any value", function()
+                expect(function()
+                    TypeGuard.Number():WithContext("Test")
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(1)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(true)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(false)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(nil)
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext(Instance.new("Folder"))
+                end).never.to.throw()
+
+                expect(function()
+                    TypeGuard.Number():WithContext({X = 1, Y = 2})
+                end).never.to.throw()
+            end)
+
+            it("should pass the context to constraints", function()
+                local DidRun = false
+                local Check = TypeGuard.Number():WithContext("Test"):Equals(function(Context)
+                    DidRun = true
+                    expect(Context).to.equal("Test")
+                    return 1
+                end)
+
+                expect(Check:Check(1)).to.equal(true)
+                expect(DidRun).to.equal(true)
+            end)
+
+            it("should pass the root context down even if a new context is given mid-way", function()
+                local DidRun = false
+                local Check = TypeGuard.Object():WithContext("Test0"):OfStructure({
+                    X = TypeGuard.Object():WithContext("Test1"):OfStructure({
+                        Y = TypeGuard.Number():WithContext("Test2"):Equals(function(Context)
+                            DidRun = true
+                            expect(Context).to.equal("Test0")
+                            return 1
+                        end)
+                    });
+                })
+
+                expect(Check:Check({
+                    X = {
+                        Y = 1;
+                    }
+                })).to.equal(true)
+                expect(DidRun).to.equal(true)
             end)
         end)
     end)
@@ -1093,6 +1300,85 @@ return function()
                         });
                     }):Check(SampleTree)
                 ).to.equal(true)
+            end)
+        end)
+
+        describe("HasTag", function()
+            it("should reject non-Instances", function()
+                expect(Base:HasTag("Test"):Check("Test")).to.equal(false)
+                expect(Base:HasTag("Test"):Check(1)).to.equal(false)
+                expect(Base:HasTag("Test"):Check(function() end)).to.equal(false)
+                expect(Base:HasTag("Test"):Check(nil)).to.equal(false)
+                expect(Base:HasTag("Test"):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances with the specified tag", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "TestTag")
+                expect(TypeGuard.Instance():HasTag("TestTag"):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasTag(function()
+                    return "TestTag"
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject Instances without the specified tag", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasTag("TestTag"):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTag(function()
+                    return "TestTag"
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("IsAncestorOf", function()
+            it("should reject non-Instances", function()
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check("Test")).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(1)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(function() end)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check(nil)).to.equal(false)
+                expect(Base:IsAncestorOf(Instance.new("Folder")):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances that are ancestors of the specified Instance", function()
+                local Test = Instance.new("Folder")
+                local Test2 = Instance.new("Folder", Test)
+                local Test3 = Instance.new("Folder", Test2)
+
+                expect(TypeGuard.Instance():IsAncestorOf(Test2):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():IsAncestorOf(Test3):Check(Test)).to.equal(true)
+
+                expect(TypeGuard.Instance():IsAncestorOf(function()
+                    return Test2
+                end):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():IsAncestorOf(function()
+                    return Test3
+                end):Check(Test)).to.equal(true)
+            end)
+        end)
+
+        describe("IsDescendantOf", function()
+            it("should reject non-Instances", function()
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check("Test")).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(1)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(function() end)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check(nil)).to.equal(false)
+                expect(Base:IsDescendantOf(Instance.new("Folder")):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances that are descendants of the specified Instance", function()
+                local Test = Instance.new("Folder")
+                local Test2 = Instance.new("Folder", Test)
+                local Test3 = Instance.new("Folder", Test2)
+
+                expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test2)).to.equal(true)
+                expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test3)).to.equal(true)
+
+                expect(TypeGuard.Instance():IsDescendantOf(function()
+                    return Test
+                end):Check(Test2)).to.equal(true)
+                expect(TypeGuard.Instance():IsDescendantOf(function()
+                    return Test
+                end):Check(Test3)).to.equal(true)
             end)
         end)
     end)

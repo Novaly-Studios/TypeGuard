@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 -- @TODO This script really needs splitting up into sub-modules
 
 local EMPTY_STRING = ""
@@ -11,6 +12,7 @@ local EXPECT_SOMETHING = {"something"}
 local EXPECT_TABLE_OR_FUNCTION = {"table", "function"}
 local EXPECT_NUMBER_OR_FUNCTION = {"number", "function"}
 local EXPECT_STRING_OR_FUNCTION = {"string", "function"}
+local EXPECT_INSTANCE_OR_FUNCTION = {"Instance", "function"}
 local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {"Enum", "EnumItem", "function"}
 
 --- This is only really for type checking internally for data passed to constraints and util functions
@@ -133,6 +135,7 @@ type TypeChecker<T> = {
     Alias: SelfReturn<T, string>;
     Negate: SelfReturn<T>;
     Optional: SelfReturn<T>;
+    WithContext: SelfReturn<T, any?>;
 
     _AddTag: SelfReturn<T, string>;
 
@@ -151,19 +154,20 @@ type TypeChecker<T> = {
     IsAKeyIn: SelfReturn<T, any>;
     isAKeyIn: SelfReturn<T, any>;
 
-    GreaterThan: SelfReturn<T, number | () -> number>;
-    greaterThan: SelfReturn<T, number | () -> number>;
+    GreaterThan: SelfReturn<T, number | (any?) -> number>;
+    greaterThan: SelfReturn<T, number | (any?) -> number>;
 
-    LessThan: SelfReturn<T, number | () -> number>;
-    lessThan: SelfReturn<T, number | () -> number>;
+    LessThan: SelfReturn<T, number | (any?) -> number>;
+    lessThan: SelfReturn<T, number | (any?) -> number>;
 
-    GreaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
-    greaterThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    GreaterThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
+    greaterThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
 
-    LessThanOrEqualTo: SelfReturn<T, number | () -> number>;
-    lessThanOrEqualTo: SelfReturn<T, number | () -> number>;
+    LessThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
+    lessThanOrEqualTo: SelfReturn<T, number | (any?) -> number>;
 };
 
+local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
 local TypeGuard = {}
 
 -- Needs refactoring, there should be a different way to self-reference in future
@@ -208,8 +212,9 @@ function TypeGuard.Template(Name: string)
             _Conjunction = {};
             _ActiveConstraints = {};
 
-            _LastConstraint = "";
+            _LastConstraint = EMPTY_STRING;
 
+            _Context = nil;
             _LastParent = nil;
         }
 
@@ -261,6 +266,7 @@ function TypeGuard.Template(Name: string)
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
+        New._Context = self._Context
         New._LastParent = self._LastParent
         New._LastConstraint = self._LastConstraint
 
@@ -354,10 +360,18 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
+    --- Passes down a "context" value to constraints with functional values
+    --- We don't copy here because performance is important at the checking phase
+    function TemplateClass:WithContext(Context)
+        --self = self:Copy()
+        self._Context = Context
+        return self
+    end
+
     --- Wrap Check into its own callable function
     function TemplateClass:WrapCheck()
         return function(Value)
-            return self:Check(Value)
+            return self:_Check(Value)
         end
     end
 
@@ -369,14 +383,18 @@ function TypeGuard.Template(Name: string)
     end
 
     --- Checks if the value is of the correct type
-    function TemplateClass:Check(Value)
+    function TemplateClass:_Check(Value)
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
         local Disjunctions = self._Disjunction
         local DidTryDisjunction = (Disjunctions[1] ~= nil)
 
         for _, AlternateType in ipairs(Disjunctions) do
-            local Success, _ = (typeof(AlternateType) == "function" and AlternateType(self) or AlternateType):Check(Value)
+            if (typeof(AlternateType) == "function") then
+                AlternateType = AlternateType(self)
+            end
+
+            local Success, _ = AlternateType:_Check(Value, RootContext)
 
             if (Success) then
                 return true, EMPTY_STRING
@@ -385,7 +403,7 @@ function TypeGuard.Template(Name: string)
 
         -- Handle "type x and type y and type z ..." - this is only really useful for objects and arrays
         for _, Conjunction in ipairs(self._Conjunction) do
-            local Success, Message = Conjunction:Check(Value)
+            local Success, Message = Conjunction:_Check(Value, RootContext)
 
             if (not Success) then
                 return false, "[Conjunction " .. tostring(Conjunction) .. "] " .. Message
@@ -421,7 +439,7 @@ function TypeGuard.Template(Name: string)
 
                 for Index, Arg in ipairs(Args) do
                     if (typeof(Arg) == "function") then
-                        Args[Index] = Arg()
+                        Args[Index] = Arg(RootContext)
                     end
                 end
             end
@@ -448,6 +466,14 @@ function TypeGuard.Template(Name: string)
         end
 
         return true, EMPTY_STRING
+    end
+
+    --- Check (like above) except sets a universal context for the duration of the check
+    function TemplateClass:Check(Value)
+        RootContext = self._Context
+        local Success, Result = self:_Check(Value)
+        RootContext = nil
+        return Success, Result
     end
 
     --- Throws an error if the check is unsatisfied
@@ -505,6 +531,10 @@ function TypeGuard.Template(Name: string)
             end
 
             table.insert(Fields, "Tags = {" .. ConcatWithToString(Tags, ", ") .. "}")
+        end
+
+        if (self._Context) then
+            table.insert(Fields, "Context = " .. tostring(self._Context))
         end
 
         return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
@@ -566,11 +596,11 @@ do
         Decimal: SelfReturn<NumberTypeChecker>;
         decimal: SelfReturn<NumberTypeChecker>;
 
-        RangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
-        rangeInclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        RangeInclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
+        rangeInclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
 
-        RangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
-        rangeExclusive: SelfReturn<NumberTypeChecker, number | () -> number, number | () -> number>;
+        RangeExclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
+        rangeExclusive: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
 
         Positive: SelfReturn<NumberTypeChecker>;
         positive: SelfReturn<NumberTypeChecker>;
@@ -654,17 +684,17 @@ end
 
 do
     type StringTypeChecker = TypeChecker<StringTypeChecker> & {
-        MinLength: SelfReturn<StringTypeChecker, number | () -> number>;
-        minLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        MinLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
+        minLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
 
-        MaxLength: SelfReturn<StringTypeChecker, number | () -> number>;
-        maxLength: SelfReturn<StringTypeChecker, number | () -> number>;
+        MaxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
+        maxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
 
-        Pattern: SelfReturn<StringTypeChecker, string | () -> string>;
-        pattern: SelfReturn<StringTypeChecker, string | () -> string>;
+        Pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+        pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
 
-        Contains: SelfReturn<StringTypeChecker, string | () -> string>;
-        contains: SelfReturn<StringTypeChecker, string | () -> string>;
+        Contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+        contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     };
 
     local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
@@ -739,14 +769,14 @@ do
     local ERR_UNEXPECTED_VALUE = ERR_PREFIX .. " Unexpected value (strict tag is present)"
 
     type ArrayTypeChecker = TypeChecker<ArrayTypeChecker> & {
-        OfLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        ofLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        OfLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        ofLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
-        MinLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        minLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        MinLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        minLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
-        MaxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
-        maxLength: SelfReturn<ArrayTypeChecker, number | () -> number>;
+        MaxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+        maxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
 
         Contains: SelfReturn<ArrayTypeChecker, any>;
         contains: SelfReturn<ArrayTypeChecker, any>;
@@ -857,7 +887,7 @@ do
 
         return self:_AddConstraint("OfType", function(SelfRef, TargetArray, SubType)
             for Index, Value in ipairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Value)
+                local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
                     return false, ERR_PREFIX:format((SelfRef._Tags.DenoteParams and PREFIX_PARAM or PREFIX_ARRAY), tostring(Index)) .. SubMessage
@@ -886,7 +916,7 @@ do
         return self:_AddConstraint("OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
             for Index, Checker in ipairs(SubTypesAtPositions) do
-                local Success, SubMessage = Checker:Check(TargetArray[Index])
+                local Success, SubMessage = Checker:_Check(TargetArray[Index])
 
                 if (not Success) then
                     return false, SelfRef:_PrefixError(ERR_PREFIX, tostring(Index)) .. SubMessage
@@ -992,7 +1022,7 @@ do
                     return false, "[Key '" .. tostring(Key) .. "'] is nil"
                 end
 
-                local Success, SubMessage = Checker:Check(RespectiveValue)
+                local Success, SubMessage = Checker:_Check(RespectiveValue)
 
                 if (not Success) then
                     return false, "[Key '" .. tostring(Key) .. "'] " .. SubMessage
@@ -1021,7 +1051,7 @@ do
 
         return self:_AddConstraint("OfValueType", function(_, TargetArray, SubType)
             for Index, Value in pairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Value)
+                local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
                     return false, "[OfValueType: Key '" .. tostring(Index) .. "'] " .. SubMessage
@@ -1039,7 +1069,7 @@ do
 
         return self:_AddConstraint("OfKeyType", function(_, TargetArray, SubType)
             for Key in pairs(TargetArray) do
-                local Success, SubMessage = SubType:Check(Key)
+                local Success, SubMessage = SubType:_Check(Key)
 
                 if (not Success) then
                     return false, "[OfKeyType: Key '" .. tostring(Key) .. "'] " .. SubMessage
@@ -1079,11 +1109,20 @@ do
         StructuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
         structuralEquals: SelfReturn<InstanceTypeChecker, {[any]: TypeChecker<Instance>}>;
 
-        IsA: SelfReturn<InstanceTypeChecker, string | () -> string>;
-        isA: SelfReturn<InstanceTypeChecker, string | () -> string>;
+        IsA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        isA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
 
         Strict: SelfReturn<InstanceTypeChecker>;
         strict: SelfReturn<InstanceTypeChecker>;
+
+        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+
+        IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+        isDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+
+        IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+        isAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
     };
 
     local function Get(Inst, Key)
@@ -1100,7 +1139,7 @@ do
         return nil
     end
 
-    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | () -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
+    local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | (any?) -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
     InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 
     --- Ensures that an Instance has specific children (this is not for properties)
@@ -1121,7 +1160,7 @@ do
             -- Check all properties and children which should be in the Instance exist (unless optional) and the type check for each passes
             for Key, Checker in pairs(SubTypes) do
                 local Value = TryGet(InstanceRoot, Key)
-                local Success, SubMessage = Checker:Check(Value)
+                local Success, SubMessage = Checker:_Check(Value)
 
                 if (not Success) then
                     return false, (typeof(Value) == "Instance" and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
@@ -1171,6 +1210,45 @@ do
     end
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
+    --- Checks if an Instance has a particular tag
+    function InstanceCheckerClass:HasTag(Tag: string)
+        ExpectType(Tag, EXPECT_STRING_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("HasTag", function(_, InstanceRoot, Tag)
+            if (CollectionService:HasTag(InstanceRoot, Tag)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+        end, Tag)
+    end
+
+    --- Checks if an Instance is a descendant of a particular Instance
+    function InstanceCheckerClass:IsDescendantOf(Instance)
+        ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("IsDescendantOf", function(_, SubjectInstance, Instance)
+            if (SubjectInstance:IsDescendantOf(Instance)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be a descendant of " .. Instance:GetFullName()
+        end, Instance)
+    end
+
+    --- Checks if an Instance is an ancestor of a particular Instance
+    function InstanceCheckerClass:IsAncestorOf(Instance)
+        ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("IsAncestorOf", function(_, SubjectInstance, Instance)
+            if (SubjectInstance:IsAncestorOf(Instance)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be an ancestor of " .. Instance:GetFullName()
+        end, Instance)
+    end
+
     InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
     TypeGuard.Instance = InstanceChecker
@@ -1196,8 +1274,8 @@ end
 
 do
     type EnumTypeChecker = TypeChecker<EnumTypeChecker> & {
-        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
-        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem | () -> Enum | EnumItem>;
+        IsA: SelfReturn<EnumTypeChecker, Enum | EnumItem | (any?) -> Enum | EnumItem>;
+        isA: SelfReturn<EnumTypeChecker, Enum | EnumItem | (any?) -> Enum | EnumItem>;
     };
 
     local EnumChecker: TypeCheckerConstructor<EnumTypeChecker>, EnumCheckerClass = TypeGuard.Template("Enum")
@@ -1280,8 +1358,8 @@ do
         IsNormal: SelfReturn<ThreadTypeChecker>;
         isNormal: SelfReturn<ThreadTypeChecker>;
 
-        HasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
-        hasStatus: SelfReturn<ThreadTypeChecker, string | () -> string>;
+        HasStatus: SelfReturn<ThreadTypeChecker, string | (any?) -> string>;
+        hasStatus: SelfReturn<ThreadTypeChecker, string | (any?) -> string>;
     };
 
     local ThreadChecker: TypeCheckerConstructor<ThreadTypeChecker>, ThreadCheckerClass = TypeGuard.Template("Thread")
@@ -1397,7 +1475,34 @@ function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
--- Wraps a function in a param checker function
+
+--- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
+function TypeGuard.ParamsWithContext(...: TypeChecker<any>)
+    local Params = {...}
+
+    for Index, ParamChecker in ipairs(Params) do
+        TypeGuard._AssertIsTypeBase(ParamChecker, Index)
+    end
+
+    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
+
+    return function(Context: any?, ...)
+        Checker:WithContext(Context):Assert({...})
+    end
+end
+
+--- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args
+function TypeGuard.VariadicParamsWithContext(CompareType: TypeChecker<any>)
+    TypeGuard._AssertIsTypeBase(CompareType, 1)
+
+    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
+
+    return function(Context: any?, ...)
+        Checker:WithContext(Context):Assert({...})
+    end
+end
+
+--- Wraps a function in a param checker function
 function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
 
@@ -1413,7 +1518,7 @@ function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
     end
 end
 
--- Wraps a function in a variadic param checker function
+--- Wraps a function in a variadic param checker function
 function TypeGuard.WrapFunctionVariadicParams<T>(Call: T, VariadicParamType: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
     TypeGuard._AssertIsTypeBase(VariadicParamType, 2)

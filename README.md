@@ -9,9 +9,9 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
 
 -- PARAMS
-    -- 1: Check if all params are either integers between 10 and 20, or strings with at least 5 characters
+    -- 1: Check if all params are either integers between or equal to 10 and 20, or strings with at least 5 characters
     local Checker = TypeGuard.VariadicParams(
-        TypeGuard.Number():Integer():Min(10):Max(20)
+        TypeGuard.Number():Integer():RangeInclusive(10, 20)
             :Or(TypeGuard.String():MinLength(5))
     )
 
@@ -26,7 +26,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     )
 
     Checker(1, 2, 3) -- Pass
-    Checker(1, 2, 3, 4) -- Pass
+    Checker(1, 2, 3, 4) -- Fail
     Checker(1, "2", 3) -- Fail
 
 -- INSTANCES, STRUCTURES & PRIMITIVE TYPES
@@ -141,6 +141,20 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     print(Checker:Check("3")) -- Fail
     print(Checker:Check("AHHHH")) -- Fail
     print(Checker:Check("498545")) -- Pass
+
+    -- 8: Single context support (works well with functional params on constraints + passing values inside a function)
+    -- We want the param to contain the string of the current hour
+    local CheckParams = TypeGuard.ParamsWithContext( TypeGuard.String():Contains(function(CurrentTime)
+        return CurrentTime
+    end) )
+
+    local function GetCurrentHour()
+        return os.date():match("%d+:(%d+):%d+")
+    end
+
+    local function Stuff(Input)
+        CheckParams(GetCurrentHour(), Input)
+    end
 
 -- EXTRA FUN
     local Predicate = TypeGuard.Instance("Model"):OfStructure({
