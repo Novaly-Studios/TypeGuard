@@ -1,26 +1,44 @@
 local CollectionService = game:GetService("CollectionService")
 -- @TODO This script really needs splitting up into sub-modules
 
+local CHECK_TAG_SUFFIX = ".Check"
 local EMPTY_STRING = ""
+
+local TYPE_SOMETHING = "something"
+local TYPE_ENUM_ITEM = "EnumItem"
+local TYPE_INSTANCE = "Instance"
+local TYPE_ENUM = "Enum"
+
+local TYPE_FUNCTION = "function"
+local TYPE_USERDATA = "userdata"
+local TYPE_BOOLEAN = "boolean"
+local TYPE_THREAD = "thread"
+local TYPE_NUMBER = "number"
+local TYPE_STRING = "string"
+local TYPE_TABLE = "table"
+local TYPE_NIL = "nil"
+
 local INVALID_ARGUMENT = "Invalid argument #%s (%s expected, got %s)"
+local INVALID_TYPE = "Expected %s, got %s"
 
 -- Cache up here so these arrays aren't re-created with every function call for the simple checking system
-local EXPECT_TABLE = {"table"}
-local EXPECT_STRING = {"string"}
-local EXPECT_FUNCTION = {"function"}
-local EXPECT_SOMETHING = {"something"}
-local EXPECT_TABLE_OR_FUNCTION = {"table", "function"}
-local EXPECT_NUMBER_OR_FUNCTION = {"number", "function"}
-local EXPECT_STRING_OR_FUNCTION = {"string", "function"}
-local EXPECT_INSTANCE_OR_FUNCTION = {"Instance", "function"}
-local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {"Enum", "EnumItem", "function"}
+local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {TYPE_ENUM, TYPE_ENUM_ITEM, TYPE_FUNCTION}
+local EXPECT_INSTANCE_OR_FUNCTION = {TYPE_INSTANCE, TYPE_FUNCTION}
+local EXPECT_STRING_OR_FUNCTION = {TYPE_STRING, TYPE_FUNCTION}
+local EXPECT_NUMBER_OR_FUNCTION = {TYPE_NUMBER, TYPE_FUNCTION}
+local EXPECT_TABLE_OR_FUNCTION = {TYPE_TABLE, TYPE_FUNCTION}
+local EXPECT_SOMETHING = {TYPE_SOMETHING}
+local EXPECT_FUNCTION = {TYPE_FUNCTION}
+local EXPECT_BOOLEAN = {TYPE_BOOLEAN}
+local EXPECT_STRING = {TYPE_STRING}
+local EXPECT_TABLE = {TYPE_TABLE}
 
 --- This is only really for type checking internally for data passed to constraints and util functions
 local function ExpectType<T>(PassedArg: T, ExpectedTypes: {string}, ArgKey: number | string)
     local GotType = typeof(PassedArg)
     local Satisfied = false
 
-    for _, PossibleType in ipairs(ExpectedTypes) do
+    for _, PossibleType in ExpectedTypes do
         if (GotType == PossibleType) then
             Satisfied = true
             break
@@ -38,36 +56,33 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true, EMPTY_STRING
         end
 
-        return false, "Expected " .. ExpectedTypeName .. ", got " .. ItemType
+        return false, INVALID_TYPE:format(ExpectedTypeName, ItemType)
     end
 end
 
 local function ConcatWithToString<T>(Array: {T}, Separator: string): string
     local Result = EMPTY_STRING
-    local Size = #Array
 
-    for Index, Value in ipairs(Array) do
+    for _, Value in Array do
         Result ..= tostring(Value)
-
-        if (Index < Size) then
-            Result ..= Separator
-        end
     end
 
-    return Result
+    return Result:sub(1, #Result - (#Array > 1 and #Separator or 0))
 end
 
 local STRUCTURE_TO_FLAT_STRING_MT = {
     __tostring = function(self)
         local Pairings = {}
 
-        for Key, Value in pairs(self) do
+        for Key, Value in self do
             table.insert(Pairings, tostring(Key) .. " = " .. tostring(Value))
         end
 
         return "{" .. ConcatWithToString(Pairings, ", ") .. "}"
     end;
 }
+
+local WEAK_KEY_MT = {__mode = "k"}
 
 -- Standard re-usable functions throughout all TypeCheckers
     local function IsAKeyIn(self, Store)
@@ -82,7 +97,7 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsAValueIn", function(_, TargetValue, Store)
-            for _, Value in pairs(Store) do
+            for _, Value in Store do
                 if (Value == TargetValue) then
                     return true, EMPTY_STRING
                 end
@@ -94,31 +109,51 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
 
     local function Equals(self, ExpectedValue)
         return self:_AddConstraint("Equals", function(_, Value, ExpectedValue)
-            return Value == ExpectedValue, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
+            if (Value == ExpectedValue) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
         end, ExpectedValue)
     end
 
     local function GreaterThan(self, GTValue)
         return self:_AddConstraint("GreaterThan", function(_, Value, GTValue)
-            return Value > GTValue, "Value " .. tostring(Value) .. " is not greater than " .. tostring(GTValue)
+            if (Value > GTValue) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Value " .. tostring(Value) .. " is not greater than " .. tostring(GTValue)
         end, GTValue)
     end
 
     local function LessThan(self, LTValue)
         return self:_AddConstraint("LessThan", function(_, Value, LTValue)
-            return Value < LTValue, "Value " .. tostring(Value) .. " is not less than " .. tostring(LTValue)
+            if (Value < LTValue) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Value " .. tostring(Value) .. " is not less than " .. tostring(LTValue)
         end, LTValue)
     end
 
     local function GreaterThanOrEqualTo(self, GTEValue)
         return self:_AddConstraint("GreaterThanOrEqualTo", function(_, Value, GTEValue)
-            return Value >= GTEValue, "Value " .. tostring(Value) .. " is not greater than or equal to " .. tostring(GTEValue)
+            if (Value >= GTEValue) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Value " .. tostring(Value) .. " is not greater than or equal to " .. tostring(GTEValue)
         end, GTEValue)
     end
 
     local function LessThanOrEqualTo(self, LTEValue)
         return self:_AddConstraint("LessThanOrEqualTo", function(_, Value, LTEValue)
-            return Value <= LTEValue, "Value " .. tostring(Value) .. " is not less than or equal to " .. tostring(LTEValue)
+            if (Value <= LTEValue) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Value " .. tostring(Value) .. " is not less than or equal to " .. tostring(LTEValue)
         end, LTEValue)
     end
 
@@ -170,30 +205,6 @@ type TypeChecker<T> = {
 local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
 local TypeGuard = {}
 
--- Needs refactoring, there should be a different way to self-reference in future
-function TypeGuard.FindFirstParent(TypeName: string)
-    local Found = nil
-
-    return function(self)
-        if (Found) then
-            return Found
-        end
-
-        while (true) do
-            self = self._LastParent
-
-            if (self == nil) then
-                error("No parent found for type " .. TypeName)
-            end
-
-            if (self.Type == TypeName) then
-                Found = self
-                return Found
-            end
-        end
-    end
-end
-
 --- Creates a template TypeChecker object that can be used to extend behaviors via constraints
 function TypeGuard.Template(Name: string)
     ExpectType(Name, EXPECT_STRING, 1)
@@ -208,6 +219,7 @@ function TypeGuard.Template(Name: string)
     function TemplateClass.new(...)
         local self = {
             _Tags = {};
+            _Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables
             _Disjunction = {};
             _Conjunction = {};
             _ActiveConstraints = {};
@@ -215,7 +227,6 @@ function TypeGuard.Template(Name: string)
             _LastConstraint = EMPTY_STRING;
 
             _Context = nil;
-            _LastParent = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -247,27 +258,26 @@ function TypeGuard.Template(Name: string)
         local New = TemplateClass.new()
 
         -- Copy tags
-        for Key, Value in pairs(self._Tags) do
+        for Key, Value in self._Tags do
             New._Tags[Key] = Value
         end
 
         -- Copy OR
-        for Index, Disjunction in ipairs(self._Disjunction) do
+        for Index, Disjunction in self._Disjunction do
             New._Disjunction[Index] = Disjunction
         end
 
         -- Copy AND
-        for Index, Conjunction in ipairs(self._Conjunction) do
+        for Index, Conjunction in self._Conjunction do
             New._Conjunction[Index] = Conjunction
         end
 
         -- Copy constraints
-        for ConstraintName, Constraint in pairs(self._ActiveConstraints) do
+        for ConstraintName, Constraint in self._ActiveConstraints do
             New._ActiveConstraints[ConstraintName] = Constraint
         end
 
         New._Context = self._Context
-        New._LastParent = self._LastParent
         New._LastConstraint = self._LastConstraint
 
         return New
@@ -284,6 +294,10 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
+    function TemplateClass:Cached()
+        return self:_AddTag("Cached")
+    end
+
     function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
         ExpectType(ConstraintName, EXPECT_STRING, 1)
         ExpectType(Constraint, EXPECT_FUNCTION, 2)
@@ -294,17 +308,12 @@ function TypeGuard.Template(Name: string)
         local Args = {...}
         local HasFunctions = false
 
-        -- Establish parent reference in the children & check for any functions
-        for _, Value in ipairs(Args) do
+        for _, Value in Args do
             local ArgType = typeof(Value)
 
-            if (ArgType == "function") then
+            if (ArgType == TYPE_FUNCTION) then
                 HasFunctions = true
                 continue
-            end
-
-            if (ArgType == "table" and Value.IsTemplate) then
-                Value._LastParent = self
             end
         end
 
@@ -321,9 +330,8 @@ function TypeGuard.Template(Name: string)
 
     --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
     function TemplateClass:Or(OtherType)
-        if (typeof(OtherType) ~= "function") then
+        if (typeof(OtherType) ~= TYPE_FUNCTION) then
             TypeGuard._AssertIsTypeBase(OtherType, 1)
-            OtherType._LastParent = self._LastParent
         end
 
         self = self:Copy()
@@ -334,7 +342,6 @@ function TypeGuard.Template(Name: string)
     --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
         TypeGuard._AssertIsTypeBase(OtherType, 1)
-        OtherType._LastParent = self._LastParent
 
         self = self:Copy()
         table.insert(self._Conjunction, OtherType)
@@ -363,7 +370,6 @@ function TypeGuard.Template(Name: string)
     --- Passes down a "context" value to constraints with functional values
     --- We don't copy here because performance is important at the checking phase
     function TemplateClass:WithContext(Context)
-        --self = self:Copy()
         self._Context = Context
         return self
     end
@@ -384,34 +390,70 @@ function TypeGuard.Template(Name: string)
 
     --- Checks if the value is of the correct type
     function TemplateClass:_Check(Value)
+        debug.profilebegin(Name .. CHECK_TAG_SUFFIX)
+
+        local Tags = self._Tags
+        local CacheTag = Tags.Cached
+        local Cache
+
+        if (CacheTag) then
+            Cache = self._Cache
+
+            local CacheValue = Cache[Value]
+
+            if (CacheValue) then
+                local Success = CacheValue[1]
+                local Result = CacheValue[2]
+                debug.profileend()
+                return Success, Result
+            end
+        end
+
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
         local Disjunctions = self._Disjunction
         local DidTryDisjunction = (Disjunctions[1] ~= nil)
 
-        for _, AlternateType in ipairs(Disjunctions) do
-            if (typeof(AlternateType) == "function") then
+        for _, AlternateType in Disjunctions do
+            if (typeof(AlternateType) == TYPE_FUNCTION) then
                 AlternateType = AlternateType(self)
             end
 
             local Success, _ = AlternateType:_Check(Value, RootContext)
 
             if (Success) then
+                if (CacheTag) then
+                    Cache[Value] = {true, EMPTY_STRING}
+                end
+
+                debug.profileend()
                 return true, EMPTY_STRING
             end
         end
 
         -- Handle "type x and type y and type z ..." - this is only really useful for objects and arrays
-        for _, Conjunction in ipairs(self._Conjunction) do
+        for _, Conjunction in self._Conjunction do
             local Success, Message = Conjunction:_Check(Value, RootContext)
 
             if (not Success) then
-                return false, "[Conjunction " .. tostring(Conjunction) .. "] " .. Message
+                local Result = "[Conjunction " .. tostring(Conjunction) .. "] " .. Message
+
+                if (CacheTag) then
+                    Cache[Value] = {false, Result}
+                end
+
+                debug.profileend()
+                return false, Result
             end
         end
 
         -- Optional allows the value to be nil, in which case it won't be checked and we can resolve
-        if (self._Tags.Optional and Value == nil) then
+        if (Tags.Optional and Value == nil) then
+            if (CacheTag) then
+                Cache[Value] = {true, EMPTY_STRING}
+            end
+
+            debug.profileend()
             return true, EMPTY_STRING
         end
 
@@ -420,14 +462,26 @@ function TypeGuard.Template(Name: string)
 
         if (not Success) then
             if (DidTryDisjunction) then
-                return false, "Disjunctions failed on " .. tostring(self)
+                local Result = "Disjunctions failed on " .. tostring(self)
+
+                if (CacheTag) then
+                    Cache[Value] = {false, Result}
+                end
+
+                debug.profileend()
+                return false, Result
             else
+                if (CacheTag) then
+                    Cache[Value] = {false, Message}
+                end
+
+                debug.profileend()
                 return false, Message
             end
         end
 
         -- Handle active constraints
-        for ConstraintName, Constraint in pairs(self._ActiveConstraints) do
+        for ConstraintName, Constraint in self._ActiveConstraints do
             local Call = Constraint[1]
             local Args = Constraint[2]
             local HasFunctionalParams = Constraint[3]
@@ -437,8 +491,8 @@ function TypeGuard.Template(Name: string)
             if (HasFunctionalParams) then
                 Args = table.clone(Args)
 
-                for Index, Arg in ipairs(Args) do
-                    if (typeof(Arg) == "function") then
+                for Index, Arg in Args do
+                    if (typeof(Arg) == TYPE_FUNCTION) then
                         Args[Index] = Arg(RootContext)
                     end
                 end
@@ -458,13 +512,30 @@ function TypeGuard.Template(Name: string)
 
             if (not SubSuccess) then
                 if (DidTryDisjunction) then
-                    return false, "Disjunctions failed on " .. tostring(self)
+                    local Result = "Disjunctions failed on " .. tostring(self)
+
+                    if (CacheTag) then
+                        Cache[Value] = {false, Result}
+                    end
+
+                    debug.profileend()
+                    return false, Result
                 else
+                    if (CacheTag) then
+                        Cache[Value] = {false, SubMessage}
+                    end
+
+                    debug.profileend()
                     return false, SubMessage
                 end
             end
         end
 
+        if (CacheTag) then
+            Cache[Value] = {true, EMPTY_STRING}
+        end
+
+        debug.profileend()
         return true, EMPTY_STRING
     end
 
@@ -493,7 +564,7 @@ function TypeGuard.Template(Name: string)
         if (next(self._ActiveConstraints) ~= nil) then
             local InnerConstraints = {}
 
-            for ConstraintName, Constraint in pairs(self._ActiveConstraints) do
+            for ConstraintName, Constraint in self._ActiveConstraints do
                 table.insert(InnerConstraints, ConstraintName .. "(" .. ConcatWithToString(Constraint[2], ", ") .. ")")
             end
 
@@ -504,7 +575,7 @@ function TypeGuard.Template(Name: string)
         if (#self._Disjunction > 0) then
             local Alternatives = {}
 
-            for _, AlternateType in ipairs(self._Disjunction) do
+            for _, AlternateType in self._Disjunction do
                 table.insert(Alternatives, tostring(AlternateType))
             end
 
@@ -515,7 +586,7 @@ function TypeGuard.Template(Name: string)
         if (#self._Conjunction > 0) then
             local Unions = {}
 
-            for _, Union in ipairs(self._Conjunction) do
+            for _, Union in self._Conjunction do
                 table.insert(Unions, tostring(Union))
             end
 
@@ -526,7 +597,7 @@ function TypeGuard.Template(Name: string)
         if (next(self._Tags) ~= nil) then
             local Tags = {}
 
-            for Tag in pairs(self._Tags) do
+            for Tag in self._Tags do
                 table.insert(Tags, Tag)
             end
 
@@ -610,7 +681,7 @@ do
     };
 
     local Number: TypeCheckerConstructor<NumberTypeChecker, TypeChecker<any>?>, NumberClass = TypeGuard.Template("Number")
-    NumberClass._Initial = CreateStandardInitial("number")
+    NumberClass._Initial = CreateStandardInitial(TYPE_NUMBER)
 
     --- Checks if the value is whole
     function NumberClass:Integer()
@@ -698,7 +769,7 @@ do
     };
 
     local String: TypeCheckerConstructor<StringTypeChecker, TypeChecker<any>?>, StringClass = TypeGuard.Template("String")
-    StringClass._Initial = CreateStandardInitial("string")
+    StringClass._Initial = CreateStandardInitial(TYPE_STRING)
 
     --- Ensures a string is at least a certain length
     function StringClass:MinLength(MinLength)
@@ -804,14 +875,14 @@ do
     end
 
     function ArrayClass:_Initial(TargetArray)
-        if (typeof(TargetArray) ~= "table") then
+        if (typeof(TargetArray) ~= TYPE_TABLE) then
             return false, "Expected table, got " .. typeof(TargetArray)
         end
 
-        for Key in pairs(TargetArray) do
+        for Key in TargetArray do
             local KeyType = typeof(Key)
 
-            if (KeyType ~= "number") then
+            if (KeyType ~= TYPE_NUMBER) then
                 return false, "Non-numetic key detected: " .. KeyType
             end
         end
@@ -886,7 +957,7 @@ do
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
         return self:_AddConstraint("OfType", function(SelfRef, TargetArray, SubType)
-            for Index, Value in ipairs(TargetArray) do
+            for Index, Value in TargetArray do
                 local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
@@ -906,7 +977,7 @@ do
         -- Just in case the user does any weird mutation
         local SubTypesCopy = table.create(#SubTypesAtPositions)
 
-        for Index, Value in ipairs(SubTypesAtPositions) do
+        for Index, Value in SubTypesAtPositions do
             TypeGuard._AssertIsTypeBase(Value, Index)
             SubTypesCopy[Index] = Value
         end
@@ -915,7 +986,7 @@ do
 
         return self:_AddConstraint("OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
-            for Index, Checker in ipairs(SubTypesAtPositions) do
+            for Index, Checker in SubTypesAtPositions do
                 local Success, SubMessage = Checker:_Check(TargetArray[Index])
 
                 if (not Success) then
@@ -925,7 +996,7 @@ do
 
             -- Check there are no extra indexes which shouldn't be in the object
             if (SelfRef._Tags.Strict) then
-                for Index in ipairs(TargetArray) do
+                for Index in TargetArray do
                     local Checker = SubTypesAtPositions[Index]
 
                     if (not Checker) then
@@ -957,6 +1028,50 @@ do
     end
     ArrayClass.denoteParams = ArrayClass.DenoteParams
 
+    --- Checks if an array is frozen
+    function ArrayClass:IsFrozen()
+        return self:_AddConstraint("IsFrozen", function(_, TargetArray)
+            if (table.isfrozen(TargetArray)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Table was not frozen"
+        end)
+    end
+
+    --- Checks if an array is ordered
+    --- @TODO If 'Descending' = false, assume ascending, but if 'Descending' = nil, assume ascending or descending from first 2 items in the array (accept ordering either way)
+    function ArrayClass:IsOrdered(Descending)
+        if (Descending ~= nil) then
+            ExpectType(Descending, EXPECT_BOOLEAN, 1)
+        end
+
+        return self:_AddConstraint("IsOrdered", function(_, TargetArray, Descending)
+            local Ascending = not Descending
+            local Size = #TargetArray
+
+            if (Size == 1) then
+                return true, EMPTY_STRING
+            end
+
+            local Last = TargetArray[1]
+
+            for Index = 2, Size do
+                local Current = TargetArray[Index]
+
+                if (Descending and Last < Current) then
+                    return false, "Array is not ordered descending at index " .. Index
+                elseif (Ascending and Last > Current) then
+                    return false, "Array is not ordered ascending at index " .. Index
+                end
+
+                Last = Current
+            end
+
+            return true, EMPTY_STRING
+        end, Descending)
+    end
+
     ArrayClass._InitialConstraint = ArrayClass.OfType
 
     TypeGuard.Array = Array
@@ -986,12 +1101,12 @@ do
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}?>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass:_Initial(TargetObject)
-        if (typeof(TargetObject) ~= "table") then
+        if (typeof(TargetObject) ~= TYPE_TABLE) then
             return false, "Expected table, got " .. typeof(TargetObject)
         end
 
-        for Key in pairs(TargetObject) do
-            if (typeof(Key) == "number") then
+        for Key in TargetObject do
+            if (typeof(Key) == TYPE_NUMBER) then
                 return false, "Incorrect key type: number"
             end
         end
@@ -1006,7 +1121,7 @@ do
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
-        for Index, Value in pairs(OriginalSubTypes) do
+        for Index, Value in OriginalSubTypes do
             TypeGuard._AssertIsTypeBase(Value, Index)
             SubTypesCopy[Index] = Value
         end
@@ -1015,7 +1130,7 @@ do
 
         return self:_AddConstraint("OfStructure", function(SelfRef, StructureCopy, SubTypes)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
-            for Key, Checker in pairs(SubTypes) do
+            for Key, Checker in SubTypes do
                 local RespectiveValue = StructureCopy[Key]
 
                 if (RespectiveValue == nil and not Checker._Tags.Optional) then
@@ -1031,7 +1146,7 @@ do
 
             -- Check there are no extra fields which shouldn't be in the object
             if (SelfRef._Tags.Strict) then
-                for Key in pairs(StructureCopy) do
+                for Key in StructureCopy do
                     local Checker = SubTypes[Key]
 
                     if (not Checker) then
@@ -1050,7 +1165,7 @@ do
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
         return self:_AddConstraint("OfValueType", function(_, TargetArray, SubType)
-            for Index, Value in pairs(TargetArray) do
+            for Index, Value in TargetArray do
                 local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
@@ -1068,7 +1183,7 @@ do
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
         return self:_AddConstraint("OfKeyType", function(_, TargetArray, SubType)
-            for Key in pairs(TargetArray) do
+            for Key in TargetArray do
                 local Success, SubMessage = SubType:_Check(Key)
 
                 if (not Success) then
@@ -1092,6 +1207,27 @@ do
         return self:OfStructure(Structure):Strict()
     end
     ObjectClass.structuralEquals = ObjectClass.StructuralEquals
+
+    --- Checks if an object is frozen
+    function ObjectClass:IsFrozen()
+        return self:_AddConstraint("IsFrozen", function(_, TargetObject)
+            if (table.isfrozen(TargetObject)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Table was not frozen"
+        end)
+    end
+
+    --- Checks an object's metatable
+    function ObjectClass:CheckMetatable(Checker)
+        TypeGuard._AssertIsTypeBase(Checker, 1)
+
+        return self:_AddConstraint("CheckMetatable", function(_, TargetObject, Checker)
+            local Success, Message = Checker:Check(getmetatable(TargetObject))
+            return Success, "[Metatable] " .. Message
+        end, Checker)
+    end
 
     ObjectClass._InitialConstraint = ObjectClass.OfStructure
 
@@ -1140,7 +1276,7 @@ do
     end
 
     local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string | (any?) -> string | nil, {[string]: TypeChecker<any>}?>, InstanceCheckerClass = TypeGuard.Template("Instance")
-    InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
+    InstanceCheckerClass._Initial = CreateStandardInitial(TYPE_INSTANCE)
 
     --- Ensures that an Instance has specific children and/or properties
     function InstanceCheckerClass:OfStructure(OriginalSubTypes)
@@ -1149,7 +1285,7 @@ do
         -- Just in case the user does any weird mutation
         local SubTypesCopy = {}
 
-        for Key, Value in pairs(OriginalSubTypes) do
+        for Key, Value in OriginalSubTypes do
             TypeGuard._AssertIsTypeBase(Value, Key)
             SubTypesCopy[Key] = Value
         end
@@ -1158,18 +1294,18 @@ do
 
         return self:_AddConstraint("OfStructure", function(SelfRef, InstanceRoot, SubTypes)
             -- Check all properties and children which should be in the Instance exist (unless optional) and the type check for each passes
-            for Key, Checker in pairs(SubTypes) do
+            for Key, Checker in SubTypes do
                 local Value = TryGet(InstanceRoot, Key)
                 local Success, SubMessage = Checker:_Check(Value)
 
                 if (not Success) then
-                    return false, (typeof(Value) == "Instance" and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
+                    return false, (typeof(Value) == TYPE_INSTANCE and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
                 end
             end
 
             -- Check there are no extra children which shouldn't be in the Instance
             if (SelfRef._Tags.Strict) then
-                for _, Value in ipairs(InstanceRoot:GetChildren()) do
+                for _, Value in InstanceRoot:GetChildren() do
                     local Key = Value.Name
                     local Checker = SubTypes[Key]
 
@@ -1182,7 +1318,7 @@ do
             return true, EMPTY_STRING
         end, SubTypesCopy)
     end
-    InstanceCheckerClass.ofStructure = InstanceCheckerClass.OfStructure
+    InstanceCheckerClass.ofStructure = InstanceCheckerClass.OfStructur
 
     --- Uses Instance.IsA to assert the type of an Instance
     function InstanceCheckerClass:IsA(InstanceIsA)
@@ -1223,6 +1359,35 @@ do
         end, Tag)
     end
 
+    --- Checks if an Instance has a particular attribute
+    function InstanceCheckerClass:HasAttribute(Attribute: string)
+        ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("HasAttribute", function(_, InstanceRoot, Attribute)
+            if (InstanceRoot:GetAttribute(Attribute) ~= nil) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+        end, Attribute)
+    end
+
+    --- Applies a TypeChecker to an Instance's expected attribute
+    function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: TypeChecker<any>)
+        ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
+        TypeGuard._AssertIsTypeBase(Checker, 2)
+
+        return self:_AddConstraint("CheckAttribute", function(_, InstanceRoot, Attribute)
+            local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
+
+            if (not Success) then
+                return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
+            end
+
+            return true, EMPTY_STRING
+        end, Attribute, Checker)
+    end
+
     --- Checks if an Instance is a descendant of a particular Instance
     function InstanceCheckerClass:IsDescendantOf(Instance)
         ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
@@ -1261,7 +1426,7 @@ do
     type BooleanTypeChecker = TypeChecker<BooleanTypeChecker> & {};
 
     local Boolean: TypeCheckerConstructor<BooleanTypeChecker, boolean?>, BooleanClass = TypeGuard.Template("Boolean")
-    BooleanClass._Initial = CreateStandardInitial("boolean")
+    BooleanClass._Initial = CreateStandardInitial(TYPE_BOOLEAN)
 
     BooleanClass._InitialConstraint = BooleanClass.Equals
 
@@ -1283,7 +1448,7 @@ do
     function EnumCheckerClass:_Initial(Value)
         local GotType = typeof(Value)
 
-        if (GotType ~= "EnumItem" and GotType ~= "Enum") then
+        if (GotType ~= TYPE_ENUM_ITEM and GotType ~= TYPE_ENUM) then
             return false, "Expected EnumItem or Enum, got " .. GotType
         end
 
@@ -1298,7 +1463,7 @@ do
             local TargetType = typeof(TargetEnum)
 
             -- Both are EnumItems
-            if (TargetType == "EnumItem") then
+            if (TargetType == TYPE_ENUM_ITEM) then
                 if (Value == TargetEnum) then
                     return true, EMPTY_STRING
                 end
@@ -1325,26 +1490,6 @@ end
 
 
 do
-    type NilTypeChecker = TypeChecker<NilTypeChecker> & {};
-
-    local NilChecker: TypeCheckerConstructor<NilTypeChecker>, NilCheckerClass = TypeGuard.Template("Nil")
-
-    function NilCheckerClass:_Initial(Value)
-        if (Value == nil) then
-            return true, EMPTY_STRING
-        end
-
-        return false, "Expected nil, got " .. typeof(Value)
-    end
-
-    TypeGuard.Nil = NilChecker
-    TypeGuard["nil"] = NilChecker
-end
-
-
-
-
-do
     type ThreadTypeChecker = TypeChecker<ThreadTypeChecker> & {
         IsDead: SelfReturn<ThreadTypeChecker>;
         isDead: SelfReturn<ThreadTypeChecker>;
@@ -1363,7 +1508,7 @@ do
     };
 
     local ThreadChecker: TypeCheckerConstructor<ThreadTypeChecker>, ThreadCheckerClass = TypeGuard.Template("Thread")
-    ThreadCheckerClass._Initial = CreateStandardInitial("thread")
+    ThreadCheckerClass._Initial = CreateStandardInitial(TYPE_THREAD)
 
     function ThreadCheckerClass:IsDead()
         return self:HasStatus("dead"):_AddTag("StatusCheck")
@@ -1441,17 +1586,20 @@ TypeGuard.Vector3 = TypeGuard.FromTypeName("Vector3")
 TypeGuard.Vector3int16 = TypeGuard.FromTypeName("Vector3int16")
 
 -- Extra base Lua data types
-TypeGuard.Function = TypeGuard.FromTypeName("function")
-TypeGuard["function"] = TypeGuard.Function
+TypeGuard.Function = TypeGuard.FromTypeName(TYPE_FUNCTION)
+TypeGuard[TYPE_FUNCTION] = TypeGuard.Function
 
-TypeGuard.Userdata = TypeGuard.FromTypeName("userdata")
-TypeGuard["userdata"] = TypeGuard.Userdata
+TypeGuard.Userdata = TypeGuard.FromTypeName(TYPE_USERDATA)
+TypeGuard[TYPE_USERDATA] = TypeGuard.Userdata
+
+TypeGuard.Nil = TypeGuard.FromTypeName(TYPE_NIL)
+TypeGuard[TYPE_NIL] = TypeGuard.Nil
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
     local Params = {...}
 
-    for Index, ParamChecker in ipairs(Params) do
+    for Index, ParamChecker in Params do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
@@ -1480,7 +1628,7 @@ TypeGuard.variadicParams = TypeGuard.VariadicParams
 function TypeGuard.ParamsWithContext(...: TypeChecker<any>)
     local Params = {...}
 
-    for Index, ParamChecker in ipairs(Params) do
+    for Index, ParamChecker in Params do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
