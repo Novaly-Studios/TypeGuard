@@ -91,32 +91,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     Checker:Assert(Enum.Material.Air) -- Pass
     Checker:Assert(Enum.AccessoryType.Hat) -- Pass
 
-    -- 5: Self-reference with "Or"
-    local CleanableChecker = TypeGuard.Array():OfType(
-        TypeGuard.RBXScriptConnection()
-            :Or(TypeGuard.Instance())
-            :Or(TypeGuard.FindFirstParent("Array"))
-    )
-
-    CleanableChecker:Check({
-        [1] = Instance.new("Model");
-        [2] = Instance.new("Part").ChildAdded:Connect(function() end);
-        [3] = {
-            [1] = Instance.new("Folder");
-            [2] = Instance.new("Folder");
-            [3] = Instance.new("Folder");
-            [4] = {};
-            [5] = {
-                [1] = Instance.new("Folder");
-            };
-        };
-    }) -- Pass
-
-    CleanableChecker:Check({
-        {{{Instance.new("Part"), 1}}}
-    }) -- Fail
-
-    -- 6: Passing functions to constraints (they evaluate when checking)
+    -- 5: Passing functions to constraints (they evaluate when checking)
     local Checker = TypeGuard.String():IsAKeyIn(function()
         local WorkspaceChildren = {}
 
@@ -130,7 +105,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     Checker:Check("Terrain") -- Pass
     Checker:Check("NonExistentInstance") -- Fail
 
-    -- 7: Constraint "not" or "inverse" operation (flips the last constraint in the sequence)
+    -- 6: Constraint "not" or "inverse" operation (flips the last constraint in the sequence)
     local Checker = TypeGuard.String()
                         :IsAValueIn({"1", "2"}):Negate()
                         :Contains("3"):Negate()
@@ -142,7 +117,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
     print(Checker:Check("AHHHH")) -- Fail
     print(Checker:Check("498545")) -- Pass
 
-    -- 8: Single context support (works well with functional params on constraints + passing values inside a function)
+    -- 7: Single context support (works well with functional params on constraints + passing values inside a function)
     -- We want the param to contain the string of the current hour
     local CheckParams = TypeGuard.ParamsWithContext( TypeGuard.String():Contains(function(CurrentTime)
         return CurrentTime

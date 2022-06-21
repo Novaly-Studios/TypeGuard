@@ -1,7 +1,4 @@
 local CollectionService = game:GetService("CollectionService")
--- TODO: finish off functional input tests
--- TODO: Negate() tests
--- TODO: turn Or, And into constraints?
 
 return function()
     local TypeGuard = require(script.Parent)
@@ -524,42 +521,6 @@ return function()
                 expect(Check:Check("Test")).to.equal(false)
                 expect(Check:Check({})).to.equal(false)
             end)
-
-            it("should allow self-references with functional or", function()
-                local CleanableChecker = TypeGuard.Array():OfType(
-                    TypeGuard.RBXScriptConnection()
-                    :Or(TypeGuard.Instance())
-                    :Or(TypeGuard.FindFirstParent("Array"))
-                )
-
-                expect(CleanableChecker:Check({
-                    [1] = Instance.new("Model");
-                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
-                    [3] = {
-                        [1] = Instance.new("Folder");
-                        [2] = Instance.new("Folder");
-                        [3] = Instance.new("Folder");
-                        [4] = {};
-                        [5] = {
-                            [1] = Instance.new("Folder");
-                        };
-                    };
-                })).to.equal(true)
-
-                expect(CleanableChecker:Check({
-                    [1] = Instance.new("Model");
-                    [2] = Instance.new("Part").ChildAdded:Connect(function() end);
-                    [3] = {
-                        [1] = Instance.new("Folder");
-                        [2] = Instance.new("Folder");
-                        [3] = Instance.new("Folder");
-                        [4] = {};
-                        [5] = {
-                            [1] = 1;
-                        };
-                    };
-                })).to.equal(false)
-            end)
         end)
 
         describe("And", function()
@@ -648,6 +609,24 @@ return function()
                 expect(Error).never.to.equal("")
             end)
         end)
+
+        describe("Cached", function()
+            it("should cache results if Cached is used on simple types", function()
+                local Check = TypeGuard.Number():Cached()
+                expect(Check:Check(1)).to.equal(true)
+                expect(Check:Check(1)).to.equal(true)
+            end)
+
+            it("should cache results if Cached is used on complex types", function()
+                local Check = TypeGuard.Object():StructuralEquals({X = TypeGuard.Number()}):Cached()
+                local Test = {X = 1}
+                expect(Check:Check(Test)).to.equal(true)
+                Test.Y = 2
+                expect(Check:Check(Test)).to.equal(true) -- Technically incorrect but that's the cost of caching: performance increase for temporal correctness
+                expect(Check:Check({X = 1})).to.equal(true)
+            end)
+        end)
+
         describe("WrapCheck", function()
             it("should return a function", function()
                 expect(TypeGuard.Number():WrapCheck()).to.be.a("function")
@@ -1381,6 +1360,118 @@ return function()
                 end):Check(Test3)).to.equal(true)
             end)
         end)
+
+        describe("HasAttribute", function()
+            it("should reject non-strings and non-functions as 1st param", function()
+                expect(function()
+                    Base:HasAttribute(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttribute(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttribute(nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string a 1st param", function()
+                expect(function()
+                    Base:HasAttribute("Test")
+                end).never.to.throw()
+            end)
+
+            it("should reject non-Instances on check", function()
+                expect(Base:HasAttribute("Test"):Check("Test")).to.equal(false)
+                expect(Base:HasAttribute("Test"):Check(1)).to.equal(false)
+                expect(Base:HasAttribute("Test"):Check(function() end)).to.equal(false)
+                expect(Base:HasAttribute("Test"):Check(nil)).to.equal(false)
+                expect(Base:HasAttribute("Test"):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances with the specified attribute", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("TestAttribute", true)
+                expect(TypeGuard.Instance():HasAttribute("TestAttribute"):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasAttribute(function()
+                    return "TestAttribute"
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject Instances without the specified attribute", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasAttribute("TestAttribute"):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasAttribute(function()
+                    return "TestAttribute"
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("CheckAttribute", function()
+            it("should reject non-strings and non-functions as 1st param", function()
+                expect(function()
+                    Base:CheckAttribute(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttribute(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttribute(nil)
+                end).to.throw()
+            end)
+
+            it("should reject non-TypeCheckers as 2nd param", function()
+                expect(function()
+                    Base:CheckAttribute("Test", 1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttribute("Test", true)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttribute("Test", function() end)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttribute("Test", nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string & TypeChecker as params", function()
+                expect(function()
+                    Base:CheckAttribute("Test", TypeGuard.Number())
+                end).never.to.throw()
+            end)
+
+            it("should reject non-Instances on check", function()
+                expect(Base:CheckAttribute("Test", TypeGuard.String()):Check("Test")).to.equal(false)
+                expect(Base:CheckAttribute("Test", TypeGuard.String()):Check(1)).to.equal(false)
+                expect(Base:CheckAttribute("Test", TypeGuard.String()):Check(function() end)).to.equal(false)
+                expect(Base:CheckAttribute("Test", TypeGuard.String()):Check(nil)).to.equal(false)
+                expect(Base:CheckAttribute("Test", TypeGuard.String()):Check({})).to.equal(false)
+            end)
+
+            it("should accept Instances with the specified attribute", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("TestAttribute", 123)
+                expect(TypeGuard.Instance():CheckAttribute("TestAttribute", TypeGuard.Number()):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():CheckAttribute(function()
+                    return "TestAttribute"
+                end, TypeGuard.Number()):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject Instances without the specified attribute", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():CheckAttribute("TestAttribute", TypeGuard.Number()):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():CheckAttribute(function()
+                    return "TestAttribute"
+                end, TypeGuard.Number()):Check(Test)).to.equal(false)
+            end)
+        end)
     end)
 
     describe("String", function()
@@ -1653,6 +1744,63 @@ return function()
                 expect(Checker:Check({1, 2, 3})).to.equal(false)
             end)
         end)
+
+        describe("IsFrozen", function()
+            it("should accept frozen arrays", function()
+                local Test = {1, 2, 3}
+                table.freeze(Test)
+                expect(Base:IsFrozen():Check(Test)).to.equal(true)
+            end)
+
+            it("should reject non-frozen arrays", function()
+                local Test = {1, 2, 3}
+                expect(Base:IsFrozen():Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("IsOrdered", function()
+            it("should allow nil params", function()
+                expect(function()
+                    Base:IsOrdered()
+                end).never.to.throw()
+            end)
+
+            it("should accept params which are booleans only if not nil (for ascending & descending)", function()
+                expect(function()
+                    Base:IsOrdered(true)
+                    Base:IsOrdered(false)
+                end).never.to.throw()
+
+                expect(function()
+                    Base:IsOrdered(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:IsOrdered({})
+                end).to.throw()
+            end)
+
+            it("should accept single-item arrays", function()
+                expect(Base:IsOrdered():Check({1})).to.equal(true)
+            end)
+
+            it("should check if an array is ordered descendingly", function()
+                expect(Base:IsOrdered(true):Check({3, 2, 1})).to.equal(true)
+                expect(Base:IsOrdered(true):Check({1, 2, 3})).to.equal(false)
+            end)
+
+            it("should check if an array is ordered ascendingly", function()
+                expect(Base:IsOrdered(false):Check({1, 2, 3})).to.equal(true)
+                expect(Base:IsOrdered(false):Check({3, 2, 1})).to.equal(false)
+                expect(Base:IsOrdered():Check({1, 2, 3})).to.equal(true)
+                expect(Base:IsOrdered():Check({3, 2, 1})).to.equal(false)
+            end)
+
+            it("should reject non ordered arrays", function()
+                expect(Base:IsOrdered(false):Check({1, 2, 4, 3})).to.equal(false)
+                expect(Base:IsOrdered(true):Check({1, 2, 4, 3})).to.equal(false)
+            end)
+        end)
     end)
 
     describe("Nil", function()
@@ -1917,6 +2065,48 @@ return function()
                         Another = TypeGuard.Boolean()
                     })
                 }):Check({Test = {Test = 123, Another = true, Final = {}}})).to.equal(true)
+            end)
+        end)
+
+        describe("IsFrozen", function()
+            it("should accept frozen objects", function()
+                local Test = {X = 1, Y = 2, Z = 3}
+                table.freeze(Test)
+                expect(Base:IsFrozen():Check(Test)).to.equal(true)
+            end)
+
+            it("should reject non-frozen objects", function()
+                local Test = {X = 1, Y = 2, Z = 3}
+                expect(Base:IsFrozen():Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("CheckMetatable", function()
+            it("should reject non-TypeCheckers", function()
+                expect(function()
+                    Base:CheckMetatable(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(function() end)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable({})
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(Instance.new("Part"))
+                end).to.throw()
+            end)
+
+            it("should run the provided TypeChecker on the metatable", function()
+                local Test = {}
+                local MT = {__index = Test}
+                setmetatable(Test, MT)
+
+                expect(Base:CheckMetatable(Base:Equals(MT)):Check(Test)).to.equal(true)
+                expect(Base:CheckMetatable(TypeGuard.Number()):Check(Test)).to.equal(false)
             end)
         end)
     end)
