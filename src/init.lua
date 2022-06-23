@@ -24,12 +24,12 @@ local INVALID_TYPE = "Expected %s, got %s"
 -- Cache up here so these arrays aren't re-created with every function call for the simple checking system
 local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {TYPE_ENUM, TYPE_ENUM_ITEM, TYPE_FUNCTION}
 local EXPECT_INSTANCE_OR_FUNCTION = {TYPE_INSTANCE, TYPE_FUNCTION}
+local EXPECT_BOOLEAN_OR_FUNCTION = {TYPE_BOOLEAN, TYPE_FUNCTION}
 local EXPECT_STRING_OR_FUNCTION = {TYPE_STRING, TYPE_FUNCTION}
 local EXPECT_NUMBER_OR_FUNCTION = {TYPE_NUMBER, TYPE_FUNCTION}
 local EXPECT_TABLE_OR_FUNCTION = {TYPE_TABLE, TYPE_FUNCTION}
 local EXPECT_SOMETHING = {TYPE_SOMETHING}
 local EXPECT_FUNCTION = {TYPE_FUNCTION}
-local EXPECT_BOOLEAN = {TYPE_BOOLEAN}
 local EXPECT_STRING = {TYPE_STRING}
 local EXPECT_TABLE = {TYPE_TABLE}
 
@@ -64,10 +64,10 @@ local function ConcatWithToString<T>(Array: {T}, Separator: string): string
     local Result = EMPTY_STRING
 
     for _, Value in Array do
-        Result ..= tostring(Value)
+        Result ..= tostring(Value) .. Separator
     end
 
-    return Result:sub(1, #Result - (#Array > 1 and #Separator or 0))
+    return (#Array > 0 and Result:sub(1, #Result - #Separator) or Result)
 end
 
 local STRUCTURE_TO_FLAT_STRING_MT = {
@@ -169,6 +169,7 @@ type TypeChecker<T> = {
     And: SelfReturn<T, TypeChecker<any>>;
     Alias: SelfReturn<T, string>;
     Negate: SelfReturn<T>;
+    Cached: SelfReturn<T>;
     Optional: SelfReturn<T>;
     WithContext: SelfReturn<T, any?>;
 
@@ -678,6 +679,15 @@ do
 
         Negative: SelfReturn<NumberTypeChecker>;
         negative: SelfReturn<NumberTypeChecker>;
+
+        IsNaN: SelfReturn<NumberTypeChecker>;
+        isNan: SelfReturn<NumberTypeChecker>;
+
+        IsInfinite: SelfReturn<NumberTypeChecker>;
+        isInfinite: SelfReturn<NumberTypeChecker>;
+
+        IsClose: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
+        isClose: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
     };
 
     local Number: TypeCheckerConstructor<NumberTypeChecker, TypeChecker<any>?>, NumberClass = TypeGuard.Template("Number")
@@ -745,6 +755,44 @@ do
         end)
     end
     NumberClass.negative = NumberClass.Negative
+
+    --- Checks if the number is NaN
+    function NumberClass:IsNaN()
+        return self:_AddConstraint("IsNaN", function(_, Item)
+            if (Item ~= Item) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected NaN, got " .. tostring(Item)
+        end)
+    end
+    NumberClass.isNaN = NumberClass.IsNaN
+
+    --- Checks if the number is infinite
+    function NumberClass:IsInfinite()
+        return self:_AddConstraint("IsInfinite", function(_, Item)
+            if (Item == math.huge or Item == -math.huge) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected infinite, got " .. tostring(Item)
+        end)
+    end
+    NumberClass.isInfinite = NumberClass.IsInfinite
+
+    --- Checks if the number is close to another
+    function NumberClass:IsClose(CloseTo, Tolerance)
+        ExpectType(CloseTo, EXPECT_NUMBER_OR_FUNCTION, 1)
+        Tolerance = Tolerance or 0.00001
+
+        return self:_AddConstraint("IsClose", function(_, NumberValue, CloseTo, Tolerance)
+            if (math.abs(NumberValue - CloseTo) < Tolerance) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected " .. tostring(CloseTo) .. " +/- " .. tostring(Tolerance) .. ", got " .. tostring(NumberValue)
+        end, CloseTo, Tolerance)
+    end
 
     TypeGuard.Number = Number
     TypeGuard.number = Number
@@ -866,6 +914,12 @@ do
 
         DenoteParams: SelfReturn<ArrayTypeChecker>;
         denoteParams: SelfReturn<ArrayTypeChecker>;
+
+        IsFrozen: SelfReturn<ArrayTypeChecker>;
+        isFrozen: SelfReturn<ArrayTypeChecker>;
+
+        IsOrdered: SelfReturn<ArrayTypeChecker, boolean | (any?) -> boolean>;
+        isOrdered: SelfReturn<ArrayTypeChecker, boolean | (any?) -> boolean>;
     };
 
     local Array: TypeCheckerConstructor<ArrayTypeChecker, TypeChecker<any>?>, ArrayClass = TypeGuard.Template("Array")
@@ -1038,12 +1092,13 @@ do
             return false, "Table was not frozen"
         end)
     end
+    ArrayClass.isFrozen = ArrayClass.IsFrozen
 
     --- Checks if an array is ordered
     --- @TODO If 'Descending' = false, assume ascending, but if 'Descending' = nil, assume ascending or descending from first 2 items in the array (accept ordering either way)
     function ArrayClass:IsOrdered(Descending)
         if (Descending ~= nil) then
-            ExpectType(Descending, EXPECT_BOOLEAN, 1)
+            ExpectType(Descending, EXPECT_BOOLEAN_OR_FUNCTION, 1)
         end
 
         return self:_AddConstraint("IsOrdered", function(_, TargetArray, Descending)
@@ -1071,6 +1126,7 @@ do
             return true, EMPTY_STRING
         end, Descending)
     end
+    ArrayClass.isOrdered = ArrayClass.IsOrdered
 
     ArrayClass._InitialConstraint = ArrayClass.OfType
 
@@ -1096,6 +1152,12 @@ do
 
         OfKeyType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
         ofKeyType: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+
+        IsFrozen: SelfReturn<ObjectTypeChecker>;
+        isFrozen: SelfReturn<ObjectTypeChecker>;
+
+        CheckMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+        checkMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
     };
 
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}?>, ObjectClass = TypeGuard.Template("Object")
@@ -1218,6 +1280,7 @@ do
             return false, "Table was not frozen"
         end)
     end
+    ObjectClass.isFrozen = ObjectClass.IsFrozen
 
     --- Checks an object's metatable
     function ObjectClass:CheckMetatable(Checker)
@@ -1228,6 +1291,7 @@ do
             return Success, "[Metatable] " .. Message
         end, Checker)
     end
+    ObjectClass.checkMetatable = ObjectClass.CheckMetatable
 
     ObjectClass._InitialConstraint = ObjectClass.OfStructure
 
@@ -1259,6 +1323,12 @@ do
 
         IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
         isAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+
+        HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        hasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+
+        CheckAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
+        checkAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
     };
 
     local function Get(Inst, Key)
@@ -1358,6 +1428,7 @@ do
             return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
         end, Tag)
     end
+    InstanceCheckerClass.hasTag = InstanceCheckerClass.HasTag
 
     --- Checks if an Instance has a particular attribute
     function InstanceCheckerClass:HasAttribute(Attribute: string)
@@ -1371,6 +1442,7 @@ do
             return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
         end, Attribute)
     end
+    InstanceCheckerClass.hasAttribute = InstanceCheckerClass.HasAttribute
 
     --- Applies a TypeChecker to an Instance's expected attribute
     function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: TypeChecker<any>)
@@ -1387,6 +1459,7 @@ do
             return true, EMPTY_STRING
         end, Attribute, Checker)
     end
+    InstanceCheckerClass.checkAttribute = InstanceCheckerClass.CheckAttribute
 
     --- Checks if an Instance is a descendant of a particular Instance
     function InstanceCheckerClass:IsDescendantOf(Instance)
@@ -1400,6 +1473,7 @@ do
             return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be a descendant of " .. Instance:GetFullName()
         end, Instance)
     end
+    InstanceCheckerClass.isDescendantOf = InstanceCheckerClass.IsDescendantOf
 
     --- Checks if an Instance is an ancestor of a particular Instance
     function InstanceCheckerClass:IsAncestorOf(Instance)
@@ -1413,6 +1487,7 @@ do
             return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be an ancestor of " .. Instance:GetFullName()
         end, Instance)
     end
+    InstanceCheckerClass.isAncestorOf = InstanceCheckerClass.IsAncestorOf
 
     InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
