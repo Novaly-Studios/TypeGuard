@@ -1062,6 +1062,54 @@ return function()
                 end):Check(123)).to.equal(true)
             end)
         end)
+
+        describe("IsNaN", function()
+            it("should reject normal numbers", function()
+                expect(Base:IsNaN():Check(1)).to.equal(false)
+            end)
+
+            it("should accept NaN", function()
+                expect(Base:IsNaN():Check(math.sqrt(-1))).to.equal(true)
+            end)
+        end)
+
+        describe("IsInfinite", function()
+            it("should reject finite numbers", function()
+                expect(Base:IsInfinite():Check(1)).to.equal(false)
+            end)
+
+            it("should accept infinite numbers", function()
+                expect(Base:IsInfinite():Check(math.huge)).to.equal(true)
+                expect(Base:IsInfinite():Check(-math.huge)).to.equal(true)
+            end)
+        end)
+
+        describe("IsClose", function()
+            it("should reject non-numbers", function()
+                expect(Base:IsClose(1):Check("Test")).to.equal(false)
+            end)
+
+            it("should reject numbers that are not close", function()
+                expect(Base:IsClose(1):Check(2)).to.equal(false)
+                expect(Base:IsClose(function()
+                    return 1
+                end):Check(2)).to.equal(false)
+            end)
+
+            it("should accept numbers in the default tolerance (0.00001)", function()
+                expect(Base:IsClose(1):Check(1 + 0.000001)).to.equal(true)
+                expect(Base:IsClose(function()
+                    return 1
+                end):Check(1 + 0.000001)).to.equal(true)
+            end)
+
+            it("should accept a custom tolerance", function()
+                expect(Base:IsClose(1, 0.5):Check(1 + 0.4)).to.equal(true)
+                expect(Base:IsClose(function()
+                    return 1
+                end, 0.5):Check(1 + 0.4)).to.equal(true)
+            end)
+        end)
     end)
 
     describe("Boolean", function()
@@ -1784,21 +1832,39 @@ return function()
                 expect(Base:IsOrdered():Check({1})).to.equal(true)
             end)
 
-            it("should check if an array is ordered descendingly", function()
+            it("should check if an array is ordered as descending", function()
                 expect(Base:IsOrdered(true):Check({3, 2, 1})).to.equal(true)
                 expect(Base:IsOrdered(true):Check({1, 2, 3})).to.equal(false)
+                expect(Base:IsOrdered(function()
+                    return true
+                end):Check({3, 2, 1})).to.equal(true)
+                expect(Base:IsOrdered(function()
+                    return true
+                end):Check({1, 2, 3})).to.equal(false)
             end)
 
-            it("should check if an array is ordered ascendingly", function()
+            it("should check if an array is ordered as ascending", function()
                 expect(Base:IsOrdered(false):Check({1, 2, 3})).to.equal(true)
                 expect(Base:IsOrdered(false):Check({3, 2, 1})).to.equal(false)
                 expect(Base:IsOrdered():Check({1, 2, 3})).to.equal(true)
                 expect(Base:IsOrdered():Check({3, 2, 1})).to.equal(false)
+                expect(Base:IsOrdered(function()
+                    return false
+                end):Check({1, 2, 3})).to.equal(true)
+                expect(Base:IsOrdered(function()
+                    return false
+                end):Check({3, 2, 1})).to.equal(false)
             end)
 
             it("should reject non ordered arrays", function()
                 expect(Base:IsOrdered(false):Check({1, 2, 4, 3})).to.equal(false)
                 expect(Base:IsOrdered(true):Check({1, 2, 4, 3})).to.equal(false)
+                expect(Base:IsOrdered(function()
+                    return false
+                end):Check({1, 2, 4, 3})).to.equal(false)
+                expect(Base:IsOrdered(function()
+                    return true
+                end):Check({1, 2, 4, 3})).to.equal(false)
             end)
         end)
     end)
