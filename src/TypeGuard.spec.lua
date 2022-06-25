@@ -771,6 +771,70 @@ return function()
                 expect(DidRun).to.equal(true)
             end)
         end)
+
+        describe("FailMessage", function()
+            it("should reject non-string args", function()
+                expect(function()
+                    TypeGuard.Number():FailMessage(1)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():FailMessage(true)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():FailMessage(false)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():FailMessage(nil)
+                end).to.throw()
+
+                expect(function()
+                    TypeGuard.Number():FailMessage({})
+                end).to.throw()
+            end)
+
+            it("should accept string args", function()
+                expect(function()
+                    TypeGuard.Number():FailMessage("Test")
+                end).never.to.throw()
+            end)
+
+            it("should enforce a custom fail message on failure", function()
+                local Check = TypeGuard.Number():FailMessage("0123456789")
+                local _, Error = Check:Check("Test")
+                expect(Error).to.equal("0123456789")
+            end)
+
+            it("should work with Or calls", function()
+                local Check = TypeGuard.Number():Or(TypeGuard.Array()):FailMessage("0123456789")
+                local _, Error = Check:Check("Test")
+                expect(Error).to.equal("0123456789")
+            end)
+
+            it("should work with And calls", function()
+                local Check = TypeGuard.Number():And(TypeGuard.Array()):FailMessage("0123456789")
+                local _, Error = Check:Check("Test")
+                expect(Error).to.equal("0123456789")
+            end)
+
+            it("should work with Cached calls", function()
+                local Check = TypeGuard.Number():Cached():FailMessage("0123456789")
+
+                local _, Error = Check:Check("Test")
+                expect(Error).to.equal("0123456789")
+
+                local _, Again = Check:Check("Test")
+                expect(Again).to.equal("0123456789")
+            end)
+
+            it("should still exist with subsequent constraint calls", function()
+                local Check = TypeGuard.Number():FailMessage("0123456789"):RangeInclusive(0, 10):Decimal()
+                local _, Error = Check:Check(1000)
+                expect(Error).to.equal("0123456789")
+            end)
+        end)
     end)
 
     describe("Number", function()
