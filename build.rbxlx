@@ -81,18 +81,18 @@
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>1.4315356</X>
-					<Y>20.0000134</Y>
-					<Z>19.9589787</Z>
-					<R00>0.998359323</R00>
-					<R01>-0.0357709527</R01>
-					<R02>0.0447136499</R02>
+					<X>3.00079918</X>
+					<Y>17.8639927</Y>
+					<Z>21.398365</Z>
+					<R00>0.993601084</R00>
+					<R01>-0.0630214512</R01>
+					<R02>0.0937291831</R02>
 					<R10>-0</R10>
-					<R11>0.780868649</R11>
-					<R12>0.624695301</R12>
-					<R20>-0.0572614409</R20>
-					<R21>-0.623670399</R21>
-					<R22>0.779587328</R22>
+					<R11>0.829856277</R11>
+					<R12>0.5579772</R12>
+					<R20>-0.112946287</R20>
+					<R21>-0.554406762</R21>
+					<R22>0.824546099</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
@@ -399,7 +399,11 @@ local WEAK_KEY_MT = {__mode = "k"}
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
-            return Store[Key] ~= nil, "No key found in table: " .. tostring(Store)
+            if (Store[Key] == nil) then
+                return false, "Key " .. tostring(Key) .. " was not found in table: " .. tostring(Store)
+            end
+
+            return true, EMPTY_STRING
         end, Store)
     end
 
@@ -413,7 +417,7 @@ local WEAK_KEY_MT = {__mode = "k"}
                 end
             end
 
-            return false, "No value found in table: " .. tostring(Store)
+            return false, "Value " .. tostring(TargetValue) .. " was not found in table: " .. tostring(Store)
         end, Store)
     end
 

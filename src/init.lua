@@ -89,7 +89,11 @@ local WEAK_KEY_MT = {__mode = "k"}
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
         return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
-            return Store[Key] ~= nil, "No key found in table: " .. tostring(Store)
+            if (Store[Key] == nil) then
+                return false, "Key " .. tostring(Key) .. " was not found in table: " .. tostring(Store)
+            end
+
+            return true, EMPTY_STRING
         end, Store)
     end
 
@@ -103,7 +107,7 @@ local WEAK_KEY_MT = {__mode = "k"}
                 end
             end
 
-            return false, "No value found in table: " .. tostring(Store)
+            return false, "Value " .. tostring(TargetValue) .. " was not found in table: " .. tostring(Store)
         end, Store)
     end
 
