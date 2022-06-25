@@ -172,8 +172,7 @@ type TypeChecker<T> = {
     Cached: SelfReturn<T>;
     Optional: SelfReturn<T>;
     WithContext: SelfReturn<T, any?>;
-
-    _AddTag: SelfReturn<T, string>;
+    FailMessage: SelfReturn<T, string>;
 
     WrapCheck: (T) -> ((any) -> (boolean, string));
     WrapAssert: (T) -> ((any) -> ());
@@ -220,14 +219,15 @@ function TypeGuard.Template(Name: string)
     function TemplateClass.new(...)
         local self = {
             _Tags = {};
-            _Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables
             _Disjunction = {};
             _Conjunction = {};
             _ActiveConstraints = {};
 
             _LastConstraint = EMPTY_STRING;
 
+            _Cache = nil;
             _Context = nil;
+            _FailMessage = nil;
         }
 
         setmetatable(self, TemplateClass)
@@ -279,10 +279,12 @@ function TypeGuard.Template(Name: string)
         end
 
         New._Context = self._Context
+        New._FailMessage = self._FailMessage
         New._LastConstraint = self._LastConstraint
 
         return New
     end
+    TemplateClass.copy = TemplateClass.Copy
 
     --- Wraps & negates the last constraint (i.e. if it originally would fail, it passes, and vice versa)
     function TemplateClass:Negate()
@@ -294,10 +296,22 @@ function TypeGuard.Template(Name: string)
 
         return self
     end
+    TemplateClass.negate = TemplateClass.Negate
+
+    --- Sets a custom fail message to return if Check() fails
+    function TemplateClass:FailMessage(Message: string)
+        ExpectType(Message, EXPECT_STRING, 1)
+
+        self = self:Copy()
+        self._FailMessage = Message
+        return self
+    end
+    TemplateClass.failMessage = TemplateClass.FailMessage
 
     function TemplateClass:Cached()
         return self:_AddTag("Cached")
     end
+    TemplateClass.cached = TemplateClass.Cached
 
     function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
         ExpectType(ConstraintName, EXPECT_STRING, 1)
@@ -324,40 +338,6 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
-    --- Calling this will only check the type of the passed value if that value is not nil, i.e. it's an optional value so nothing can be passed, but if it is not nothing then it will be checked
-    function TemplateClass:Optional()
-        return self:_AddTag("Optional")
-    end
-
-    --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
-    function TemplateClass:Or(OtherType)
-        if (typeof(OtherType) ~= TYPE_FUNCTION) then
-            TypeGuard._AssertIsTypeBase(OtherType, 1)
-        end
-
-        self = self:Copy()
-        table.insert(self._Disjunction, OtherType)
-        return self
-    end
-
-    --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
-    function TemplateClass:And(OtherType)
-        TypeGuard._AssertIsTypeBase(OtherType, 1)
-
-        self = self:Copy()
-        table.insert(self._Conjunction, OtherType)
-        return self
-    end
-
-    --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing
-    function TemplateClass:Alias(AliasName)
-        ExpectType(AliasName, EXPECT_STRING, 1)
-
-        self = self:Copy()
-        self._Alias = AliasName
-        return self
-    end
-
     --- Adds a tag (for internal purposes)
     function TemplateClass:_AddTag(TagName)
         ExpectType(TagName, EXPECT_STRING, 1)
@@ -368,25 +348,15 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
-    --- Passes down a "context" value to constraints with functional values
-    --- We don't copy here because performance is important at the checking phase
-    function TemplateClass:WithContext(Context)
-        self._Context = Context
-        return self
-    end
+    function TemplateClass:_GetCache()
+        local Cache = self._Cache
 
-    --- Wrap Check into its own callable function
-    function TemplateClass:WrapCheck()
-        return function(Value)
-            return self:_Check(Value)
+        if (not Cache) then
+            Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables
+            self._Cache = Cache
         end
-    end
 
-    --- Wraps Assert into its own callable function
-    function TemplateClass:WrapAssert()
-        return function(Value)
-            return self:Assert(Value)
-        end
+        return Cache
     end
 
     --- Checks if the value is of the correct type
@@ -398,7 +368,7 @@ function TypeGuard.Template(Name: string)
         local Cache
 
         if (CacheTag) then
-            Cache = self._Cache
+            Cache = self:_GetCache()
 
             local CacheValue = Cache[Value]
 
@@ -437,7 +407,7 @@ function TypeGuard.Template(Name: string)
             local Success, Message = Conjunction:_Check(Value, RootContext)
 
             if (not Success) then
-                local Result = "[Conjunction " .. tostring(Conjunction) .. "] " .. Message
+                local Result = self._FailMessage or ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
 
                 if (CacheTag) then
                     Cache[Value] = {false, Result}
@@ -463,7 +433,7 @@ function TypeGuard.Template(Name: string)
 
         if (not Success) then
             if (DidTryDisjunction) then
-                local Result = "Disjunctions failed on " .. tostring(self)
+                local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                 if (CacheTag) then
                     Cache[Value] = {false, Result}
@@ -472,6 +442,8 @@ function TypeGuard.Template(Name: string)
                 debug.profileend()
                 return false, Result
             else
+                Message = self._FailMessage or Message
+
                 if (CacheTag) then
                     Cache[Value] = {false, Message}
                 end
@@ -505,7 +477,7 @@ function TypeGuard.Template(Name: string)
             if (ShouldNegate) then
                 SubMessage = if (SubSuccess) then
                                 "Constraint '" .. ConstraintName .. "' succeeded but was expected to fail on value " .. tostring(Value)
-                             else
+                                else
                                 EMPTY_STRING
 
                 SubSuccess = not SubSuccess
@@ -513,7 +485,7 @@ function TypeGuard.Template(Name: string)
 
             if (not SubSuccess) then
                 if (DidTryDisjunction) then
-                    local Result = "Disjunctions failed on " .. tostring(self)
+                    local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                     if (CacheTag) then
                         Cache[Value] = {false, Result}
@@ -522,6 +494,8 @@ function TypeGuard.Template(Name: string)
                     debug.profileend()
                     return false, Result
                 else
+                    SubMessage = self._FailMessage or SubMessage
+
                     if (CacheTag) then
                         Cache[Value] = {false, SubMessage}
                     end
@@ -540,6 +514,68 @@ function TypeGuard.Template(Name: string)
         return true, EMPTY_STRING
     end
 
+    --- Calling this will only check the type of the passed value if that value is not nil, i.e. it's an optional value so nothing can be passed, but if it is not nothing then it will be checked
+    function TemplateClass:Optional()
+        return self:_AddTag("Optional")
+    end
+    TemplateClass.optional = TemplateClass.Optional
+
+    --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
+    function TemplateClass:Or(OtherType)
+        if (typeof(OtherType) ~= TYPE_FUNCTION) then
+            TypeGuard._AssertIsTypeBase(OtherType, 1)
+        end
+
+        self = self:Copy()
+        table.insert(self._Disjunction, OtherType)
+        return self
+    end
+    TemplateClass["or"] = TemplateClass.Or
+
+    --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
+    function TemplateClass:And(OtherType)
+        TypeGuard._AssertIsTypeBase(OtherType, 1)
+
+        self = self:Copy()
+        table.insert(self._Conjunction, OtherType)
+        return self
+    end
+    TemplateClass["and"] = TemplateClass.And
+
+    --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing
+    function TemplateClass:Alias(AliasName)
+        ExpectType(AliasName, EXPECT_STRING, 1)
+
+        self = self:Copy()
+        self._Alias = AliasName
+        return self
+    end
+    TemplateClass.alias = TemplateClass.Alias
+
+    --- Passes down a "context" value to constraints with functional values
+    --- We don't copy here because performance is important at the checking phase
+    function TemplateClass:WithContext(Context)
+        self._Context = Context
+        return self
+    end
+    TemplateClass.withContext = TemplateClass.WithContext
+
+    --- Wrap Check into its own callable function
+    function TemplateClass:WrapCheck()
+        return function(Value)
+            return self:_Check(Value)
+        end
+    end
+    TemplateClass.wrapCheck = TemplateClass.WrapCheck
+
+    --- Wraps Assert into its own callable function
+    function TemplateClass:WrapAssert()
+        return function(Value)
+            return self:Assert(Value)
+        end
+    end
+    TemplateClass.wrapAssert = TemplateClass.WrapAssert
+
     --- Check (like above) except sets a universal context for the duration of the check
     function TemplateClass:Check(Value)
         RootContext = self._Context
@@ -547,11 +583,13 @@ function TypeGuard.Template(Name: string)
         RootContext = nil
         return Success, Result
     end
+    TemplateClass.check = TemplateClass.Check
 
     --- Throws an error if the check is unsatisfied
     function TemplateClass:Assert(Value)
         assert(self:Check(Value))
     end
+    TemplateClass.assert = TemplateClass.Assert
 
     function TemplateClass:__tostring()
         -- User can create a unique alias to help simplify "where did it fail?"
@@ -639,7 +677,7 @@ function TypeGuard.Template(Name: string)
 end
 
 --- Checks if an object contains the fields which define a type template from this module
-function TypeGuard._AssertIsTypeBase<T>(Subject: T, Position: number | string)
+function TypeGuard._AssertIsTypeBase(Subject: any, Position: number | string)
     ExpectType(Subject, EXPECT_TABLE, Position)
 
     assert(Subject.IsTemplate, "Subject is not a type template")
@@ -1726,7 +1764,7 @@ function TypeGuard.VariadicParamsWithContext(CompareType: TypeChecker<any>)
 end
 
 --- Wraps a function in a param checker function
-function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
+function TypeGuard.WrapFunctionParams(Call: (...any) -> (...any), ...: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
 
     for Index = 1, select("#", ...) do
@@ -1742,7 +1780,7 @@ function TypeGuard.WrapFunctionParams<T>(Call: T, ...: TypeChecker<any>)
 end
 
 --- Wraps a function in a variadic param checker function
-function TypeGuard.WrapFunctionVariadicParams<T>(Call: T, VariadicParamType: TypeChecker<any>)
+function TypeGuard.WrapFunctionVariadicParams(Call: (...any) -> (...any), VariadicParamType: TypeChecker<any>)
     ExpectType(Call, EXPECT_FUNCTION, 1)
     TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
 
