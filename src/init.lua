@@ -1531,6 +1531,19 @@ do
     end
     InstanceCheckerClass.isAncestorOf = InstanceCheckerClass.IsAncestorOf
 
+    --- Checks if a particular child exists in an Instance
+    function InstanceCheckerClass:HasChild(Name)
+        ExpectType(Name, EXPECT_STRING_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("HasChild", function(_, InstanceRoot, Name)
+            if (InstanceRoot:FindFirstChild(Name)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected child '" .. Name .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+        end, Name)
+    end
+
     InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
     TypeGuard.Instance = InstanceChecker
@@ -1714,16 +1727,27 @@ TypeGuard[TYPE_NIL] = TypeGuard.Nil
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
-    local Params = {...}
+    local Args = {...}
+    local ArgSize = #Args
 
-    for Index, ParamChecker in Params do
+    for Index, ParamChecker in Args do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
-    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
-
     return function(...)
-        Checker:Assert({...})
+        local Size = select("#", ...)
+
+        if (ArgSize ~= Size) then
+            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+        end
+
+        for Index = 1, Size do
+            local Success, Message = Args[Index]:Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 TypeGuard.params = TypeGuard.Params
@@ -1732,27 +1756,43 @@ TypeGuard.params = TypeGuard.Params
 function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
-    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
-
     return function(...)
-        Checker:Assert({...})
+        local Size = select("#", ...)
+
+        for Index = 1, Size do
+            local Success, Message = CompareType:Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
-
 --- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
 function TypeGuard.ParamsWithContext(...: TypeChecker<any>)
-    local Params = {...}
+    local Args = {...}
+    local ArgSize = #Args
 
-    for Index, ParamChecker in Params do
+    for Index, ParamChecker in Args do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
-    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
-
     return function(Context: any?, ...)
-        Checker:WithContext(Context):Assert({...})
+        local Size = select("#", ...)
+
+        if (ArgSize ~= Size) then
+            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+        end
+
+        for Index = 1, Size do
+            local Success, Message = Args[Index]:WithContext(Context):Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 
@@ -1760,10 +1800,16 @@ end
 function TypeGuard.VariadicParamsWithContext(CompareType: TypeChecker<any>)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
-    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
-
     return function(Context: any?, ...)
-        Checker:WithContext(Context):Assert({...})
+        local Size = select("#", ...)
+
+        for Index = 1, Size do
+            local Success, Message = CompareType:WithContext(Context):Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 
