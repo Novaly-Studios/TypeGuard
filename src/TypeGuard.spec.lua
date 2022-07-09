@@ -1584,6 +1584,176 @@ return function()
                 end, TypeGuard.Number()):Check(Test)).to.equal(false)
             end)
         end)
+
+        describe("HasTags", function()
+            it("should reject non-string arrays as first arg", function()
+                expect(function()
+                    Base:HasTags(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasTags(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasTags(nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string array as first arg", function()
+                expect(function()
+                    Base:HasTags({"Test"})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:HasTags({"Test", "Test2"})
+                end).never.to.throw()
+            end)
+
+            it("should accept if all the tags are present", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "Test")
+                CollectionService:AddTag(Test, "Test2")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject if not all the tags are present", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "Test")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+
+            it("should reject if none of the tags are present", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("HasAttributes", function()
+            it("should reject non-string arrays as first arg", function()
+                expect(function()
+                    Base:HasAttributes(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttributes(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttributes(nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string array as first arg", function()
+                expect(function()
+                    Base:HasAttributes({"Test"})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:HasAttributes({"Test", "Test2"})
+                end).never.to.throw()
+            end)
+
+            it("should accept if all the attributes are present", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", true)
+                Test:SetAttribute("Test2", false)
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject if not all the attributes are present", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", 123)
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+
+            it("should reject if none of the attributes are present", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("CheckAttributes", function()
+            it("should reject non-tables as first arg", function()
+                expect(function()
+                    Base:CheckAttributes(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes(nil)
+                end).to.throw()
+            end)
+
+            it("should reject tables with non-TypeCheckers as values or non-strings as keys", function()
+                expect(function()
+                    Base:CheckAttributes({TypeGuard.String()})
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes({Test = "P"})
+                end).to.throw()
+            end)
+
+            it("should accept tables with TypeCheckers as values and strings as keys", function()
+                expect(function()
+                    Base:CheckAttributes({Test = TypeGuard.String()})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:CheckAttributes({
+                        P = TypeGuard.String();
+                        Q = TypeGuard.Number();
+                    })
+                end).never.to.throw()
+            end)
+
+            it("should correctly check attribute types", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", "Test")
+                Test:SetAttribute("Test2", 123)
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(true)
+
+                Test:SetAttribute("Test2", "TestString")
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(false)
+
+                Test:SetAttribute("Test2", nil)
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(false)
+            end)
+        end)
     end)
 
     describe("String", function()
@@ -1678,6 +1848,20 @@ return function()
                     return "Test"
                 end):Check("asdfghjkl")).to.equal(false)
             end)
+        end)
+    end)
+
+    describe("Any", function()
+        it("should reject nil values", function()
+            expect(TypeGuard.Any():Check(nil)).to.equal(false)
+        end)
+
+        it("should accept any non-nil type", function()
+            expect(TypeGuard.Any():Check(1)).to.equal(true)
+            expect(TypeGuard.Any():Check("Test")).to.equal(true)
+            expect(TypeGuard.Any():Check(function() end)).to.equal(true)
+            expect(TypeGuard.Any():Check({})).to.equal(true)
+            expect(TypeGuard.Any():Check(false)).to.equal(true)
         end)
     end)
 
@@ -2237,6 +2421,68 @@ return function()
 
                 expect(Base:CheckMetatable(Base:Equals(MT)):Check(Test)).to.equal(true)
                 expect(Base:CheckMetatable(TypeGuard.Number()):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("OfClass", function()
+            it("should reject non-tables", function()
+                expect(function()
+                    Base:CheckMetatable(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(function() end)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(Instance.new("Part"))
+                end).to.throw()
+            end)
+
+            it("should reject tables which are not intended to be an __index metatable", function()
+                local Test = {}
+
+                expect(function()
+                    Base:OfClass(Test)
+                end).to.throw()
+            end)
+
+            it("should accept tables which are intended to be an __index metatable", function()
+                local Test = {__index = {}}
+
+                expect(function()
+                    Base:OfClass(Test)
+                end).never.to.throw()
+            end)
+
+            it("should accept tables with the metatable equivalent to the provided class", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test):Check(Object)).to.equal(true)
+            end)
+
+            it("should reject tables with the metatable not equivalent to the provided class", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Test2 = {}
+                Test2.__index = Test2
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test2):Check(Object)).to.equal(false)
+            end)
+
+            it("should reject tables with no metatable", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Test2 = {}
+                Test2.__index = Test2
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test2):Check(Object)).to.equal(false)
             end)
         end)
     end)

@@ -81,18 +81,18 @@
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<CoordinateFrame name="CFrame">
-					<X>3.00079918</X>
-					<Y>17.8639927</Y>
-					<Z>21.398365</Z>
-					<R00>0.993601084</R00>
-					<R01>-0.0630214512</R01>
-					<R02>0.0937291831</R02>
+					<X>3.96855402</X>
+					<Y>15.1345654</Y>
+					<Z>22.9319897</Z>
+					<R00>0.990057111</R00>
+					<R01>-0.0664964691</R01>
+					<R02>0.12395677</R02>
 					<R10>-0</R10>
-					<R11>0.829856277</R11>
-					<R12>0.5579772</R12>
-					<R20>-0.112946287</R20>
-					<R21>-0.554406762</R21>
-					<R22>0.824546099</R22>
+					<R11>0.881210446</R11>
+					<R12>0.472724289</R12>
+					<R20>-0.1406665</R20>
+					<R21>-0.468024045</R21>
+					<R22>0.872448564</R22>
 				</CoordinateFrame>
 				<Ref name="CameraSubject">null</Ref>
 				<token name="CameraType">0</token>
@@ -1510,6 +1510,9 @@ do
 
         CheckMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
         checkMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+
+        OfClass: SelfReturn<ObjectTypeChecker, any>;
+        ofClass: SelfReturn<ObjectTypeChecker, any>;
     };
 
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}?>, ObjectClass = TypeGuard.Template("Object")
@@ -1645,6 +1648,14 @@ do
     end
     ObjectClass.checkMetatable = ObjectClass.CheckMetatable
 
+    --- Checks if an object's __index points to the specified class
+    function ObjectClass:OfClass(Class)
+        ExpectType(Class, EXPECT_TABLE, 1)
+        assert(Class.__index, "Class must have an __index")
+
+        return self:CheckMetatable(Object():Equals(Class))
+    end
+
     ObjectClass._InitialConstraint = ObjectClass.OfStructure
 
     TypeGuard.Object = Object
@@ -1667,20 +1678,29 @@ do
         Strict: SelfReturn<InstanceTypeChecker>;
         strict: SelfReturn<InstanceTypeChecker>;
 
-        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-
         IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
         isDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
 
         IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
         isAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
 
+        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+
         HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
         hasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
 
         CheckAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
         checkAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
+
+        HasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+        hasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+
+        HasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+        hasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+
+        CheckAttributes: SelfReturn<InstanceTypeChecker, {[string]: TypeChecker<any>} | (any?) -> {[string]: TypeChecker<any>}>;
+        checkAttributes: SelfReturn<InstanceTypeChecker, {[string]: TypeChecker<any>} | (any?) -> {[string]: TypeChecker<any>}>;
     };
 
     local function Get(Inst, Key)
@@ -1769,6 +1789,7 @@ do
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
     --- Checks if an Instance has a particular tag
+    --- @deprecated Use HasTags instead
     function InstanceCheckerClass:HasTag(Tag: string)
         ExpectType(Tag, EXPECT_STRING_OR_FUNCTION, 1)
 
@@ -1783,6 +1804,7 @@ do
     InstanceCheckerClass.hasTag = InstanceCheckerClass.HasTag
 
     --- Checks if an Instance has a particular attribute
+    --- @deprecated Use HasAttributes instead
     function InstanceCheckerClass:HasAttribute(Attribute: string)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
 
@@ -1797,6 +1819,7 @@ do
     InstanceCheckerClass.hasAttribute = InstanceCheckerClass.HasAttribute
 
     --- Applies a TypeChecker to an Instance's expected attribute
+    --- @deprecated Use CheckAttributes instead
     function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: TypeChecker<any>)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
         TypeGuard._AssertIsTypeBase(Checker, 2)
@@ -1812,6 +1835,77 @@ do
         end, Attribute, Checker)
     end
     InstanceCheckerClass.checkAttribute = InstanceCheckerClass.CheckAttribute
+
+
+
+
+
+    --- Checks if an Instance has a set of tags
+    function InstanceCheckerClass:HasTags(Tags: {string})
+        ExpectType(Tags, EXPECT_TABLE_OR_FUNCTION, 1)
+
+        if (typeof(Tags) == TYPE_TABLE) then
+            for Index, Tag in Tags do
+                assert(typeof(Tag) == "string", "Expected tag #" .. Index .. " to be a string")
+            end
+        end
+
+        return self:_AddConstraint("HasTags", function(_, InstanceRoot, Tags)
+            for _, Tag in Tags do
+                if (not CollectionService:HasTag(InstanceRoot, Tag)) then
+                    return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, Tags)
+    end
+    InstanceCheckerClass.hasTags = InstanceCheckerClass.HasTags
+
+    --- Checks if an Instance has a set of attributes
+    function InstanceCheckerClass:HasAttributes(Attributes: {string})
+        ExpectType(Attributes, EXPECT_TABLE_OR_FUNCTION, 1)
+
+        if (typeof(Attributes) == TYPE_TABLE) then
+            for Index, Attribute in Attributes do
+                assert(typeof(Attribute) == "string", "Expected attribute #" .. Index .. " to be a string")
+            end
+        end
+
+        return self:_AddConstraint("HasAttributes", function(_, InstanceRoot, Attributes)
+            for _, Attribute in Attributes do
+                if (InstanceRoot:GetAttribute(Attribute) == nil) then
+                    return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, Attributes)
+    end
+    InstanceCheckerClass.hasAttributes = InstanceCheckerClass.HasAttributes
+
+    --- Applies a TypeChecker to an Instance's expected attribute
+    function InstanceCheckerClass:CheckAttributes(AttributeCheckers: {TypeChecker<any>})
+        ExpectType(AttributeCheckers, EXPECT_TABLE, 1)
+
+        for Attribute, Checker in AttributeCheckers do
+            assert(typeof(Attribute) == "string", "Attribute '" .. tostring(Attribute) .. "' was not a string")
+            TypeGuard._AssertIsTypeBase(Checker, "")
+        end
+
+        return self:_AddConstraint("CheckAttributes", function(_, InstanceRoot, AttributeCheckers)
+            for Attribute, Checker in AttributeCheckers do
+                local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
+
+                if (not Success) then
+                    return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, AttributeCheckers)
+    end
+    InstanceCheckerClass.checkAttributes = InstanceCheckerClass.CheckAttributes
 
     --- Checks if an Instance is a descendant of a particular Instance
     function InstanceCheckerClass:IsDescendantOf(Instance)
@@ -1840,6 +1934,19 @@ do
         end, Instance)
     end
     InstanceCheckerClass.isAncestorOf = InstanceCheckerClass.IsAncestorOf
+
+    --- Checks if a particular child exists in an Instance
+    function InstanceCheckerClass:HasChild(Name)
+        ExpectType(Name, EXPECT_STRING_OR_FUNCTION, 1)
+
+        return self:_AddConstraint("HasChild", function(_, InstanceRoot, Name)
+            if (InstanceRoot:FindFirstChild(Name)) then
+                return true, EMPTY_STRING
+            end
+
+            return false, "Expected child '" .. Name .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+        end, Name)
+    end
 
     InstanceCheckerClass._InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}
 
@@ -1976,6 +2083,26 @@ end
 
 
 
+
+do
+    type AnyTypeChecker = TypeChecker<AnyTypeChecker> & {}
+
+    local AnyChecker: TypeCheckerConstructor<AnyTypeChecker>, AnyCheckerClass = TypeGuard.Template("Any")
+    function AnyCheckerClass:_Initial(Item)
+        if (Item == nil) then
+            return false, "Expected something, got nil"
+        end
+
+        return true, EMPTY_STRING
+    end
+
+    TypeGuard.Any = AnyChecker
+    TypeGuard.any = AnyChecker
+end
+
+
+
+
 -- Luau data types
 TypeGuard.Axes = TypeGuard.FromTypeName("Axes")
 TypeGuard.BrickColor = TypeGuard.FromTypeName("BrickColor")
@@ -2024,16 +2151,27 @@ TypeGuard[TYPE_NIL] = TypeGuard.Nil
 
 --- Creates a function which checks params as if they were a strict Array checker
 function TypeGuard.Params(...: TypeChecker<any>)
-    local Params = {...}
+    local Args = {...}
+    local ArgSize = #Args
 
-    for Index, ParamChecker in Params do
+    for Index, ParamChecker in Args do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
-    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
-
     return function(...)
-        Checker:Assert({...})
+        local Size = select("#", ...)
+
+        if (ArgSize ~= Size) then
+            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+        end
+
+        for Index = 1, Size do
+            local Success, Message = Args[Index]:Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 TypeGuard.params = TypeGuard.Params
@@ -2042,27 +2180,43 @@ TypeGuard.params = TypeGuard.Params
 function TypeGuard.VariadicParams(CompareType: TypeChecker<any>)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
-    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
-
     return function(...)
-        Checker:Assert({...})
+        local Size = select("#", ...)
+
+        for Index = 1, Size do
+            local Success, Message = CompareType:Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 TypeGuard.variadicParams = TypeGuard.VariadicParams
 
-
 --- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
 function TypeGuard.ParamsWithContext(...: TypeChecker<any>)
-    local Params = {...}
+    local Args = {...}
+    local ArgSize = #Args
 
-    for Index, ParamChecker in Params do
+    for Index, ParamChecker in Args do
         TypeGuard._AssertIsTypeBase(ParamChecker, Index)
     end
 
-    local Checker = TypeGuard.Array():StructuralEquals(Params):DenoteParams()
-
     return function(Context: any?, ...)
-        Checker:WithContext(Context):Assert({...})
+        local Size = select("#", ...)
+
+        if (ArgSize ~= Size) then
+            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+        end
+
+        for Index = 1, Size do
+            local Success, Message = Args[Index]:WithContext(Context):Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 
@@ -2070,10 +2224,16 @@ end
 function TypeGuard.VariadicParamsWithContext(CompareType: TypeChecker<any>)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
-    local Checker = TypeGuard.Array():OfType(CompareType):DenoteParams()
-
     return function(Context: any?, ...)
-        Checker:WithContext(Context):Assert({...})
+        local Size = select("#", ...)
+
+        for Index = 1, Size do
+            local Success, Message = CompareType:WithContext(Context):Check(select(Index, ...))
+
+            if (not Success) then
+                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            end
+        end
     end
 end
 
@@ -3703,6 +3863,176 @@ return function()
                 end, TypeGuard.Number()):Check(Test)).to.equal(false)
             end)
         end)
+
+        describe("HasTags", function()
+            it("should reject non-string arrays as first arg", function()
+                expect(function()
+                    Base:HasTags(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasTags(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasTags(nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string array as first arg", function()
+                expect(function()
+                    Base:HasTags({"Test"})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:HasTags({"Test", "Test2"})
+                end).never.to.throw()
+            end)
+
+            it("should accept if all the tags are present", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "Test")
+                CollectionService:AddTag(Test, "Test2")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject if not all the tags are present", function()
+                local Test = Instance.new("Folder")
+                CollectionService:AddTag(Test, "Test")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+
+            it("should reject if none of the tags are present", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasTags({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasTags(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("HasAttributes", function()
+            it("should reject non-string arrays as first arg", function()
+                expect(function()
+                    Base:HasAttributes(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttributes(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:HasAttributes(nil)
+                end).to.throw()
+            end)
+
+            it("should accept a string array as first arg", function()
+                expect(function()
+                    Base:HasAttributes({"Test"})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:HasAttributes({"Test", "Test2"})
+                end).never.to.throw()
+            end)
+
+            it("should accept if all the attributes are present", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", true)
+                Test:SetAttribute("Test2", false)
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(true)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(true)
+            end)
+
+            it("should reject if not all the attributes are present", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", 123)
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+
+            it("should reject if none of the attributes are present", function()
+                local Test = Instance.new("Folder")
+                expect(TypeGuard.Instance():HasAttributes({"Test", "Test2"}):Check(Test)).to.equal(false)
+                expect(TypeGuard.Instance():HasAttributes(function()
+                    return {"Test", "Test2"}
+                end):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("CheckAttributes", function()
+            it("should reject non-tables as first arg", function()
+                expect(function()
+                    Base:CheckAttributes(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes(true)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes(nil)
+                end).to.throw()
+            end)
+
+            it("should reject tables with non-TypeCheckers as values or non-strings as keys", function()
+                expect(function()
+                    Base:CheckAttributes({TypeGuard.String()})
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckAttributes({Test = "P"})
+                end).to.throw()
+            end)
+
+            it("should accept tables with TypeCheckers as values and strings as keys", function()
+                expect(function()
+                    Base:CheckAttributes({Test = TypeGuard.String()})
+                end).never.to.throw()
+
+                expect(function()
+                    Base:CheckAttributes({
+                        P = TypeGuard.String();
+                        Q = TypeGuard.Number();
+                    })
+                end).never.to.throw()
+            end)
+
+            it("should correctly check attribute types", function()
+                local Test = Instance.new("Folder")
+                Test:SetAttribute("Test", "Test")
+                Test:SetAttribute("Test2", 123)
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(true)
+
+                Test:SetAttribute("Test2", "TestString")
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(false)
+
+                Test:SetAttribute("Test2", nil)
+
+                expect(Base:CheckAttributes({
+                    Test = TypeGuard.String();
+                    Test2 = TypeGuard.Number();
+                }):Check(Test)).to.equal(false)
+            end)
+        end)
     end)
 
     describe("String", function()
@@ -3797,6 +4127,20 @@ return function()
                     return "Test"
                 end):Check("asdfghjkl")).to.equal(false)
             end)
+        end)
+    end)
+
+    describe("Any", function()
+        it("should reject nil values", function()
+            expect(TypeGuard.Any():Check(nil)).to.equal(false)
+        end)
+
+        it("should accept any non-nil type", function()
+            expect(TypeGuard.Any():Check(1)).to.equal(true)
+            expect(TypeGuard.Any():Check("Test")).to.equal(true)
+            expect(TypeGuard.Any():Check(function() end)).to.equal(true)
+            expect(TypeGuard.Any():Check({})).to.equal(true)
+            expect(TypeGuard.Any():Check(false)).to.equal(true)
         end)
     end)
 
@@ -4356,6 +4700,68 @@ return function()
 
                 expect(Base:CheckMetatable(Base:Equals(MT)):Check(Test)).to.equal(true)
                 expect(Base:CheckMetatable(TypeGuard.Number()):Check(Test)).to.equal(false)
+            end)
+        end)
+
+        describe("OfClass", function()
+            it("should reject non-tables", function()
+                expect(function()
+                    Base:CheckMetatable(1)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(function() end)
+                end).to.throw()
+
+                expect(function()
+                    Base:CheckMetatable(Instance.new("Part"))
+                end).to.throw()
+            end)
+
+            it("should reject tables which are not intended to be an __index metatable", function()
+                local Test = {}
+
+                expect(function()
+                    Base:OfClass(Test)
+                end).to.throw()
+            end)
+
+            it("should accept tables which are intended to be an __index metatable", function()
+                local Test = {__index = {}}
+
+                expect(function()
+                    Base:OfClass(Test)
+                end).never.to.throw()
+            end)
+
+            it("should accept tables with the metatable equivalent to the provided class", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test):Check(Object)).to.equal(true)
+            end)
+
+            it("should reject tables with the metatable not equivalent to the provided class", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Test2 = {}
+                Test2.__index = Test2
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test2):Check(Object)).to.equal(false)
+            end)
+
+            it("should reject tables with no metatable", function()
+                local Test = {}
+                Test.__index = Test
+
+                local Test2 = {}
+                Test2.__index = Test2
+
+                local Object = setmetatable({}, Test)
+                expect(Base:OfClass(Test2):Check(Object)).to.equal(false)
             end)
         end)
     end)

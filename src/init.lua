@@ -1200,6 +1200,9 @@ do
 
         CheckMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
         checkMetatable: SelfReturn<ObjectTypeChecker, TypeChecker<any>>;
+
+        OfClass: SelfReturn<ObjectTypeChecker, any>;
+        ofClass: SelfReturn<ObjectTypeChecker, any>;
     };
 
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: TypeChecker<any>}?>, ObjectClass = TypeGuard.Template("Object")
@@ -1335,6 +1338,14 @@ do
     end
     ObjectClass.checkMetatable = ObjectClass.CheckMetatable
 
+    --- Checks if an object's __index points to the specified class
+    function ObjectClass:OfClass(Class)
+        ExpectType(Class, EXPECT_TABLE, 1)
+        assert(Class.__index, "Class must have an __index")
+
+        return self:CheckMetatable(Object():Equals(Class))
+    end
+
     ObjectClass._InitialConstraint = ObjectClass.OfStructure
 
     TypeGuard.Object = Object
@@ -1357,20 +1368,29 @@ do
         Strict: SelfReturn<InstanceTypeChecker>;
         strict: SelfReturn<InstanceTypeChecker>;
 
-        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-
         IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
         isDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
 
         IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
         isAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
 
+        HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+        hasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+
         HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
         hasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
 
         CheckAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
         checkAttribute: SelfReturn<InstanceTypeChecker, string, TypeChecker<any>>;
+
+        HasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+        hasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+
+        HasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+        hasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+
+        CheckAttributes: SelfReturn<InstanceTypeChecker, {[string]: TypeChecker<any>} | (any?) -> {[string]: TypeChecker<any>}>;
+        checkAttributes: SelfReturn<InstanceTypeChecker, {[string]: TypeChecker<any>} | (any?) -> {[string]: TypeChecker<any>}>;
     };
 
     local function Get(Inst, Key)
@@ -1459,6 +1479,7 @@ do
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
     --- Checks if an Instance has a particular tag
+    --- @deprecated Use HasTags instead
     function InstanceCheckerClass:HasTag(Tag: string)
         ExpectType(Tag, EXPECT_STRING_OR_FUNCTION, 1)
 
@@ -1473,6 +1494,7 @@ do
     InstanceCheckerClass.hasTag = InstanceCheckerClass.HasTag
 
     --- Checks if an Instance has a particular attribute
+    --- @deprecated Use HasAttributes instead
     function InstanceCheckerClass:HasAttribute(Attribute: string)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
 
@@ -1487,6 +1509,7 @@ do
     InstanceCheckerClass.hasAttribute = InstanceCheckerClass.HasAttribute
 
     --- Applies a TypeChecker to an Instance's expected attribute
+    --- @deprecated Use CheckAttributes instead
     function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: TypeChecker<any>)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
         TypeGuard._AssertIsTypeBase(Checker, 2)
@@ -1502,6 +1525,77 @@ do
         end, Attribute, Checker)
     end
     InstanceCheckerClass.checkAttribute = InstanceCheckerClass.CheckAttribute
+
+
+
+
+
+    --- Checks if an Instance has a set of tags
+    function InstanceCheckerClass:HasTags(Tags: {string})
+        ExpectType(Tags, EXPECT_TABLE_OR_FUNCTION, 1)
+
+        if (typeof(Tags) == TYPE_TABLE) then
+            for Index, Tag in Tags do
+                assert(typeof(Tag) == "string", "Expected tag #" .. Index .. " to be a string")
+            end
+        end
+
+        return self:_AddConstraint("HasTags", function(_, InstanceRoot, Tags)
+            for _, Tag in Tags do
+                if (not CollectionService:HasTag(InstanceRoot, Tag)) then
+                    return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, Tags)
+    end
+    InstanceCheckerClass.hasTags = InstanceCheckerClass.HasTags
+
+    --- Checks if an Instance has a set of attributes
+    function InstanceCheckerClass:HasAttributes(Attributes: {string})
+        ExpectType(Attributes, EXPECT_TABLE_OR_FUNCTION, 1)
+
+        if (typeof(Attributes) == TYPE_TABLE) then
+            for Index, Attribute in Attributes do
+                assert(typeof(Attribute) == "string", "Expected attribute #" .. Index .. " to be a string")
+            end
+        end
+
+        return self:_AddConstraint("HasAttributes", function(_, InstanceRoot, Attributes)
+            for _, Attribute in Attributes do
+                if (InstanceRoot:GetAttribute(Attribute) == nil) then
+                    return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, Attributes)
+    end
+    InstanceCheckerClass.hasAttributes = InstanceCheckerClass.HasAttributes
+
+    --- Applies a TypeChecker to an Instance's expected attribute
+    function InstanceCheckerClass:CheckAttributes(AttributeCheckers: {TypeChecker<any>})
+        ExpectType(AttributeCheckers, EXPECT_TABLE, 1)
+
+        for Attribute, Checker in AttributeCheckers do
+            assert(typeof(Attribute) == "string", "Attribute '" .. tostring(Attribute) .. "' was not a string")
+            TypeGuard._AssertIsTypeBase(Checker, "")
+        end
+
+        return self:_AddConstraint("CheckAttributes", function(_, InstanceRoot, AttributeCheckers)
+            for Attribute, Checker in AttributeCheckers do
+                local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
+
+                if (not Success) then
+                    return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
+                end
+            end
+
+            return true, EMPTY_STRING
+        end, AttributeCheckers)
+    end
+    InstanceCheckerClass.checkAttributes = InstanceCheckerClass.CheckAttributes
 
     --- Checks if an Instance is a descendant of a particular Instance
     function InstanceCheckerClass:IsDescendantOf(Instance)
@@ -1676,6 +1770,26 @@ do
     TypeGuard.Thread = ThreadChecker
     TypeGuard.thread = ThreadChecker
 end
+
+
+
+
+do
+    type AnyTypeChecker = TypeChecker<AnyTypeChecker> & {}
+
+    local AnyChecker: TypeCheckerConstructor<AnyTypeChecker>, AnyCheckerClass = TypeGuard.Template("Any")
+    function AnyCheckerClass:_Initial(Item)
+        if (Item == nil) then
+            return false, "Expected something, got nil"
+        end
+
+        return true, EMPTY_STRING
+    end
+
+    TypeGuard.Any = AnyChecker
+    TypeGuard.any = AnyChecker
+end
+
 
 
 
