@@ -417,7 +417,7 @@ function TypeGuard.Template(Name: string)
                 AlternateType = AlternateType(self)
             end
 
-            local Success, _ = AlternateType:_Check(Value, RootContext)
+            local Success, _ = AlternateType:_Check(Value)
 
             if (Success) then
                 if (CacheTag) then
@@ -431,7 +431,7 @@ function TypeGuard.Template(Name: string)
 
         -- Handle "type x and type y and type z ..." - this is only really useful for objects and arrays
         for _, Conjunction in self._Conjunction do
-            local Success, Message = Conjunction:_Check(Value, RootContext)
+            local Success, Message = Conjunction:_Check(Value)
 
             if (not Success) then
                 local Result = self._FailMessage or ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
