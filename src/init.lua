@@ -30,6 +30,7 @@ local EXPECT_NUMBER_OR_FUNCTION = {TYPE_NUMBER, TYPE_FUNCTION}
 local EXPECT_TABLE_OR_FUNCTION = {TYPE_TABLE, TYPE_FUNCTION}
 local EXPECT_SOMETHING = {TYPE_SOMETHING}
 local EXPECT_FUNCTION = {TYPE_FUNCTION}
+local EXPECT_BOOLEAN = {TYPE_BOOLEAN}
 local EXPECT_STRING = {TYPE_STRING}
 local EXPECT_TABLE = {TYPE_TABLE}
 
@@ -88,7 +89,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     local function IsAKeyIn(self, Store)
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsAKeyIn", function(_, Key, Store)
+        return self:_AddConstraint(false, "IsAKeyIn", function(_, Key, Store)
             if (Store[Key] == nil) then
                 return false, "Key " .. tostring(Key) .. " was not found in table: " .. tostring(Store)
             end
@@ -100,7 +101,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     local function IsAValueIn(self, Store)
         ExpectType(Store, EXPECT_TABLE_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsAValueIn", function(_, TargetValue, Store)
+        return self:_AddConstraint(false, "IsAValueIn", function(_, TargetValue, Store)
             for _, Value in Store do
                 if (Value == TargetValue) then
                     return true, EMPTY_STRING
@@ -112,7 +113,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     end
 
     local function Equals(self, ExpectedValue)
-        return self:_AddConstraint("Equals", function(_, Value, ExpectedValue)
+        return self:_AddConstraint(true, "Equals", function(_, Value, ExpectedValue)
             if (Value == ExpectedValue) then
                 return true, EMPTY_STRING
             end
@@ -122,7 +123,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     end
 
     local function GreaterThan(self, GTValue)
-        return self:_AddConstraint("GreaterThan", function(_, Value, GTValue)
+        return self:_AddConstraint(true, "GreaterThan", function(_, Value, GTValue)
             if (Value > GTValue) then
                 return true, EMPTY_STRING
             end
@@ -132,7 +133,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     end
 
     local function LessThan(self, LTValue)
-        return self:_AddConstraint("LessThan", function(_, Value, LTValue)
+        return self:_AddConstraint(true, "LessThan", function(_, Value, LTValue)
             if (Value < LTValue) then
                 return true, EMPTY_STRING
             end
@@ -142,7 +143,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     end
 
     local function GreaterThanOrEqualTo(self, GTEValue)
-        return self:_AddConstraint("GreaterThanOrEqualTo", function(_, Value, GTEValue)
+        return self:_AddConstraint(true, "GreaterThanOrEqualTo", function(_, Value, GTEValue)
             if (Value >= GTEValue) then
                 return true, EMPTY_STRING
             end
@@ -152,7 +153,7 @@ local WEAK_KEY_MT = {__mode = "k"}
     end
 
     local function LessThanOrEqualTo(self, LTEValue)
-        return self:_AddConstraint("LessThanOrEqualTo", function(_, Value, LTEValue)
+        return self:_AddConstraint(true, "LessThanOrEqualTo", function(_, Value, LTEValue)
             if (Value <= LTEValue) then
                 return true, EMPTY_STRING
             end
@@ -317,12 +318,15 @@ function TypeGuard.Template(Name: string)
     end
     TemplateClass.cached = TemplateClass.Cached
 
-    function TemplateClass:_AddConstraint(ConstraintName, Constraint, ...)
-        ExpectType(ConstraintName, EXPECT_STRING, 1)
-        ExpectType(Constraint, EXPECT_FUNCTION, 2)
+    function TemplateClass:_AddConstraint(OnlyOnce, ConstraintName, Constraint, ...)
+        if (OnlyOnce ~= nil) then
+            ExpectType(OnlyOnce, EXPECT_BOOLEAN, 1)
+        end
+
+        ExpectType(ConstraintName, EXPECT_STRING, 2)
+        ExpectType(Constraint, EXPECT_FUNCTION, 3)
 
         self = self:Copy()
-        self._LastConstraint = ConstraintName
 
         local Args = {...}
         local HasFunctions = false
@@ -337,8 +341,27 @@ function TypeGuard.Template(Name: string)
         end
 
         local ActiveConstraints = self._ActiveConstraints
-        assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
-        ActiveConstraints[ConstraintName] = {Constraint, Args, HasFunctions, false}
+        --assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
+
+        if (OnlyOnce) then
+            local Found = false
+
+            for _, ConstraintData in ActiveConstraints do
+                if (ConstraintData[5] == ConstraintName) then
+                    Found = true
+                    break
+                end
+            end
+
+            if (Found) then
+                error("Attempt to apply a constraint marked as 'only once' more than once: " .. ConstraintName)
+            end
+        end
+
+        --ActiveConstraints[ConstraintName] = {Constraint, Args, HasFunctions, false}
+        local NextIndex = #ActiveConstraints + 1
+        ActiveConstraints[NextIndex] = {Constraint, Args, HasFunctions, false, ConstraintName}
+        self._LastConstraint = NextIndex
         return self
     end
 
@@ -458,11 +481,12 @@ function TypeGuard.Template(Name: string)
         end
 
         -- Handle active constraints
-        for ConstraintName, Constraint in self._ActiveConstraints do
+        for _, Constraint in self._ActiveConstraints do
             local Call = Constraint[1]
             local Args = Constraint[2]
             local HasFunctionalParams = Constraint[3]
             local ShouldNegate = Constraint[4]
+            local ConstraintName = Constraint[5]
 
             -- Functional params -> transform into values when type checking
             if (HasFunctionalParams) then
@@ -607,8 +631,8 @@ function TypeGuard.Template(Name: string)
         if (next(self._ActiveConstraints) ~= nil) then
             local InnerConstraints = {}
 
-            for ConstraintName, Constraint in self._ActiveConstraints do
-                table.insert(InnerConstraints, ConstraintName .. "(" .. ConcatWithToString(Constraint[2], ", ") .. ")")
+            for _, Constraint in self._ActiveConstraints do
+                table.insert(InnerConstraints, Constraint[5] .. "(" .. ConcatWithToString(Constraint[2], ", ") .. ")")
             end
 
             table.insert(Fields, "Constraints = {" .. ConcatWithToString(InnerConstraints, ", ") .. "}")
@@ -737,7 +761,7 @@ do
 
     --- Checks if the value is whole
     function NumberClass:Integer()
-        return self:_AddConstraint("Integer", function(_, Item)
+        return self:_AddConstraint(true, "Integer", function(_, Item)
             if (Item % 1 == 0) then
                 return true, EMPTY_STRING
             end
@@ -749,7 +773,7 @@ do
 
     --- Checks if the number is a decimal
     function NumberClass:Decimal()
-        return self:_AddConstraint("Decimal", function(_, Item)
+        return self:_AddConstraint(true, "Decimal", function(_, Item)
             if (Item % 1 ~= 0) then
                 return true, EMPTY_STRING
             end
@@ -776,7 +800,7 @@ do
 
     --- Checks the number is positive
     function NumberClass:Positive()
-        return self:_AddConstraint("Positive", function(_, Item)
+        return self:_AddConstraint(true, "Positive", function(_, Item)
             if (Item < 0) then
                 return false, "Expected positive number, got " .. tostring(Item)
             end
@@ -788,7 +812,7 @@ do
 
     --- Checks the number is negative
     function NumberClass:Negative()
-        return self:_AddConstraint("Negative", function(_, Item)
+        return self:_AddConstraint(true, "Negative", function(_, Item)
             if (Item >= 0) then
                 return false, "Expected negative number, got " .. tostring(Item)
             end
@@ -800,7 +824,7 @@ do
 
     --- Checks if the number is NaN
     function NumberClass:IsNaN()
-        return self:_AddConstraint("IsNaN", function(_, Item)
+        return self:_AddConstraint(true, "IsNaN", function(_, Item)
             if (Item ~= Item) then
                 return true, EMPTY_STRING
             end
@@ -812,7 +836,7 @@ do
 
     --- Checks if the number is infinite
     function NumberClass:IsInfinite()
-        return self:_AddConstraint("IsInfinite", function(_, Item)
+        return self:_AddConstraint(true, "IsInfinite", function(_, Item)
             if (Item == math.huge or Item == -math.huge) then
                 return true, EMPTY_STRING
             end
@@ -827,7 +851,7 @@ do
         ExpectType(CloseTo, EXPECT_NUMBER_OR_FUNCTION, 1)
         Tolerance = Tolerance or 0.00001
 
-        return self:_AddConstraint("IsClose", function(_, NumberValue, CloseTo, Tolerance)
+        return self:_AddConstraint(true, "IsClose", function(_, NumberValue, CloseTo, Tolerance)
             if (math.abs(NumberValue - CloseTo) < Tolerance) then
                 return true, EMPTY_STRING
             end
@@ -865,7 +889,7 @@ do
     function StringClass:MinLength(MinLength)
         ExpectType(MinLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("MinLength", function(_, Item, MinLength)
+        return self:_AddConstraint(true, "MinLength", function(_, Item, MinLength)
             if (#Item < MinLength) then
                 return false, "Length must be at least " .. MinLength .. ", got " .. #Item
             end
@@ -879,7 +903,7 @@ do
     function StringClass:MaxLength(MaxLength)
         ExpectType(MaxLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("MaxLength", function(_, Item, MaxLength)
+        return self:_AddConstraint(true, "MaxLength", function(_, Item, MaxLength)
             if (#Item > MaxLength) then
                 return false, "Length must be at most " .. MaxLength .. ", got " .. #Item
             end
@@ -893,7 +917,7 @@ do
     function StringClass:Pattern(PatternString)
         ExpectType(PatternString, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("Pattern", function(_, Item, Pattern)
+        return self:_AddConstraint(false, "Pattern", function(_, Item, Pattern)
             if (string.match(Item, Pattern) ~= Item) then
                 return false, "String does not match pattern " .. tostring(Pattern)
             end
@@ -907,7 +931,7 @@ do
     function StringClass:Contains(SubstringValue)
         ExpectType(SubstringValue, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("Contains", function(_, Item, Substring)
+        return self:_AddConstraint(false, "Contains", function(_, Item, Substring)
             if (string.find(Item, Substring) == nil) then
                 return false, "String does not contain substring " .. tostring(Substring)
             end
@@ -990,7 +1014,7 @@ do
     function ArrayClass:OfLength(Length)
         ExpectType(Length, EXPECT_NUMBER_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("Length", function(_, TargetArray, Length)
+        return self:_AddConstraint(true, "Length", function(_, TargetArray, Length)
             if (#TargetArray ~= Length) then
                 return false, "Length must be " .. Length .. ", got " .. #TargetArray
             end
@@ -1004,7 +1028,7 @@ do
     function ArrayClass:MinLength(MinLength)
         ExpectType(MinLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("MinLength", function(_, TargetArray, MinLength)
+        return self:_AddConstraint(true, "MinLength", function(_, TargetArray, MinLength)
             if (#TargetArray < MinLength) then
                 return false, "Length must be at least " .. MinLength .. ", got " .. #TargetArray
             end
@@ -1018,7 +1042,7 @@ do
     function ArrayClass:MaxLength(MaxLength)
         ExpectType(MaxLength, EXPECT_NUMBER_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("MaxLength", function(_, TargetArray, MaxLength)
+        return self:_AddConstraint(true, "MaxLength", function(_, TargetArray, MaxLength)
             if (#TargetArray > MaxLength) then
                 return false, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
             end
@@ -1038,7 +1062,7 @@ do
             ExpectType(StartPoint, EXPECT_NUMBER_OR_FUNCTION, 2)
         end
 
-        return self:_AddConstraint("Contains", function(_, TargetArray, Value, StartPoint)
+        return self:_AddConstraint(false, "Contains", function(_, TargetArray, Value, StartPoint)
             if (table.find(TargetArray, Value, StartPoint) == nil) then
                 return false, "Value not found in array: " .. tostring(Value)
             end
@@ -1052,7 +1076,7 @@ do
     function ArrayClass:OfType(SubType)
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
-        return self:_AddConstraint("OfType", function(SelfRef, TargetArray, SubType)
+        return self:_AddConstraint(true, "OfType", function(SelfRef, TargetArray, SubType)
             for Index, Value in TargetArray do
                 local Success, SubMessage = SubType:_Check(Value)
 
@@ -1080,7 +1104,7 @@ do
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
 
-        return self:_AddConstraint("OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
+        return self:_AddConstraint(true, "OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
             for Index, Checker in SubTypesAtPositions do
                 local Success, SubMessage = Checker:_Check(TargetArray[Index])
@@ -1126,7 +1150,7 @@ do
 
     --- Checks if an array is frozen
     function ArrayClass:IsFrozen()
-        return self:_AddConstraint("IsFrozen", function(_, TargetArray)
+        return self:_AddConstraint(true, "IsFrozen", function(_, TargetArray)
             if (table.isfrozen(TargetArray)) then
                 return true, EMPTY_STRING
             end
@@ -1143,7 +1167,7 @@ do
             ExpectType(Descending, EXPECT_BOOLEAN_OR_FUNCTION, 1)
         end
 
-        return self:_AddConstraint("IsOrdered", function(_, TargetArray, Descending)
+        return self:_AddConstraint(true, "IsOrdered", function(_, TargetArray, Descending)
             local Ascending = not Descending
             local Size = #TargetArray
 
@@ -1235,7 +1259,7 @@ do
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
 
-        return self:_AddConstraint("OfStructure", function(SelfRef, StructureCopy, SubTypes)
+        return self:_AddConstraint(true, "OfStructure", function(SelfRef, StructureCopy, SubTypes)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
             for Key, Checker in SubTypes do
                 local RespectiveValue = StructureCopy[Key]
@@ -1271,7 +1295,7 @@ do
     function ObjectClass:OfValueType(SubType)
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
-        return self:_AddConstraint("OfValueType", function(_, TargetArray, SubType)
+        return self:_AddConstraint(true, "OfValueType", function(_, TargetArray, SubType)
             for Index, Value in TargetArray do
                 local Success, SubMessage = SubType:_Check(Value)
 
@@ -1289,7 +1313,7 @@ do
     function ObjectClass:OfKeyType(SubType)
         TypeGuard._AssertIsTypeBase(SubType, 1)
 
-        return self:_AddConstraint("OfKeyType", function(_, TargetArray, SubType)
+        return self:_AddConstraint(true, "OfKeyType", function(_, TargetArray, SubType)
             for Key in TargetArray do
                 local Success, SubMessage = SubType:_Check(Key)
 
@@ -1317,7 +1341,7 @@ do
 
     --- Checks if an object is frozen
     function ObjectClass:IsFrozen()
-        return self:_AddConstraint("IsFrozen", function(_, TargetObject)
+        return self:_AddConstraint(true, "IsFrozen", function(_, TargetObject)
             if (table.isfrozen(TargetObject)) then
                 return true, EMPTY_STRING
             end
@@ -1331,7 +1355,7 @@ do
     function ObjectClass:CheckMetatable(Checker)
         TypeGuard._AssertIsTypeBase(Checker, 1)
 
-        return self:_AddConstraint("CheckMetatable", function(_, TargetObject, Checker)
+        return self:_AddConstraint(true, "CheckMetatable", function(_, TargetObject, Checker)
             local Success, Message = Checker:Check(getmetatable(TargetObject))
             return Success, "[Metatable] " .. Message
         end, Checker)
@@ -1424,7 +1448,7 @@ do
 
         setmetatable(SubTypesCopy, STRUCTURE_TO_FLAT_STRING_MT)
 
-        return self:_AddConstraint("OfStructure", function(SelfRef, InstanceRoot, SubTypes)
+        return self:_AddConstraint(true, "OfStructure", function(SelfRef, InstanceRoot, SubTypes)
             -- Check all properties and children which should be in the Instance exist (unless optional) and the type check for each passes
             for Key, Checker in SubTypes do
                 local Value = TryGet(InstanceRoot, Key)
@@ -1456,7 +1480,7 @@ do
     function InstanceCheckerClass:IsA(InstanceIsA)
         ExpectType(InstanceIsA, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsA", function(_, InstanceRoot, InstanceIsA)
+        return self:_AddConstraint(true, "IsA", function(_, InstanceRoot, InstanceIsA)
             if (not InstanceRoot:IsA(InstanceIsA)) then
                 return false, "Expected " .. InstanceIsA .. ", got " .. InstanceRoot.ClassName
             end
@@ -1479,11 +1503,10 @@ do
     InstanceCheckerClass.structuralEquals = InstanceCheckerClass.StructuralEquals
 
     --- Checks if an Instance has a particular tag
-    --- @deprecated Use HasTags instead
     function InstanceCheckerClass:HasTag(Tag: string)
         ExpectType(Tag, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("HasTag", function(_, InstanceRoot, Tag)
+        return self:_AddConstraint(false, "HasTag", function(_, InstanceRoot, Tag)
             if (CollectionService:HasTag(InstanceRoot, Tag)) then
                 return true, EMPTY_STRING
             end
@@ -1494,11 +1517,10 @@ do
     InstanceCheckerClass.hasTag = InstanceCheckerClass.HasTag
 
     --- Checks if an Instance has a particular attribute
-    --- @deprecated Use HasAttributes instead
     function InstanceCheckerClass:HasAttribute(Attribute: string)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("HasAttribute", function(_, InstanceRoot, Attribute)
+        return self:_AddConstraint(false, "HasAttribute", function(_, InstanceRoot, Attribute)
             if (InstanceRoot:GetAttribute(Attribute) ~= nil) then
                 return true, EMPTY_STRING
             end
@@ -1509,12 +1531,11 @@ do
     InstanceCheckerClass.hasAttribute = InstanceCheckerClass.HasAttribute
 
     --- Applies a TypeChecker to an Instance's expected attribute
-    --- @deprecated Use CheckAttributes instead
     function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: TypeChecker<any>)
         ExpectType(Attribute, EXPECT_STRING_OR_FUNCTION, 1)
         TypeGuard._AssertIsTypeBase(Checker, 2)
 
-        return self:_AddConstraint("CheckAttribute", function(_, InstanceRoot, Attribute)
+        return self:_AddConstraint(false, "CheckAttribute", function(_, InstanceRoot, Attribute)
             local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
 
             if (not Success) then
@@ -1540,7 +1561,7 @@ do
             end
         end
 
-        return self:_AddConstraint("HasTags", function(_, InstanceRoot, Tags)
+        return self:_AddConstraint(false, "HasTags", function(_, InstanceRoot, Tags)
             for _, Tag in Tags do
                 if (not CollectionService:HasTag(InstanceRoot, Tag)) then
                     return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
@@ -1562,7 +1583,7 @@ do
             end
         end
 
-        return self:_AddConstraint("HasAttributes", function(_, InstanceRoot, Attributes)
+        return self:_AddConstraint(false, "HasAttributes", function(_, InstanceRoot, Attributes)
             for _, Attribute in Attributes do
                 if (InstanceRoot:GetAttribute(Attribute) == nil) then
                     return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
@@ -1583,7 +1604,7 @@ do
             TypeGuard._AssertIsTypeBase(Checker, "")
         end
 
-        return self:_AddConstraint("CheckAttributes", function(_, InstanceRoot, AttributeCheckers)
+        return self:_AddConstraint(false, "CheckAttributes", function(_, InstanceRoot, AttributeCheckers)
             for Attribute, Checker in AttributeCheckers do
                 local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
 
@@ -1601,7 +1622,7 @@ do
     function InstanceCheckerClass:IsDescendantOf(Instance)
         ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsDescendantOf", function(_, SubjectInstance, Instance)
+        return self:_AddConstraint(true, "IsDescendantOf", function(_, SubjectInstance, Instance)
             if (SubjectInstance:IsDescendantOf(Instance)) then
                 return true, EMPTY_STRING
             end
@@ -1615,7 +1636,7 @@ do
     function InstanceCheckerClass:IsAncestorOf(Instance)
         ExpectType(Instance, EXPECT_INSTANCE_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsAncestorOf", function(_, SubjectInstance, Instance)
+        return self:_AddConstraint(false, "IsAncestorOf", function(_, SubjectInstance, Instance)
             if (SubjectInstance:IsAncestorOf(Instance)) then
                 return true, EMPTY_STRING
             end
@@ -1629,7 +1650,7 @@ do
     function InstanceCheckerClass:HasChild(Name)
         ExpectType(Name, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("HasChild", function(_, InstanceRoot, Name)
+        return self:_AddConstraint(false, "HasChild", function(_, InstanceRoot, Name)
             if (InstanceRoot:FindFirstChild(Name)) then
                 return true, EMPTY_STRING
             end
@@ -1683,7 +1704,7 @@ do
     function EnumCheckerClass:IsA(TargetEnum)
         ExpectType(TargetEnum, EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("IsA", function(_, Value, TargetEnum)
+        return self:_AddConstraint(true, "IsA", function(_, Value, TargetEnum)
             local TargetType = typeof(TargetEnum)
 
             -- Both are EnumItems
@@ -1754,7 +1775,7 @@ do
     function ThreadCheckerClass:HasStatus(Status)
         ExpectType(Status, EXPECT_STRING_OR_FUNCTION, 1)
 
-        return self:_AddConstraint("HasStatus", function(_, Thread, Status)
+        return self:_AddConstraint(true, "HasStatus", function(_, Thread, Status)
             local CurrentStatus = coroutine.status(Thread)
 
             if (CurrentStatus == Status) then
