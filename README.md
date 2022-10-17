@@ -1,6 +1,6 @@
 # TypeGuard
 
-A constraint-based runtime assertion & type-checking library. Aims to replace all assertions and manual type checks with a convenient callable pattern.
+A runtime assertion & type-checking library. This aims to replace most assertions and manual type checks with a consistent, callable pattern.
 
 ## Usage Examples
 
@@ -8,135 +8,102 @@ A constraint-based runtime assertion & type-checking library. Aims to replace al
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
 
--- PARAMS
-    -- 1: Check if all params are either integers between or equal to 10 and 20, or strings with at least 5 characters
-    local Checker = TypeGuard.VariadicParams(
-        TypeGuard.Number():Integer():RangeInclusive(10, 20)
-            :Or(TypeGuard.String():MinLength(5))
+-- Example #1: standard params, simple
+local AssertRandomParams = TypeGuard.Params(
+    TypeGuard.String(),
+    TypeGuard.Boolean(),
+    TypeGuard.Any()
+)
+
+local function Test(P: string, Q: boolean, R: any)
+    AssertRandomParams(P, Q, R)
+    -- ...
+end
+
+-- Example #2: variadic params + "reject non-integer" constraint
+local AssertSumInts = TypeGuard.VariadicParams(TypeGuard.Number():Integer())
+
+local function SumInts(...: number)
+    AssertSumInts(...)
+    -- ...
+end
+
+-- Example #3: validating tables passed to RemoteEvents recursively
+local AssertValidTest = TypeGuard.Params(
+    TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
+    TypeGuard.Object({
+        P = TypeGuard.Number();
+        Q = TypeGuard.Number():Integer():IsAValueIn({1, 2, 3, 4, 5});
+        R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
+    }):Strict()
+)
+
+SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
+    AssertValidTest(Player, TestData)
+    -- ...
+end)
+
+-- Example #4: TypeChecker disjunction
+local AssertStringOrNumberOrBoolean = TypeGuard.Params(
+    TypeGuard.String():Or(TypeGuard.Number()):Or(TypeGuard.Boolean()):FailMessage("expected a string, number, or boolean")
+)
+
+local function Test(Input: string | number | boolean)
+    AssertStringOrNumberOrBoolean(Input)
+    -- ...
+end
+
+-- Example #5: TypeChecker conjunction
+local AssertStructureCombined = TypeGuard.Params(
+    -- 'And' only really makes sense on non-strict structural checks for arrays, objects, and Instances
+    TypeGuard.Object({
+        X = TypeGuard.Number();
+    }):And(
+        TypeGuard.Object({
+            Y = TypeGuard.Number();
+        })
+    ):And(
+        TypeGuard.Object({
+            Z = TypeGuard.Number();
+        })
     )
+)
 
-    Checker(15, "ddddd") -- Pass
-    Checker(15, "ddddd", "abc") -- Fail
+local function Test(Input: {X: number} & {Y: number} & {Z: number})
+    AssertStructureCombined(Input)
+    -- ...
+end
 
-    -- 2: Check if the first three parameters are numbers
-    local Checker = TypeGuard.Params(
-        TypeGuard.Number(),
-        TypeGuard.Number(),
-        TypeGuard.Number()
-    )
-
-    Checker(1, 2, 3) -- Pass
-    Checker(1, 2, 3, 4) -- Fail
-    Checker(1, "2", 3) -- Fail
-
--- INSTANCES, STRUCTURES & PRIMITIVE TYPES
-
-    -- 1: Check a two-layer array and ensure the first item is either a number or a string
-    local Checker = TypeGuard.Array():OfStructure({
-        [1] = TypeGuard.Array():OfStructure({
-            [1] = TypeGuard.Number():Or(TypeGuard.String()):Alias("NumberOrString");
-        });
+-- Example #6: context passing (is a character's health > some random number?)
+local AssertTestContext = TypeGuard.ParamsWithContext(
+    TypeGuard.Instance("Model", {
+        Humanoid = TypeGuard.Instance("Humanoid", {
+            Health = TypeGuard.Number():GreaterThan(function(Context)
+                return Context.Compare
+            end)
+        })
     })
+)
 
-    Checker:Assert({{"test"}}) -- Pass
-    Checker:Assert({{false}}) -- Fail
+local function Test(Root: Model)
+    AssertTestContext({Compare = math.random(1, 50)}, Root)
+    -- ...
+end
 
-    -- 2: Check a structure recursively and its types, ensuring they are all integer numbers
-    local Int = TypeGuard.Number():Integer()
-    local Checker = TypeGuard.Object({
-        X = Int;
-        Y = Int;
-        Z = Int;
+-- Example #7: Instance filtering
+local IsHumanoidAlive = TypeGuard.Instance("Model", {
+    Humanoid = TypeGuard.Instance("Humanoid", { -- Scans children recursively
+        Health = TypeGuard.Number():GreaterThan(0); -- Scans properties
+    });
+}):WrapCheck()
 
-        W = TypeGuard.Object({
-            Test = Int;
-        }):Strict()
-    })
-
-    Checker:Assert({
-        X = 1;
-        Y = 1;
-        Z = 1;
-
-        W = {
-            Test = 1;
-        };
-    }) -- Pass
-
-    Checker:Assert({
-        X = 1;
-        Y = 1;
-        Z = 1;
-
-        W = {
-            Test = 1;
-            H = 1;
-        };
-    }) -- Fail (strict check, unexpected field in W: H)
-
-    -- 3: Check the structure of Workspace on a blank baseplate game
-    local Test = TypeGuard.Instance("Workspace", {
-        Camera = TypeGuard.Instance("Camera");
-        Baseplate = TypeGuard.Instance("BasePart", {
-            Texture = TypeGuard.Instance("Texture");
-        });
-        SpawnLocation = TypeGuard.Instance("BasePart");
-    })
-
-    Test:Assert(game:GetService("Workspace")) -- Pass (if on default baseplate)
-    Test:Strict():Assert(game:GetService("Workspace")) -- Fail (even if on default baseplate, as Terrain, Camera, and SpawnLocation would also exist)
-
-    -- 4: Checking against Enum values and Enum classes (with disjunction)
-    local Checker = TypeGuard.Enum(Enum.Material):Or( TypeGuard.Enum(Enum.AccessoryType.Hat) )
-    Checker:Assert(Enum.Material.Air) -- Pass
-    Checker:Assert(Enum.AccessoryType.Hat) -- Pass
-
-    -- 5: Passing functions to constraints (they evaluate when checking)
-    local Checker = TypeGuard.String():IsAKeyIn(function()
-        local WorkspaceChildren = {}
-
-        for _, Item in pairs(Workspace:GetChildren()) do
-            WorkspaceChildren[Item.Name] = true
-        end
-
-        return WorkspaceChildren
-    end)
-
-    Checker:Check("Terrain") -- Pass
-    Checker:Check("NonExistentInstance") -- Fail
-
-    -- 6: Constraint "not" or "inverse" operation (flips the last constraint in the sequence)
-    local Checker = TypeGuard.String()
-                        :IsAValueIn({"1", "2"}):Negate()
-                        :Contains("3"):Negate()
-                        :Pattern("%d+")
-    
-    print(Checker:Check("100")) -- Pass
-    print(Checker:Check("2")) -- Fail
-    print(Checker:Check("3")) -- Fail
-    print(Checker:Check("AHHHH")) -- Fail
-    print(Checker:Check("498545")) -- Pass
-
-    -- 7: Single context support (works well with functional params on constraints + passing values inside a function)
-    -- We want the param to contain the string of the current hour
-    local CheckParams = TypeGuard.ParamsWithContext( TypeGuard.String():Contains(function(CurrentTime)
-        return CurrentTime
-    end) )
-
-    local function GetCurrentHour()
-        return os.date():match("%d+:(%d+):%d+")
-    end
-
-    local function Stuff(Input)
-        CheckParams(GetCurrentHour(), Input)
-    end
-
--- EXTRA FUN
-    local Predicate = TypeGuard.Instance("Model"):OfStructure({
-        Humanoid = TypeGuard.Instance("Humanoid"):OfStructure({ -- Can scan children recursively
-            Health = TypeGuard.Number():GreaterThan(0); -- Also can scan properties
-        });
-    }):WrapCheck()
-
-    local AliveHumanoids = TableUtil.Array.Filter1D(Workspace:GetChildren(), Predicate)
+local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumanoidAlive)
 ```
+
+## Best Practices
+Avoid re-construction of TypeCheckers. They are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
+
+## Major Initiatives
+- Split up each TypeChecker into separate modules
+- Find a way to make the type metadata compatible with Roblox LSP (intellisense is critical to the intuitiveness of this library)
+- Constraint disjunction (e.g. `TypeGuard.String():IsAValueIn({"X", "Y"}):Or():IsAValueIn({"Z", "W"})`)
