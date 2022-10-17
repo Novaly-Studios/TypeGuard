@@ -74,19 +74,15 @@ local function Test(Input: {X: number} & {Y: number} & {Z: number})
     -- ...
 end
 
--- Example #6: context passing (is a character's health > some random number?)
+-- Example #6: context passing (e.g. is a provided Model a descendant of Workspace?)
 local AssertTestContext = TypeGuard.ParamsWithContext(
-    TypeGuard.Instance("Model", {
-        Humanoid = TypeGuard.Instance("Humanoid", {
-            Health = TypeGuard.Number():GreaterThan(function(Context)
-                return Context.Compare
-            end)
-        })
-    })
+    TypeGuard.Instance("Model"):IsDescendantOf(function(Context)
+        return Context.Reference
+    end)
 )
 
 local function Test(Root: Model)
-    AssertTestContext({Compare = math.random(1, 50)}, Root)
+    AssertTestContext({Reference = workspace}, Root)
     -- ...
 end
 
