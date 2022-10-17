@@ -90,7 +90,18 @@ local function Test(Root: Model)
     -- ...
 end
 
--- Example #7: Instance filtering
+-- Example #7: Optional params
+local AssertTestOptional = TypeGuard.Params(
+    TypeGuard.String(),
+    TypeGuard.Vector3():Optional()
+)
+
+local function Test(X: string, Y: Vector3)
+    AssertTestOptional(X, Y)
+    -- ...
+end
+
+-- Example #8: Instance filtering via wrapping check into predicate
 local IsHumanoidAlive = TypeGuard.Instance("Model", {
     Humanoid = TypeGuard.Instance("Humanoid", { -- Scans children recursively
         Health = TypeGuard.Number():GreaterThan(0); -- Scans properties
