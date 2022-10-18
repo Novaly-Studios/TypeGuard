@@ -1,9 +1,11 @@
 --!nonstrict
-local CollectionService = game:GetService("CollectionService")
--- @TODO This script really needs splitting up into sub-modules
 
-local INVALID_ARGUMENT = "Invalid argument #%s (%s expected, got %s)"
-local INVALID_TYPE = "Expected %s, got %s"
+-- TODOs:
+-- .. This script really needs splitting into sub-modules
+-- .. Design some way to turn on and off different levels of runtime type checking for production vs development - for performance
+-- .. Auto-template for objects, arrays, and Instances, e.g. -- TypeGuard.Object():FromSample({ P = 1, Q = 2, R = {X = "s", ...} })
+
+local CollectionService = game:GetService("CollectionService")
 
 -- Cache up here so these arrays aren't re-created with every function call for the simple checking system
 local EXPECT_ENUM_OR_ENUM_ITEM_OR_FUNCTION = {"Enum", "EnumItem", "function"}
@@ -19,19 +21,18 @@ local EXPECT_STRING = {"string"}
 local EXPECT_TABLE = {"table"}
 
 --- This is only really for type checking internally for data passed to constraints and util functions
---- @todo We should use TypeGuard itself for validating the constraint args?
-local function ExpectType(PassedArg: any, ExpectedTypes: {string}, ArgKey: number | string)
-    local GotType = typeof(PassedArg)
+local function ExpectType(Target: any, ExpectedTypes: {string}, ArgKey: number | string)
+    local GotType = typeof(Target)
     local Satisfied = false
 
     for _, PossibleType in ExpectedTypes do
         if (GotType == PossibleType) then
             Satisfied = true
-            break
+            return
         end
     end
 
-    assert(Satisfied, INVALID_ARGUMENT:format(tostring(ArgKey), table.concat(ExpectedTypes, " or "), GotType))
+    assert(Satisfied, ("Invalid argument #%s (%s expected, got %s)"):format(tostring(ArgKey), table.concat(ExpectedTypes, " or "), GotType))
 end
 
 local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string))
@@ -42,11 +43,11 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true, ""
         end
 
-        return false, INVALID_TYPE:format(ExpectedTypeName, ItemType)
+        return false, ("Expected %s, got %s"):format(ExpectedTypeName, ItemType)
     end
 end
 
-local function ConcatWithToString<T>(Array: {T}, Separator: string): string
+local function ConcatWithToString(Array: {any}, Separator: string): string
     local Result = ""
 
     for _, Value in Array do
@@ -207,24 +208,24 @@ type SelfReturn<T, P...> = ((T, P...) -> T)
 type TypeCheckerConstructor<T, P...> = ((P...) -> T)
 
 -- Base methods
-type TC_Or<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, SignatureTypeChecker | () -> SignatureTypeChecker>;
-type TC_And<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, SignatureTypeChecker>;
-type TC_Copy<ExtensionClass, Primitive> = SelfReturn<ExtensionClass>;
-type TC_Alias<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, string>;
-type TC_Negate<ExtensionClass, Primitive> = SelfReturn<ExtensionClass>;
-type TC_Cached<ExtensionClass, Primitive> = SelfReturn<ExtensionClass>;
-type TC_Optional<ExtensionClass, Primitive> = SelfReturn<ExtensionClass>;
-type TC_WithContext<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, any?>;
-type TC_FailMessage<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, string>;
-type TC_WrapCheck<ExtensionClass, Primitive> = (ExtensionClass) -> ((any?) -> (boolean, string));
-type TC_WrapAssert<ExtensionClass, Primitive> = (ExtensionClass) -> ((any?) -> ());
-type TC_Check<ExtensionClass, Primitive> = (ExtensionClass, any) -> (string, boolean);
-type TC_Assert<ExtensionClass, Primitive> = (ExtensionClass, any) -> ();
+type TC_Or<ExtensionClass> = SelfReturn<ExtensionClass, SignatureTypeChecker | () -> SignatureTypeChecker>;
+type TC_And<ExtensionClass> = SelfReturn<ExtensionClass, SignatureTypeChecker>;
+type TC_Copy<ExtensionClass> = SelfReturn<ExtensionClass>;
+type TC_Alias<ExtensionClass> = SelfReturn<ExtensionClass, string>;
+type TC_Negate<ExtensionClass> = SelfReturn<ExtensionClass>;
+type TC_Cached<ExtensionClass> = SelfReturn<ExtensionClass>;
+type TC_Optional<ExtensionClass> = SelfReturn<ExtensionClass>;
+type TC_WithContext<ExtensionClass> = SelfReturn<ExtensionClass, any?>;
+type TC_FailMessage<ExtensionClass> = SelfReturn<ExtensionClass, string>;
+type TC_WrapCheck<ExtensionClass> = (ExtensionClass) -> ((any?) -> (boolean, string));
+type TC_WrapAssert<ExtensionClass> = (ExtensionClass) -> ((any?) -> ());
+type TC_Check<ExtensionClass> = (ExtensionClass, any) -> (string, boolean);
+type TC_Assert<ExtensionClass> = (ExtensionClass, any) -> ();
 
 -- Base constraints
-type TC_Equals<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
-type TC_IsAValueIn<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
-type TC_IsAKeyIn<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
+type TC_Equals<ExtensionClass> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
+type TC_IsAValueIn<ExtensionClass> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
+type TC_IsAKeyIn<ExtensionClass> = SelfReturn<ExtensionClass, any | ((any?) -> any)>;
 type TC_GreaterThan<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, Primitive | ((any?) -> Primitive)>;
 type TC_LessThan<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, Primitive | ((any?) -> Primitive)>;
 type TC_GreaterThanOrEqualTo<ExtensionClass, Primitive> = SelfReturn<ExtensionClass, Primitive | ((any?) -> Primitive)>;
@@ -234,54 +235,54 @@ type TypeChecker<ExtensionClass, Primitive> = {
     IsTemplate: true;
 
     -- Methods available in all TypeCheckers
-    Or: TC_Or<ExtensionClass, Primitive>;
-    alternate: TC_Or<ExtensionClass, Primitive>;
+    Or: TC_Or<ExtensionClass>;
+    alternate: TC_Or<ExtensionClass>;
     
-    And: TC_And<ExtensionClass, Primitive>;
-    additional: TC_Or<ExtensionClass, Primitive>;
+    And: TC_And<ExtensionClass>;
+    additional: TC_Or<ExtensionClass>;
 
-    Copy: TC_Copy<ExtensionClass, Primitive>;
-    copy: TC_Copy<ExtensionClass, Primitive>;
+    Copy: TC_Copy<ExtensionClass>;
+    copy: TC_Copy<ExtensionClass>;
 
-    Alias: TC_Alias<ExtensionClass, Primitive>;
-    alias: TC_Alias<ExtensionClass, Primitive>;
+    Alias: TC_Alias<ExtensionClass>;
+    alias: TC_Alias<ExtensionClass>;
 
-    Negate: TC_Negate<ExtensionClass, Primitive>;
-    negate: TC_Negate<ExtensionClass, Primitive>;
+    Negate: TC_Negate<ExtensionClass>;
+    negate: TC_Negate<ExtensionClass>;
 
-    Cached: TC_Cached<ExtensionClass, Primitive>;
-    cached: TC_Cached<ExtensionClass, Primitive>;
+    Cached: TC_Cached<ExtensionClass>;
+    cached: TC_Cached<ExtensionClass>;
 
-    Optional: TC_Optional<ExtensionClass, Primitive>;
-    optional: TC_Optional<ExtensionClass, Primitive>;
+    Optional: TC_Optional<ExtensionClass>;
+    optional: TC_Optional<ExtensionClass>;
 
-    WithContext: TC_WithContext<ExtensionClass, Primitive>;
-    withContext: TC_WithContext<ExtensionClass, Primitive>;
+    WithContext: TC_WithContext<ExtensionClass>;
+    withContext: TC_WithContext<ExtensionClass>;
 
-    FailMessage: TC_FailMessage<ExtensionClass, Primitive>;
-    failMessage: TC_FailMessage<ExtensionClass, Primitive>;
+    FailMessage: TC_FailMessage<ExtensionClass>;
+    failMessage: TC_FailMessage<ExtensionClass>;
 
-    WrapCheck: TC_WrapCheck<ExtensionClass, Primitive>;
-    wrapCheck: TC_WrapCheck<ExtensionClass, Primitive>;
+    WrapCheck: TC_WrapCheck<ExtensionClass>;
+    wrapCheck: TC_WrapCheck<ExtensionClass>;
 
-    WrapAssert: TC_WrapAssert<ExtensionClass, Primitive>;
-    wrapAssert: TC_WrapAssert<ExtensionClass, Primitive>;
+    WrapAssert: TC_WrapAssert<ExtensionClass>;
+    wrapAssert: TC_WrapAssert<ExtensionClass>;
 
-    Check: TC_Check<ExtensionClass, Primitive>;
-    check: TC_Check<ExtensionClass, Primitive>;
+    Check: TC_Check<ExtensionClass>;
+    check: TC_Check<ExtensionClass>;
 
-    Assert: TC_Assert<ExtensionClass, Primitive>;
-    assert: TC_Assert<ExtensionClass, Primitive>;
+    Assert: TC_Assert<ExtensionClass>;
+    assert: TC_Assert<ExtensionClass>;
 
     -- Constraint methods available in all TypeCheckers
-    Equals: TC_Equals<ExtensionClass, Primitive>;
-    equals: TC_Equals<ExtensionClass, Primitive>;
+    Equals: TC_Equals<ExtensionClass>;
+    equals: TC_Equals<ExtensionClass>;
 
-    IsAValueIn: TC_IsAValueIn<ExtensionClass, Primitive>;
-    isAValueIn: TC_IsAValueIn<ExtensionClass, Primitive>;
+    IsAValueIn: TC_IsAValueIn<ExtensionClass>;
+    isAValueIn: TC_IsAValueIn<ExtensionClass>;
 
-    IsAKeyIn: TC_IsAKeyIn<ExtensionClass, Primitive>;
-    isAKeyIn: TC_IsAKeyIn<ExtensionClass, Primitive>;
+    IsAKeyIn: TC_IsAKeyIn<ExtensionClass>;
+    isAKeyIn: TC_IsAKeyIn<ExtensionClass>;
 
     GreaterThan: TC_GreaterThan<ExtensionClass, Primitive>;
     greaterThan: TC_GreaterThan<ExtensionClass, Primitive>;
@@ -477,7 +478,7 @@ function TypeGuard.Template(Name: string)
 
     --- Checks if the value is of the correct type
     function TemplateClass:_Check(Value)
-        debug.profilebegin(Name .. ".Check")
+        debug.profilebegin(Name)
 
         local Tags = self._Tags
         local CacheTag = Tags.Cached
@@ -647,7 +648,7 @@ function TypeGuard.Template(Name: string)
         table.insert(self._Disjunction, OtherType)
         return self
     end
-    TemplateClass["alternate"] = TemplateClass.Or
+    TemplateClass.alternate = TemplateClass.Or
 
     --- Enqueues a new constraint to satisfy 'and' i.e. "check x and check y and check z and ..." must pass
     function TemplateClass:And(OtherType)
@@ -657,7 +658,7 @@ function TypeGuard.Template(Name: string)
         table.insert(self._Conjunction, OtherType)
         return self
     end
-    TemplateClass["additional"] = TemplateClass.And
+    TemplateClass.additional = TemplateClass.And
 
     --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing
     function TemplateClass:Alias(AliasName)
@@ -1305,11 +1306,11 @@ end
 
 do
     type ObjectTypeChecker = TypeChecker<ObjectTypeChecker, {[any]: any}> & {
-        OfStructure: SelfReturn<ObjectTypeChecker, {[any]: any}>;
-        ofStructure: SelfReturn<ObjectTypeChecker, {[any]: any}>;
+        OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
+        ofStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
 
-        OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: any}>;
-        ofStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: any}>;
+        OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
+        ofStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
 
         Strict: SelfReturn<ObjectTypeChecker>;
         strict: SelfReturn<ObjectTypeChecker>;
@@ -1330,7 +1331,7 @@ do
         ofClass: SelfReturn<ObjectTypeChecker, any>;
     };
 
-    local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: any}?>, ObjectClass = TypeGuard.Template("Object")
+    local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: SignatureTypeChecker}?>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass:_Initial(TargetObject)
         if (typeof(TargetObject) ~= "table") then
@@ -1481,11 +1482,11 @@ end
 
 do
     type InstanceTypeChecker = TypeChecker<InstanceTypeChecker, Instance> & {
-        OfStructure: SelfReturn<InstanceTypeChecker, {[any]: SignatureTypeChecker}>;
-        ofStructure: SelfReturn<InstanceTypeChecker, {[any]: SignatureTypeChecker}>;
+        OfStructure: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
+        ofStructure: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
 
-        OfStructureStrict: SelfReturn<InstanceTypeChecker, {[any]: SignatureTypeChecker}>;
-        ofStructureStrict: SelfReturn<InstanceTypeChecker, {[any]: SignatureTypeChecker}>;
+        OfStructureStrict: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
+        ofStructureStrict: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
 
         IsA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
         isA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
@@ -1768,7 +1769,7 @@ end
 do
     type BooleanTypeChecker = TypeChecker<BooleanTypeChecker, boolean>;
 
-    local Boolean: TypeCheckerConstructor<BooleanTypeChecker, boolean?>, BooleanClass = TypeGuard.Template("Boolean")
+    local Boolean: TypeCheckerConstructor<BooleanTypeChecker>, BooleanClass = TypeGuard.Template("Boolean")
     BooleanClass._Initial = CreateStandardInitial("boolean")
 
     BooleanClass.InitialConstraint = BooleanClass.Equals
@@ -1994,7 +1995,7 @@ end
 TypeGuard.params = TypeGuard.Params
 
 --- Creates a function which checks variadic params against a single given TypeChecker
-function TypeGuard.VariadicParams(CompareType: SignatureTypeChecker)
+function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(...)
@@ -2009,7 +2010,7 @@ function TypeGuard.VariadicParams(CompareType: SignatureTypeChecker)
         end
     end
 end
-TypeGuard.variadicParams = TypeGuard.VariadicParams
+TypeGuard.variadic = TypeGuard.Variadic
 
 --- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
 function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
@@ -2039,7 +2040,7 @@ end
 TypeGuard.paramsWithContext = TypeGuard.ParamsWithContext
 
 --- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args
-function TypeGuard.VariadicParamsWithContext(CompareType: SignatureTypeChecker)
+function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(Context: any?, ...)
@@ -2054,7 +2055,7 @@ function TypeGuard.VariadicParamsWithContext(CompareType: SignatureTypeChecker)
         end
     end
 end
-TypeGuard.variadicParamsWithContext = TypeGuard.VariadicParamsWithContext
+TypeGuard.variadicWithContext = TypeGuard.VariadicWithContext
 
 --- Wraps a function in a param checker function
 function TypeGuard.WrapFunctionParams(Call: (...any) -> (...any), ...: SignatureTypeChecker)
@@ -2074,17 +2075,17 @@ end
 TypeGuard.wrapFunctionParams = TypeGuard.WrapFunctionParams
 
 --- Wraps a function in a variadic param checker function
-function TypeGuard.WrapFunctionVariadicParams(Call: (...any) -> (...any), VariadicParamType: SignatureTypeChecker)
+function TypeGuard.WrapFunctionVariadic(Call: (...any) -> (...any), VariadicParamType: SignatureTypeChecker)
     ExpectType(Call, EXPECT_FUNCTION, 1)
     TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
 
-    local ParamChecker = TypeGuard.VariadicParams(VariadicParamType)
+    local ParamChecker = TypeGuard.Variadic(VariadicParamType)
 
     return function(...)
         ParamChecker(...)
         return Call(...)
     end
 end
-TypeGuard.wrapFunctionVariadicParams = TypeGuard.WrapFunctionVariadicParams
+TypeGuard.wrapFunctionVariadic = TypeGuard.WrapFunctionVariadic
 
 return TypeGuard

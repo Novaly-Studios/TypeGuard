@@ -182,114 +182,114 @@ return function()
         end)
     end)
 
-    describe("VariadicParams", function()
+    describe("Variadic", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
-                TypeGuard.VariadicParams(1)
+                TypeGuard.Variadic(1)
             end).to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams({})
+                TypeGuard.Variadic({})
             end).to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams(true)
+                TypeGuard.Variadic(true)
             end).to.throw()
         end)
 
         it("should accept TypeChecker types", function()
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Number())
+                TypeGuard.Variadic(TypeGuard.Number())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.String())
+                TypeGuard.Variadic(TypeGuard.String())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Array())
+                TypeGuard.Variadic(TypeGuard.Array())
             end).never.to.throw()
         end)
 
         it("should check one type", function()
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Number())(1)
+                TypeGuard.Variadic(TypeGuard.Number())(1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Number())("Test")
+                TypeGuard.Variadic(TypeGuard.Number())("Test")
             end).to.throw()
         end)
 
         it("should check multiple types", function()
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Number())(1, 1)
+                TypeGuard.Variadic(TypeGuard.Number())(1, 1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParams(TypeGuard.Number())(1, "Test")
+                TypeGuard.Variadic(TypeGuard.Number())(1, "Test")
             end).to.throw()
         end)
     end)
 
-    describe("VariadicParamsWithContext", function()
+    describe("VariadicWithContext", function()
         it("should reject non-TypeChecker types", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(1)
+                TypeGuard.VariadicWithContext(1)
             end).to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext({})
+                TypeGuard.VariadicWithContext({})
             end).to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(true)
+                TypeGuard.VariadicWithContext(true)
             end).to.throw()
         end)
 
         it("should accept TypeChecker types", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())
+                TypeGuard.VariadicWithContext(TypeGuard.Number())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.String())
+                TypeGuard.VariadicWithContext(TypeGuard.String())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Array())
+                TypeGuard.VariadicWithContext(TypeGuard.Array())
             end).never.to.throw()
         end)
 
         it("should check one type", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1)
+                TypeGuard.VariadicWithContext(TypeGuard.Number())(nil, 1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, "Test")
+                TypeGuard.VariadicWithContext(TypeGuard.Number())(nil, "Test")
             end).to.throw()
         end)
 
         it("should accept a context as first arg (or nil)", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())("Test", 1, 1, 1)
+                TypeGuard.VariadicWithContext(TypeGuard.Number())("Test", 1, 1, 1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1, 1)
+                TypeGuard.VariadicWithContext(TypeGuard.Number())(nil, 1, 1, 1)
             end).never.to.throw()
         end)
 
         it("should pass the context down", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                TypeGuard.VariadicWithContext(TypeGuard.Number():Equals(function(Context)
                     return Context.MustEqual
                 end))({MustEqual = 1}, 1, 1, 1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number():Equals(function(Context)
+                TypeGuard.VariadicWithContext(TypeGuard.Number():Equals(function(Context)
                     return Context.MustEqual
                 end))({MustEqual = 1}, 1, 1, 2)
             end).to.throw()
@@ -297,11 +297,11 @@ return function()
 
         it("should check multiple types", function()
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, 1)
+                TypeGuard.VariadicWithContext(TypeGuard.Number())(nil, 1, 1)
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.VariadicParamsWithContext(TypeGuard.Number())(nil, 1, "Test")
+                TypeGuard.VariadicWithContext(TypeGuard.Number())(nil, 1, "Test")
             end).to.throw()
         end)
     end)
@@ -377,57 +377,57 @@ return function()
         end)
     end)
 
-    describe("WrapFunctionVariadicParams", function()
+    describe("WrapFunctionVariadic", function()
         it("should reject non functions as first arg", function()
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(1)
+                TypeGuard.WrapFunctionVariadic(1)
             end).to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams({})
+                TypeGuard.WrapFunctionVariadic({})
             end).to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(true)
+                TypeGuard.WrapFunctionVariadic(true)
             end).to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Number())
+                TypeGuard.WrapFunctionVariadic(function() end, TypeGuard.Number())
             end).never.to.throw()
         end)
 
         it("should reject non-TypeChecker types", function()
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, 1)
+                TypeGuard.WrapFunctionVariadic(function() end, 1)
             end).to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, {})
+                TypeGuard.WrapFunctionVariadic(function() end, {})
             end).to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, true)
+                TypeGuard.WrapFunctionVariadic(function() end, true)
             end).to.throw()
         end)
 
         it("should accept TypeChecker types", function()
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Number())
+                TypeGuard.WrapFunctionVariadic(function() end, TypeGuard.Number())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.String())
+                TypeGuard.WrapFunctionVariadic(function() end, TypeGuard.String())
             end).never.to.throw()
 
             expect(function()
-                TypeGuard.WrapFunctionVariadicParams(function() end, TypeGuard.Array())
+                TypeGuard.WrapFunctionVariadic(function() end, TypeGuard.Array())
             end).never.to.throw()
         end)
 
         it("should wrap a function", function()
             local function TestFunction(_X, ...) end
 
-            local TestWrapped = TypeGuard.WrapFunctionVariadicParams(TestFunction, TypeGuard.Number())
+            local TestWrapped = TypeGuard.WrapFunctionVariadic(TestFunction, TypeGuard.Number())
             expect(TestWrapped).to.be.a("function")
 
             expect(function()
@@ -1319,8 +1319,9 @@ return function()
 
             it("should accept Instances that match the structure", function()
                 local SampleTree = Instance.new("Folder")
-                    local Test = Instance.new("Folder", SampleTree)
+                    local Test = Instance.new("Folder")
                     Test.Name = "Test"
+                    Test.Parent = SampleTree
 
                 expect(
                     Base:OfStructure({
@@ -1332,10 +1333,12 @@ return function()
 
             it("should reject Instances that do not match the structure recursively", function()
                 local SampleTree = Instance.new("Folder")
-                    local Test = Instance.new("Folder", SampleTree)
+                    local Test = Instance.new("Folder")
                     Test.Name = "Test"
-                        local Test2 = Instance.new("Part", Test)
+                    Test.Parent = SampleTree
+                        local Test2 = Instance.new("Part")
                         Test2.Name = "Test2"
+                        Test2.Parent = Test
 
                 expect(
                     Base:OfStructure({
@@ -1352,10 +1355,12 @@ return function()
 
             it("should accept Instances that match the structure recursively", function()
                 local SampleTree = Instance.new("Folder")
-                    local Test = Instance.new("Folder", SampleTree)
+                    local Test = Instance.new("Folder")
                     Test.Name = "Test"
-                        local Test2 = Instance.new("Part", Test)
+                    Test.Parent = SampleTree
+                        local Test2 = Instance.new("Part")
                         Test2.Name = "Test2"
+                        Test2.Parent = Test
 
                 expect(
                     Base:OfStructure({
@@ -1374,10 +1379,12 @@ return function()
         describe("OfStructureStrict (Strict + OfStructure)", function()
             it("should reject extra flat children", function()
                 local SampleTree = Instance.new("Folder")
-                    local Test = Instance.new("Folder", SampleTree)
+                    local Test = Instance.new("Folder")
                     Test.Name = "Test"
-                    local Test2 = Instance.new("Folder", SampleTree)
+                    Test.Parent = SampleTree
+                    local Test2 = Instance.new("Folder")
                     Test2.Name = "Test2"
+                    Test2.Parent = SampleTree
 
                 expect(
                     Base:OfStructureStrict({
@@ -1395,12 +1402,15 @@ return function()
 
             it("should reject extra children recursively", function()
                 local SampleTree = Instance.new("Folder")
-                    local Test = Instance.new("Folder", SampleTree)
+                    local Test = Instance.new("Folder")
                     Test.Name = "Test"
-                        local Test2 = Instance.new("Folder", Test)
+                    Test.Parent = SampleTree
+                        local Test2 = Instance.new("Folder")
                         Test2.Name = "Test2"
-                        local Test22 = Instance.new("Folder", Test)
+                        Test2.Parent = Test
+                        local Test22 = Instance.new("Folder")
                         Test22.Name = "Test22"
+                        Test22.Parent = Test
 
                 expect(
                     Base:OfStructureStrict({
@@ -1460,8 +1470,10 @@ return function()
 
             it("should accept Instances that are ancestors of the specified Instance", function()
                 local Test = Instance.new("Folder")
-                local Test2 = Instance.new("Folder", Test)
-                local Test3 = Instance.new("Folder", Test2)
+                local Test2 = Instance.new("Folder")
+                Test2.Parent = Test
+                local Test3 = Instance.new("Folder")
+                Test3.Parent = Test2
 
                 expect(TypeGuard.Instance():IsAncestorOf(Test2):Check(Test)).to.equal(true)
                 expect(TypeGuard.Instance():IsAncestorOf(Test3):Check(Test)).to.equal(true)
@@ -1486,8 +1498,10 @@ return function()
 
             it("should accept Instances that are descendants of the specified Instance", function()
                 local Test = Instance.new("Folder")
-                local Test2 = Instance.new("Folder", Test)
-                local Test3 = Instance.new("Folder", Test2)
+                local Test2 = Instance.new("Folder")
+                Test2.Parent = Test
+                local Test3 = Instance.new("Folder")
+                Test3.Parent = Test2
 
                 expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test2)).to.equal(true)
                 expect(TypeGuard.Instance():IsDescendantOf(Test):Check(Test3)).to.equal(true)

@@ -21,7 +21,7 @@ local function Test(P: string, Q: boolean, R: any)
 end
 
 -- Example #2: variadic params + "reject non-integer" constraint
-local AssertSumInts = TypeGuard.VariadicParams(TypeGuard.Number():Integer())
+local AssertSumInts = TypeGuard.Variadic(TypeGuard.Number():Integer())
 
 local function SumInts(...: number)
     AssertSumInts(...)
