@@ -28,28 +28,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         -- ...
     end
 
--- Example #3: validating tables passed to RemoteEvents recursively
-    local AssertValidTest = TypeGuard.Params(
-        TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
-
-        TypeGuard.Object({
-            P = TypeGuard.Number();
-            Q = TypeGuard.Number():Integer():IsAValueIn({1, 2, 3, 4, 5});
-            R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
-
-            S = TypeGuard.Object({
-                Key1 = TypeGuard.String():Optional();
-                Key2 = TypeGuard.Enum(Enum.Material);
-            });
-        }):Strict()
-    )
-
-    SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
-        AssertValidTest(Player, TestData)
-        -- ...
-    end)
-
--- Example #4: TypeChecker disjunction
+-- Example #3: TypeChecker disjunction
     local AssertStringOrNumberOrBoolean = TypeGuard.Params(
         TypeGuard.String():Or(TypeGuard.Number()):Or(TypeGuard.Boolean()):FailMessage("expected a string, number, or boolean")
     )
@@ -59,7 +38,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         -- ...
     end
 
--- Example #5: TypeChecker conjunction
+-- Example #4: TypeChecker conjunction
     local AssertStructureCombined = TypeGuard.Params(
         -- 'And' only really makes sense on non-strict structural checks for arrays, objects, and Instances
         TypeGuard.Object({
@@ -80,7 +59,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         -- ...
     end
 
--- Example #6: context passing (e.g. is a provided Model a descendant of Workspace?)
+-- Example #5: context passing (e.g. is a provided Model a descendant of Workspace?)
     local AssertTestContext = TypeGuard.ParamsWithContext(
         TypeGuard.Instance("Model"):IsDescendantOf(function(Context)
             return Context.Reference
@@ -92,7 +71,7 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         -- ...
     end
 
--- Example #7: Optional params
+-- Example #6: Optional params
     local AssertTestOptional = TypeGuard.Params(
         TypeGuard.String(),
         TypeGuard.Vector3():Optional()
@@ -102,6 +81,29 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
         AssertTestOptional(X, Y)
         -- ...
     end
+
+-- Example #7: validating tables passed to RemoteEvents recursively, with various principles combined
+    local AssertValidTest = TypeGuard.Params(
+        TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
+
+        TypeGuard.Object({
+            P = TypeGuard.Number():IsAValueIn({1, 2, 3, 4, 5});
+            Q = TypeGuard.Number():Integer():RangeInclusive(-100, 100);
+            R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
+
+            S = TypeGuard.Object({
+                Key1 = TypeGuard.String():Optional();
+                Key2 = TypeGuard.Enum(Enum.Material);
+            }):Strict();
+
+            T = TypeGuard.Number():IsInfinite():Negate():IsClose(123, 0.5):Negate(); -- "number should not be infinite and should not be close to 123"
+        }):Strict()
+    )
+
+    SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
+        AssertValidTest(Player, TestData)
+        -- ...
+    end)
 
 -- Example #8: Instance filtering via wrapping check into predicate
     local IsHumanoidAlive = TypeGuard.Instance("Model", {
