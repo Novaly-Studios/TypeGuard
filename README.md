@@ -9,102 +9,102 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
 
 -- Example #1: standard params, simple
-local AssertRandomParams = TypeGuard.Params(
-    TypeGuard.String(),
-    TypeGuard.Boolean(),
-    TypeGuard.Any()
-)
+    local AssertRandomParams = TypeGuard.Params(
+        TypeGuard.String(),
+        TypeGuard.Boolean(),
+        TypeGuard.Any()
+    )
 
-local function Test(P: string, Q: boolean, R: any)
-    AssertRandomParams(P, Q, R)
-    -- ...
-end
+    local function Test(P: string, Q: boolean, R: any)
+        AssertRandomParams(P, Q, R)
+        -- ...
+    end
 
 -- Example #2: variadic params + "reject non-integer" constraint
-local AssertSumInts = TypeGuard.Variadic(TypeGuard.Number():Integer())
+    local AssertSumInts = TypeGuard.Variadic(TypeGuard.Number():Integer())
 
-local function SumInts(...: number)
-    AssertSumInts(...)
-    -- ...
-end
+    local function SumInts(...: number)
+        AssertSumInts(...)
+        -- ...
+    end
 
 -- Example #3: validating tables passed to RemoteEvents recursively
-local AssertValidTest = TypeGuard.Params(
-    TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
-    TypeGuard.Object({
-        P = TypeGuard.Number();
-        Q = TypeGuard.Number():Integer():IsAValueIn({1, 2, 3, 4, 5});
-        R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
-    }):Strict()
-)
+    local AssertValidTest = TypeGuard.Params(
+        TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
+        TypeGuard.Object({
+            P = TypeGuard.Number();
+            Q = TypeGuard.Number():Integer():IsAValueIn({1, 2, 3, 4, 5});
+            R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
+        }):Strict()
+    )
 
-SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
-    AssertValidTest(Player, TestData)
-    -- ...
-end)
+    SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
+        AssertValidTest(Player, TestData)
+        -- ...
+    end)
 
 -- Example #4: TypeChecker disjunction
-local AssertStringOrNumberOrBoolean = TypeGuard.Params(
-    TypeGuard.String():Or(TypeGuard.Number()):Or(TypeGuard.Boolean()):FailMessage("expected a string, number, or boolean")
-)
+    local AssertStringOrNumberOrBoolean = TypeGuard.Params(
+        TypeGuard.String():Or(TypeGuard.Number()):Or(TypeGuard.Boolean()):FailMessage("expected a string, number, or boolean")
+    )
 
-local function Test(Input: string | number | boolean)
-    AssertStringOrNumberOrBoolean(Input)
-    -- ...
-end
+    local function Test(Input: string | number | boolean)
+        AssertStringOrNumberOrBoolean(Input)
+        -- ...
+    end
 
 -- Example #5: TypeChecker conjunction
-local AssertStructureCombined = TypeGuard.Params(
-    -- 'And' only really makes sense on non-strict structural checks for arrays, objects, and Instances
-    TypeGuard.Object({
-        X = TypeGuard.Number();
-    }):And(
+    local AssertStructureCombined = TypeGuard.Params(
+        -- 'And' only really makes sense on non-strict structural checks for arrays, objects, and Instances
         TypeGuard.Object({
-            Y = TypeGuard.Number();
-        })
-    ):And(
-        TypeGuard.Object({
-            Z = TypeGuard.Number();
-        })
+            X = TypeGuard.Number();
+        }):And(
+            TypeGuard.Object({
+                Y = TypeGuard.Number();
+            })
+        ):And(
+            TypeGuard.Object({
+                Z = TypeGuard.Number();
+            })
+        )
     )
-)
 
-local function Test(Input: {X: number} & {Y: number} & {Z: number})
-    AssertStructureCombined(Input)
-    -- ...
-end
+    local function Test(Input: {X: number} & {Y: number} & {Z: number})
+        AssertStructureCombined(Input)
+        -- ...
+    end
 
 -- Example #6: context passing (e.g. is a provided Model a descendant of Workspace?)
-local AssertTestContext = TypeGuard.ParamsWithContext(
-    TypeGuard.Instance("Model"):IsDescendantOf(function(Context)
-        return Context.Reference
-    end)
-)
+    local AssertTestContext = TypeGuard.ParamsWithContext(
+        TypeGuard.Instance("Model"):IsDescendantOf(function(Context)
+            return Context.Reference
+        end)
+    )
 
-local function Test(Root: Model)
-    AssertTestContext({Reference = workspace}, Root)
-    -- ...
-end
+    local function Test(Root: Model)
+        AssertTestContext({Reference = workspace}, Root)
+        -- ...
+    end
 
 -- Example #7: Optional params
-local AssertTestOptional = TypeGuard.Params(
-    TypeGuard.String(),
-    TypeGuard.Vector3():Optional()
-)
+    local AssertTestOptional = TypeGuard.Params(
+        TypeGuard.String(),
+        TypeGuard.Vector3():Optional()
+    )
 
-local function Test(X: string, Y: Vector3?)
-    AssertTestOptional(X, Y)
-    -- ...
-end
+    local function Test(X: string, Y: Vector3?)
+        AssertTestOptional(X, Y)
+        -- ...
+    end
 
 -- Example #8: Instance filtering via wrapping check into predicate
-local IsHumanoidAlive = TypeGuard.Instance("Model", {
-    Humanoid = TypeGuard.Instance("Humanoid", { -- Scans children recursively
-        Health = TypeGuard.Number():GreaterThan(0); -- Scans properties
-    });
-}):WrapCheck()
+    local IsHumanoidAlive = TypeGuard.Instance("Model", {
+        Humanoid = TypeGuard.Instance("Humanoid", { -- Scans children recursively
+            Health = TypeGuard.Number():GreaterThan(0); -- Scans properties
+        });
+    }):WrapCheck()
 
-local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumanoidAlive)
+    local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumanoidAlive)
 ```
 
 ## Best Practices
