@@ -130,4 +130,4 @@ local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumano
 ```
 
 ## Best Practices
-Avoid re-construction of TypeCheckers. They are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
+Avoid construction or copying of TypeCheckers for performance reasons. TypeCheckers are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
