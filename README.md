@@ -31,10 +31,16 @@ local TypeGuard = require(ReplicatedFirst:WaitForChild("TypeGuard"))
 -- Example #3: validating tables passed to RemoteEvents recursively
     local AssertValidTest = TypeGuard.Params(
         TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
+
         TypeGuard.Object({
             P = TypeGuard.Number();
             Q = TypeGuard.Number():Integer():IsAValueIn({1, 2, 3, 4, 5});
             R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
+
+            S = TypeGuard.Object({
+                Key1 = TypeGuard.String():Optional();
+                Key2 = TypeGuard.Enum(Enum.Material);
+            });
         }):Strict()
     )
 
