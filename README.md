@@ -109,8 +109,3 @@ local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumano
 
 ## Best Practices
 Avoid re-construction of TypeCheckers. They are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
-
-## Upcoming Changes
-- Split up each TypeChecker into separate modules
-- Find a way to make the type metadata compatible with Roblox LSP (intellisense is critical to the intuitiveness of this library)
-- Constraint disjunction (e.g. `TypeGuard.String():IsAValueIn({"X", "Y"}):Or():IsAValueIn({"Z", "W"})`)

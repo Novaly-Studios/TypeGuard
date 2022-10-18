@@ -1,5 +1,10 @@
 local CollectionService = game:GetService("CollectionService")
 
+local function anyfn(...) return ({} :: any) end
+it = it or anyfn
+expect = expect or anyfn
+describe = describe or anyfn
+
 return function()
     local TypeGuard = require(script.Parent)
 
@@ -641,7 +646,7 @@ return function()
             end)
 
             it("should cache results if Cached is used on complex types", function()
-                local Check = TypeGuard.Object():StructuralEquals({X = TypeGuard.Number()}):Cached()
+                local Check = TypeGuard.Object():OfStructureStrict({X = TypeGuard.Number()}):Cached()
                 local Test = {X = 1}
                 expect(Check:Check(Test)).to.equal(true)
                 Test.Y = 2
@@ -1366,7 +1371,7 @@ return function()
             end)
         end)
 
-        describe("StructuralEquals (Strict + OfStructure)", function()
+        describe("OfStructureStrict (Strict + OfStructure)", function()
             it("should reject extra flat children", function()
                 local SampleTree = Instance.new("Folder")
                     local Test = Instance.new("Folder", SampleTree)
@@ -1375,13 +1380,13 @@ return function()
                     Test2.Name = "Test2"
 
                 expect(
-                    Base:StructuralEquals({
+                    Base:OfStructureStrict({
                         Test = TypeGuard.Instance("Folder");
                     }):Check(SampleTree)
                 ).to.equal(false)
 
                 expect(
-                    Base:StructuralEquals({
+                    Base:OfStructureStrict({
                         Test = TypeGuard.Instance("Folder");
                         Test2 = TypeGuard.Instance("Folder");
                     }):Check(SampleTree)
@@ -1398,8 +1403,8 @@ return function()
                         Test22.Name = "Test22"
 
                 expect(
-                    Base:StructuralEquals({
-                        Test = TypeGuard.Instance("Folder"):StructuralEquals({
+                    Base:OfStructureStrict({
+                        Test = TypeGuard.Instance("Folder"):OfStructureStrict({
                             Test2 = TypeGuard.Instance("Folder");
                             -- No Test22, should reject
                         });
@@ -1407,8 +1412,8 @@ return function()
                 ).to.equal(false)
 
                 expect(
-                    Base:StructuralEquals({
-                        Test = TypeGuard.Instance("Folder"):StructuralEquals({
+                    Base:OfStructureStrict({
+                        Test = TypeGuard.Instance("Folder"):OfStructureStrict({
                             Test2 = TypeGuard.Instance("Folder");
                             Test22 = TypeGuard.Instance("Folder");
                         });
@@ -2056,9 +2061,9 @@ return function()
             end)
         end)
 
-        describe("StructuralEquals (Strict + OfStructure)", function()
+        describe("OfStructureStrict (Strict + OfStructure)", function()
             it("should reject arrays with additional contents", function()
-                local Checker = Base:StructuralEquals({TypeGuard.Number(), TypeGuard.Number()})
+                local Checker = Base:OfStructureStrict({TypeGuard.Number(), TypeGuard.Number()})
                 expect(Checker:Check({1, 2})).to.equal(true)
                 expect(Checker:Check({1, 2, 3})).to.equal(false)
             end)
@@ -2373,30 +2378,30 @@ return function()
             end)
         end)
 
-        describe("StructuralEquals (OfStructure + Strict)", function()
+        describe("OfStructureStrict (OfStructure + Strict)", function()
             it("should accept an object with the given structure", function()
-                expect(Base:StructuralEquals({
+                expect(Base:OfStructureStrict({
                     Test = TypeGuard.Number(),
                     Another = TypeGuard.Boolean()
                 }):Check({Test = 123, Another = true})).to.equal(true)
             end)
 
             it("should reject an object with a different structure", function()
-                expect(Base:StructuralEquals({
+                expect(Base:OfStructureStrict({
                     Test = TypeGuard.Number(),
                     Another = TypeGuard.Boolean()
                 }):Check({Test = 123, Another = "true"})).to.equal(false)
             end)
 
             it("should reject additional fields when not in strict mode", function()
-                expect(Base:StructuralEquals({
+                expect(Base:OfStructureStrict({
                     Test = TypeGuard.Number(),
                     Another = TypeGuard.Boolean()
                 }):Check({Test = 123, Another = true, Test2 = "123"})).to.equal(false)
             end)
 
             it("should recurse given sub object TypeCheckers but not enforce strict recursively", function()
-                expect(Base:StructuralEquals({
+                expect(Base:OfStructureStrict({
                     Test = TypeGuard.Object({
                         Test = TypeGuard.Number(),
                         Another = TypeGuard.Boolean()
