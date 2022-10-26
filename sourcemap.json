@@ -1,1 +1,1 @@
-{"name":"TypeGuard","className":"ModuleScript","filePaths":["src\\init.lua","default.project.json"],"children":[{"name":"TypeGuard.spec","className":"ModuleScript","filePaths":["src\\TypeGuard.spec.lua"]}]}
+{"name":"TypeGuard","className":"DataModel","filePaths":["place.project.json"],"children":[{"name":"ReplicatedFirst","className":"ReplicatedFirst","children":[{"name":"TypeGuard","className":"ModuleScript","filePaths":["src\\init.lua"],"children":[{"name":"TypeGuard.spec","className":"ModuleScript","filePaths":["src\\TypeGuard.spec.lua"]}]}]}]}

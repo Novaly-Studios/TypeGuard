@@ -478,8 +478,6 @@ function TypeGuard.Template(Name: string)
 
     --- Checks if the value is of the correct type
     function TemplateClass:_Check(Value)
-        debug.profilebegin(Name)
-
         local Tags = self._Tags
         local CacheTag = Tags.Cached
         local Cache
@@ -490,10 +488,7 @@ function TypeGuard.Template(Name: string)
             local CacheValue = Cache[Value]
 
             if (CacheValue) then
-                local Success = CacheValue[1]
-                local Result = CacheValue[2]
-                debug.profileend()
-                return Success, Result
+                return CacheValue[1], CacheValue[2]
             end
         end
 
@@ -507,14 +502,13 @@ function TypeGuard.Template(Name: string)
                 AlternateType = AlternateType(self)
             end
 
-            local Success, _ = AlternateType:_Check(Value)
+            local Success = AlternateType:_Check(Value)
 
             if (Success) then
                 if (CacheTag) then
                     Cache[Value] = {true, ""}
                 end
 
-                debug.profileend()
                 return true, ""
             end
         end
@@ -530,7 +524,6 @@ function TypeGuard.Template(Name: string)
                     Cache[Value] = {false, Result}
                 end
 
-                debug.profileend()
                 return false, Result
             end
         end
@@ -541,7 +534,6 @@ function TypeGuard.Template(Name: string)
                 Cache[Value] = {true, ""}
             end
 
-            debug.profileend()
             return true, ""
         end
 
@@ -556,7 +548,6 @@ function TypeGuard.Template(Name: string)
                     Cache[Value] = {false, Result}
                 end
 
-                debug.profileend()
                 return false, Result
             else
                 Message = self._FailMessage or Message
@@ -565,7 +556,6 @@ function TypeGuard.Template(Name: string)
                     Cache[Value] = {false, Message}
                 end
 
-                debug.profileend()
                 return false, Message
             end
         end
@@ -609,7 +599,6 @@ function TypeGuard.Template(Name: string)
                         Cache[Value] = {false, Result}
                     end
 
-                    debug.profileend()
                     return false, Result
                 else
                     SubMessage = self._FailMessage or SubMessage
@@ -618,7 +607,6 @@ function TypeGuard.Template(Name: string)
                         Cache[Value] = {false, SubMessage}
                     end
 
-                    debug.profileend()
                     return false, SubMessage
                 end
             end
@@ -628,7 +616,6 @@ function TypeGuard.Template(Name: string)
             Cache[Value] = {true, ""}
         end
 
-        debug.profileend()
         return true, ""
     end
 
@@ -1977,6 +1964,8 @@ function TypeGuard.Params(...: SignatureTypeChecker)
     end
 
     return function(...)
+        debug.profilebegin("Params")
+
         local Size = select("#", ...)
 
         if (ArgSize ~= Size) then
@@ -1984,12 +1973,15 @@ function TypeGuard.Params(...: SignatureTypeChecker)
         end
 
         for Index = 1, Size do
-            local Success, Message = Args[Index]:_Check(select(Index, ...))
+            local Arg = select(Index, ...)
+            local Success, Message = Args[Index]:_Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
             end
         end
+
+        debug.profileend()
     end
 end
 TypeGuard.params = TypeGuard.Params
@@ -1999,15 +1991,20 @@ function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(...)
+        debug.profilebegin("Variadic")
+
         local Size = select("#", ...)
 
         for Index = 1, Size do
-            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(select(Index, ...))
+            local Arg = select(Index, ...)
+            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
             end
         end
+
+        debug.profileend()
     end
 end
 TypeGuard.variadic = TypeGuard.Variadic
@@ -2022,6 +2019,8 @@ function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
     end
 
     return function(Context: any?, ...)
+        debug.profilebegin("Params+")
+
         local Size = select("#", ...)
 
         if (ArgSize ~= Size) then
@@ -2029,12 +2028,15 @@ function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
         end
 
         for Index = 1, Size do
-            local Success, Message = Args[Index]:WithContext(Context):Check(select(Index, ...))
+            local Arg = select(Index, ...)
+            local Success, Message = Args[Index]:WithContext(Context):Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
             end
         end
+
+        debug.profileend()
     end
 end
 TypeGuard.paramsWithContext = TypeGuard.ParamsWithContext
@@ -2044,15 +2046,20 @@ function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(Context: any?, ...)
+        debug.profilebegin("Variadic+")
+
         local Size = select("#", ...)
 
         for Index = 1, Size do
-            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(select(Index, ...))
+            local Arg = select(Index, ...)
+            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
             end
         end
+
+        debug.profileend()
     end
 end
 TypeGuard.variadicWithContext = TypeGuard.VariadicWithContext
