@@ -35,12 +35,12 @@ local function ExpectType(Target: any, ExpectedTypes: {string}, ArgKey: number |
     assert(Satisfied, ("Invalid argument #%s (%s expected, got %s)"):format(tostring(ArgKey), table.concat(ExpectedTypes, " or "), GotType))
 end
 
-local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string))
-    return function(_, Item)
+local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string?))
+    return function(Item)
         local ItemType = typeof(Item)
 
         if (ItemType == ExpectedTypeName) then
-            return true, ""
+            return true
         end
 
         return false, ("Expected %s, got %s"):format(ExpectedTypeName, ItemType)
@@ -80,7 +80,7 @@ local function IsAKeyIn(self, Store)
             return false, "Key " .. tostring(Key) .. " was not found in table: " .. tostring(Store)
         end
 
-        return true, ""
+        return true
     end, Store)
 end
 
@@ -90,7 +90,7 @@ local function IsAValueIn(self, Store)
     return self:_AddConstraint(false, "IsAValueIn", function(_, TargetValue, Store)
         for _, Value in Store do
             if (Value == TargetValue) then
-                return true, ""
+                return true
             end
         end
 
@@ -101,7 +101,7 @@ end
 local function Equals(self, ExpectedValue)
     return self:_AddConstraint(true, "Equals", function(_, Value, ExpectedValue)
         if (Value == ExpectedValue) then
-            return true, ""
+            return true
         end
 
         return false, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
@@ -111,7 +111,7 @@ end
 local function GreaterThan(self, GTValue)
     return self:_AddConstraint(true, "GreaterThan", function(_, Value, GTValue)
         if (Value > GTValue) then
-            return true, ""
+            return true
         end
 
         return false, "Value " .. tostring(Value) .. " is not greater than " .. tostring(GTValue)
@@ -121,7 +121,7 @@ end
 local function LessThan(self, LTValue)
     return self:_AddConstraint(true, "LessThan", function(_, Value, LTValue)
         if (Value < LTValue) then
-            return true, ""
+            return true
         end
 
         return false, "Value " .. tostring(Value) .. " is not less than " .. tostring(LTValue)
@@ -131,7 +131,7 @@ end
 local function GreaterThanOrEqualTo(self, GTEValue)
     return self:_AddConstraint(true, "GreaterThanOrEqualTo", function(_, Value, GTEValue)
         if (Value >= GTEValue) then
-            return true, ""
+            return true
         end
 
         return false, "Value " .. tostring(Value) .. " is not greater than or equal to " .. tostring(GTEValue)
@@ -141,7 +141,7 @@ end
 local function LessThanOrEqualTo(self, LTEValue)
     return self:_AddConstraint(true, "LessThanOrEqualTo", function(_, Value, LTEValue)
         if (Value <= LTEValue) then
-            return true, ""
+            return true
         end
 
         return false, "Value " .. tostring(Value) .. " is not less than or equal to " .. tostring(LTEValue)
@@ -195,7 +195,7 @@ type SignatureTypeCheckerInternal = {
     lessThanOrEqualTo: AnyMethod;
     _AddConstraint: AnyMethod;
     _AddTag: AnyMethod;
-    _GetCache: AnyMethod;
+    _CreateCache: AnyMethod;
     _Check: AnyMethod;
 }
 
@@ -217,9 +217,9 @@ type TC_Cached<ExtensionClass> = SelfReturn<ExtensionClass>;
 type TC_Optional<ExtensionClass> = SelfReturn<ExtensionClass>;
 type TC_WithContext<ExtensionClass> = SelfReturn<ExtensionClass, any?>;
 type TC_FailMessage<ExtensionClass> = SelfReturn<ExtensionClass, string>;
-type TC_WrapCheck<ExtensionClass> = (ExtensionClass) -> ((any?) -> (boolean, string));
+type TC_WrapCheck<ExtensionClass> = (ExtensionClass) -> ((any?) -> (boolean, string?));
 type TC_WrapAssert<ExtensionClass> = (ExtensionClass) -> ((any?) -> ());
-type TC_Check<ExtensionClass> = (ExtensionClass, any) -> (string, boolean);
+type TC_Check<ExtensionClass> = (ExtensionClass, any) -> (boolean, string?);
 type TC_Assert<ExtensionClass> = (ExtensionClass, any) -> ();
 
 -- Base constraints
@@ -465,14 +465,9 @@ function TypeGuard.Template(Name: string)
         return self
     end
 
-    function TemplateClass:_GetCache()
-        local Cache = self._Cache
-
-        if (not Cache) then
-            Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables
-            self._Cache = Cache
-        end
-
+    function TemplateClass:_CreateCache()
+        local Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables
+        self._Cache = Cache
         return Cache
     end
 
@@ -483,7 +478,7 @@ function TypeGuard.Template(Name: string)
         local Cache
 
         if (CacheTag) then
-            Cache = self:_GetCache()
+            Cache = self._Cache or self:_CreateCache()
 
             local CacheValue = Cache[Value]
 
@@ -495,7 +490,7 @@ function TypeGuard.Template(Name: string)
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
         local Disjunctions = self._Disjunction
-        local DidTryDisjunction = (Disjunctions[1] ~= nil)
+        local DidTryDisjunction = Disjunctions[1] --(Disjunctions[1] ~= nil)
 
         for _, AlternateType in Disjunctions do
             if (typeof(AlternateType) == "function") then
@@ -506,10 +501,10 @@ function TypeGuard.Template(Name: string)
 
             if (Success) then
                 if (CacheTag) then
-                    Cache[Value] = {true, ""}
+                    Cache[Value] = {true}
                 end
 
-                return true, ""
+                return true
             end
         end
 
@@ -531,14 +526,14 @@ function TypeGuard.Template(Name: string)
         -- Optional allows the value to be nil, in which case it won't be checked and we can resolve
         if (Tags.Optional and Value == nil) then
             if (CacheTag) then
-                Cache[Value] = {true, ""}
+                Cache[Value] = {true}
             end
 
-            return true, ""
+            return true
         end
 
         -- Handle initial type check
-        local Success, Message = self:_Initial(Value)
+        local Success, Message = self._Initial(Value)
 
         if (not Success) then
             if (DidTryDisjunction) then
@@ -613,10 +608,10 @@ function TypeGuard.Template(Name: string)
         end
 
         if (CacheTag) then
-            Cache[Value] = {true, ""}
+            Cache[Value] = {true}
         end
 
-        return true, ""
+        return true
     end
 
     --- Calling this will only check the type of the passed value if that value is not nil, i.e. it's an optional value so nothing can be passed, but if it is not nothing then it will be checked
@@ -852,7 +847,7 @@ do
     function NumberClass:Integer()
         return self:_AddConstraint(true, "Integer", function(_, Item)
             if (Item % 1 == 0) then
-                return true, ""
+                return true
             end
 
             return false, "Expected integer form, got " .. tostring(Item)
@@ -864,7 +859,7 @@ do
     function NumberClass:Decimal()
         return self:_AddConstraint(true, "Decimal", function(_, Item)
             if (Item % 1 ~= 0) then
-                return true, ""
+                return true
             end
 
             return false, "Expected decimal form, got " .. tostring(Item)
@@ -894,7 +889,7 @@ do
                 return false, "Expected positive number, got " .. tostring(Item)
             end
 
-            return true, ""
+            return true
         end)
     end
     NumberClass.positive = NumberClass.Positive
@@ -906,7 +901,7 @@ do
                 return false, "Expected negative number, got " .. tostring(Item)
             end
 
-            return true, ""
+            return true
         end)
     end
     NumberClass.negative = NumberClass.Negative
@@ -915,7 +910,7 @@ do
     function NumberClass:IsNaN()
         return self:_AddConstraint(true, "IsNaN", function(_, Item)
             if (Item ~= Item) then
-                return true, ""
+                return true
             end
 
             return false, "Expected NaN, got " .. tostring(Item)
@@ -927,7 +922,7 @@ do
     function NumberClass:IsInfinite()
         return self:_AddConstraint(true, "IsInfinite", function(_, Item)
             if (Item == math.huge or Item == -math.huge) then
-                return true, ""
+                return true
             end
 
             return false, "Expected infinite, got " .. tostring(Item)
@@ -942,7 +937,7 @@ do
 
         return self:_AddConstraint(true, "IsClose", function(_, NumberValue, CloseTo, Tolerance)
             if (math.abs(NumberValue - CloseTo) < Tolerance) then
-                return true, ""
+                return true
             end
 
             return false, "Expected " .. tostring(CloseTo) .. " +/- " .. tostring(Tolerance) .. ", got " .. tostring(NumberValue)
@@ -983,7 +978,7 @@ do
                 return false, "Length must be at least " .. MinLength .. ", got " .. #Item
             end
 
-            return true, ""
+            return true
         end, MinLength)
     end
     StringClass.minLength = StringClass.MinLength
@@ -997,7 +992,7 @@ do
                 return false, "Length must be at most " .. MaxLength .. ", got " .. #Item
             end
 
-            return true, ""
+            return true
         end, MaxLength)
     end
     StringClass.maxLength = StringClass.MaxLength
@@ -1011,7 +1006,7 @@ do
                 return false, "String does not match pattern " .. tostring(Pattern)
             end
 
-            return true, ""
+            return true
         end, PatternString)
     end
     StringClass.pattern = StringClass.Pattern
@@ -1025,7 +1020,7 @@ do
                 return false, "String does not contain substring " .. tostring(Substring)
             end
 
-            return true, ""
+            return true
         end, SubstringValue)
     end
 
@@ -1083,20 +1078,26 @@ do
         return ErrorString:format((self._Tags.DenoteParams and PREFIX_PARAM or PREFIX_ARRAY), Index)
     end
 
-    function ArrayClass:_Initial(TargetArray)
+    function ArrayClass._Initial(TargetArray)
         if (typeof(TargetArray) ~= "table") then
             return false, "Expected table, got " .. typeof(TargetArray)
         end
 
-        for Key in TargetArray do
+        -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
+        --[[ for Key in TargetArray do
             local KeyType = typeof(Key)
 
             if (KeyType ~= "number") then
-                return false, "Non-numetic key detected: " .. KeyType
+                return false, "Non-numeric key detected: " .. KeyType
             end
+        end ]]
+
+        -- This will catch the majority of cases
+        if (rawget(TargetArray, 1) == nil and next(TargetArray) ~= nil) then
+            return false, "Array is empty"
         end
 
-        return true, ""
+        return true
     end
 
     --- Ensures an array is of a certain length
@@ -1108,7 +1109,7 @@ do
                 return false, "Length must be " .. Length .. ", got " .. #TargetArray
             end
 
-            return true, ""
+            return true
         end, Length)
     end
     ArrayClass.ofLength = ArrayClass.OfLength
@@ -1122,7 +1123,7 @@ do
                 return false, "Length must be at least " .. MinLength .. ", got " .. #TargetArray
             end
 
-            return true, ""
+            return true
         end, MinLength)
     end
     ArrayClass.minLength = ArrayClass.MinLength
@@ -1136,7 +1137,7 @@ do
                 return false, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
             end
 
-            return true, ""
+            return true
         end, MaxLength)
     end
     ArrayClass.maxLength = ArrayClass.MaxLength
@@ -1156,7 +1157,7 @@ do
                 return false, "Value not found in array: " .. tostring(Value)
             end
 
-            return true, ""
+            return true
         end, Value, StartPoint)
     end
     ArrayClass.contains = ArrayClass.Contains
@@ -1174,7 +1175,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubType)
     end
     ArrayClass.ofType = ArrayClass.OfType
@@ -1214,7 +1215,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubTypesCopy, SubTypesAtPositions)
     end
     ArrayClass.ofStructure = ArrayClass.OfStructure
@@ -1241,7 +1242,7 @@ do
     function ArrayClass:IsFrozen()
         return self:_AddConstraint(true, "IsFrozen", function(_, TargetArray)
             if (table.isfrozen(TargetArray)) then
-                return true, ""
+                return true
             end
 
             return false, "Table was not frozen"
@@ -1261,7 +1262,7 @@ do
             local Size = #TargetArray
 
             if (Size == 1) then
-                return true, ""
+                return true
             end
 
             local Last = TargetArray[1]
@@ -1278,7 +1279,7 @@ do
                 Last = Current
             end
 
-            return true, ""
+            return true
         end, Descending)
     end
     ArrayClass.isOrdered = ArrayClass.IsOrdered
@@ -1320,18 +1321,24 @@ do
 
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: SignatureTypeChecker}?>, ObjectClass = TypeGuard.Template("Object")
 
-    function ObjectClass:_Initial(TargetObject)
+    function ObjectClass._Initial(TargetObject)
         if (typeof(TargetObject) ~= "table") then
             return false, "Expected table, got " .. typeof(TargetObject)
         end
 
-        for Key in TargetObject do
+        -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
+        --[[ for Key in TargetObject do
             if (typeof(Key) == "number") then
                 return false, "Incorrect key type: number"
             end
+        end ]]
+
+        -- This will catch the majority of cases
+        if (rawget(TargetObject, 1) ~= nil) then
+            return false, "Incorrect key type: numeric index [1]"
         end
 
-        return true, ""
+        return true
     end
 
     --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs
@@ -1375,7 +1382,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubTypesCopy)
     end
     ObjectClass.ofStructure = ObjectClass.OfStructure
@@ -1393,7 +1400,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubType)
     end
     ObjectClass.ofValueType = ObjectClass.OfValueType
@@ -1411,7 +1418,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubType)
     end
     ObjectClass.ofKeyType = ObjectClass.OfKeyType
@@ -1432,7 +1439,7 @@ do
     function ObjectClass:IsFrozen()
         return self:_AddConstraint(true, "IsFrozen", function(_, TargetObject)
             if (table.isfrozen(TargetObject)) then
-                return true, ""
+                return true
             end
 
             return false, "Table was not frozen"
@@ -1445,8 +1452,14 @@ do
         TypeGuard._AssertIsTypeBase(Checker, 1)
 
         return self:_AddConstraint(true, "CheckMetatable", function(_, TargetObject, Checker)
+            --print("HHHHHHHH", getmetatable(TargetObject) == TargetObject)
             local Success, Message = Checker:_Check(getmetatable(TargetObject))
-            return Success, "[Metatable] " .. Message
+
+            if (Success) then
+                return true
+            end
+
+            return false, "[Metatable] " .. Message
         end, Checker)
     end
     ObjectClass.checkMetatable = ObjectClass.CheckMetatable
@@ -1560,7 +1573,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, SubTypesCopy)
     end
     InstanceCheckerClass.ofStructure = InstanceCheckerClass.OfStructur
@@ -1574,7 +1587,7 @@ do
                 return false, "Expected " .. InstanceIsA .. ", got " .. InstanceRoot.ClassName
             end
 
-            return true, ""
+            return true
         end, InstanceIsA)
     end
     InstanceCheckerClass.isA = InstanceCheckerClass.IsA
@@ -1597,7 +1610,7 @@ do
 
         return self:_AddConstraint(false, "HasTag", function(_, InstanceRoot, Tag)
             if (CollectionService:HasTag(InstanceRoot, Tag)) then
-                return true, ""
+                return true
             end
 
             return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
@@ -1611,7 +1624,7 @@ do
 
         return self:_AddConstraint(false, "HasAttribute", function(_, InstanceRoot, Attribute)
             if (InstanceRoot:GetAttribute(Attribute) ~= nil) then
-                return true, ""
+                return true
             end
 
             return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
@@ -1631,7 +1644,7 @@ do
                 return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
             end
 
-            return true, ""
+            return true
         end, Attribute, Checker)
     end
     InstanceCheckerClass.checkAttribute = InstanceCheckerClass.CheckAttribute
@@ -1653,7 +1666,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, Tags)
     end
     InstanceCheckerClass.hasTags = InstanceCheckerClass.HasTags
@@ -1675,7 +1688,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, Attributes)
     end
     InstanceCheckerClass.hasAttributes = InstanceCheckerClass.HasAttributes
@@ -1698,7 +1711,7 @@ do
                 end
             end
 
-            return true, ""
+            return true
         end, AttributeCheckers)
     end
     InstanceCheckerClass.checkAttributes = InstanceCheckerClass.CheckAttributes
@@ -1709,7 +1722,7 @@ do
 
         return self:_AddConstraint(true, "IsDescendantOf", function(_, SubjectInstance, Instance)
             if (SubjectInstance:IsDescendantOf(Instance)) then
-                return true, ""
+                return true
             end
 
             return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be a descendant of " .. Instance:GetFullName()
@@ -1723,7 +1736,7 @@ do
 
         return self:_AddConstraint(false, "IsAncestorOf", function(_, SubjectInstance, Instance)
             if (SubjectInstance:IsAncestorOf(Instance)) then
-                return true, ""
+                return true
             end
 
             return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be an ancestor of " .. Instance:GetFullName()
@@ -1737,7 +1750,7 @@ do
 
         return self:_AddConstraint(false, "HasChild", function(_, InstanceRoot, Name)
             if (InstanceRoot:FindFirstChild(Name)) then
-                return true, ""
+                return true
             end
 
             return false, "Expected child '" .. Name .. "' to exist on Instance " .. InstanceRoot:GetFullName()
@@ -1776,14 +1789,14 @@ do
 
     local EnumChecker: TypeCheckerConstructor<EnumTypeChecker, Enum? | EnumItem? | (any?) -> (Enum | EnumItem)?>, EnumCheckerClass = TypeGuard.Template("Enum")
 
-    function EnumCheckerClass:_Initial(Value)
+    function EnumCheckerClass._Initial(Value)
         local GotType = typeof(Value)
 
-        if (GotType ~= "EnumItem" and GotType ~= "Enum") then
-            return false, "Expected EnumItem or Enum, got " .. GotType
+        if (GotType == "EnumItem" or GotType == "Enum") then
+            return true
         end
 
-        return true, ""
+        return false, "Expected EnumItem or Enum, got " .. GotType
     end
 
     --- Ensures that a passed EnumItem is either equivalent to an EnumItem or a sub-item of an Enum class
@@ -1796,7 +1809,7 @@ do
             -- Both are EnumItems
             if (TargetType == "EnumItem") then
                 if (Value == TargetEnum) then
-                    return true, ""
+                    return true
                 end
 
                 return false, "Expected " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
@@ -1807,7 +1820,7 @@ do
                 return false, "Expected a " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
             end
 
-            return true, ""
+            return true
         end, TargetEnum)
     end
     EnumCheckerClass.isA = EnumCheckerClass.IsA
@@ -1869,7 +1882,7 @@ do
             local CurrentStatus = coroutine.status(Thread)
 
             if (CurrentStatus == Status) then
-                return true, ""
+                return true
             end
 
             return false, "Expected thread to have status '" .. Status .. "', got " .. CurrentStatus
@@ -1890,12 +1903,12 @@ do
 
     local AnyChecker: TypeCheckerConstructor<AnyTypeChecker>, AnyCheckerClass = TypeGuard.Template("Any")
 
-    function AnyCheckerClass:_Initial(Item)
+    function AnyCheckerClass._Initial(Item)
         if (Item == nil) then
             return false, "Expected something, got nil"
         end
 
-        return true, ""
+        return true
     end
 
     TypeGuard.Any = AnyChecker
