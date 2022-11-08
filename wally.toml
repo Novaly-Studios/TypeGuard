@@ -1,6 +1,6 @@
 [package]
 name = "tpc9000/typeguard"
-version = "3.0.2"
+version = "3.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 license = "MIT"
