@@ -112,7 +112,7 @@ local AssertValidTest = TypeGuard.Params(
     }):Strict()
 )
 
-SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}})
+SomeRemoteEvent.OnServerEvent:Connect(function(Player: Player, TestData: {P: number, Q: number, R: {string}, S: {Key1: string?, Key2: Enum.Material?}, T: number})
     AssertValidTest(Player, TestData)
     -- ...
 end)
