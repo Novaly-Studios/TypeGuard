@@ -297,6 +297,7 @@ type TypeChecker<ExtensionClass, Primitive> = {
     lessThanOrEqualTo: TC_LessThanOrEqualTo<ExtensionClass, Primitive>;
 };
 
+local NegativeCacheValue = {} -- Exists for Cached() because nil causes problems
 local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
 local TypeGuard = {}
 
@@ -306,6 +307,7 @@ function TypeGuard.Template(Name: string)
 
     local TemplateClass = {}
     TemplateClass.__index = TemplateClass
+    TemplateClass.InitialConstraintsVariadic = nil
     TemplateClass.InitialConstraints = nil
     TemplateClass.InitialConstraint = nil
     TemplateClass.IsTemplate = true
@@ -342,6 +344,17 @@ function TypeGuard.Template(Name: string)
         if (InitialConstraints and NumArgs > 0) then
             for Index = 1, NumArgs do
                 self = InitialConstraints[Index](self, select(Index, ...))
+            end
+
+            return self
+        end
+
+        -- Variadic constraints support
+        local InitialConstraintsVariadic = TemplateClass.InitialConstraintsVariadic
+
+        if (InitialConstraintsVariadic and NumArgs > 0) then
+            for Index = 1, NumArgs do
+                self = InitialConstraintsVariadic(self, select(Index, ...))
             end
 
             return self
@@ -480,7 +493,7 @@ function TypeGuard.Template(Name: string)
         if (CacheTag) then
             Cache = self._Cache or self:_CreateCache()
 
-            local CacheValue = Cache[Value]
+            local CacheValue = Cache[Value or NegativeCacheValue]
 
             if (CacheValue) then
                 return CacheValue[1], CacheValue[2]
@@ -501,7 +514,7 @@ function TypeGuard.Template(Name: string)
 
             if (Success) then
                 if (CacheTag) then
-                    Cache[Value] = {true}
+                    Cache[Value or NegativeCacheValue] = {true}
                 end
 
                 return true
@@ -516,7 +529,7 @@ function TypeGuard.Template(Name: string)
                 local Result = self._FailMessage or ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
 
                 if (CacheTag) then
-                    Cache[Value] = {false, Result}
+                    Cache[Value or NegativeCacheValue] = {false, Result}
                 end
 
                 return false, Result
@@ -526,7 +539,7 @@ function TypeGuard.Template(Name: string)
         -- Optional allows the value to be nil, in which case it won't be checked and we can resolve
         if (Tags.Optional and Value == nil) then
             if (CacheTag) then
-                Cache[Value] = {true}
+                Cache[Value or NegativeCacheValue] = {true}
             end
 
             return true
@@ -540,7 +553,7 @@ function TypeGuard.Template(Name: string)
                 local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                 if (CacheTag) then
-                    Cache[Value] = {false, Result}
+                    Cache[Value or NegativeCacheValue] = {false, Result}
                 end
 
                 return false, Result
@@ -548,7 +561,7 @@ function TypeGuard.Template(Name: string)
                 Message = self._FailMessage or Message
 
                 if (CacheTag) then
-                    Cache[Value] = {false, Message}
+                    Cache[Value or NegativeCacheValue] = {false, Message}
                 end
 
                 return false, Message
@@ -591,7 +604,7 @@ function TypeGuard.Template(Name: string)
                     local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                     if (CacheTag) then
-                        Cache[Value] = {false, Result}
+                        Cache[Value or NegativeCacheValue] = {false, Result}
                     end
 
                     return false, Result
@@ -599,7 +612,7 @@ function TypeGuard.Template(Name: string)
                     SubMessage = self._FailMessage or SubMessage
 
                     if (CacheTag) then
-                        Cache[Value] = {false, SubMessage}
+                        Cache[Value or NegativeCacheValue] = {false, SubMessage}
                     end
 
                     return false, SubMessage
@@ -608,7 +621,7 @@ function TypeGuard.Template(Name: string)
         end
 
         if (CacheTag) then
-            Cache[Value] = {true}
+            Cache[Value or NegativeCacheValue] = {true}
         end
 
         return true
@@ -1024,6 +1037,8 @@ do
         end, SubstringValue)
     end
 
+    StringClass.InitialConstraintsVariadic = StringClass.Equals
+
     TypeGuard.String = String
     TypeGuard.string = String
 end
@@ -1093,11 +1108,13 @@ do
         end ]]
 
         -- This will catch the majority of cases
-        if (rawget(TargetArray, 1) == nil and next(TargetArray) ~= nil) then
-            return false, "Array is empty"
+        local FirstKey = next(TargetArray)
+
+        if (FirstKey == nil or FirstKey == 1) then
+            return true
         end
 
-        return true
+        return false, "Array is empty"
     end
 
     --- Ensures an array is of a certain length
@@ -1452,7 +1469,6 @@ do
         TypeGuard._AssertIsTypeBase(Checker, 1)
 
         return self:_AddConstraint(true, "CheckMetatable", function(_, TargetObject, Checker)
-            --print("HHHHHHHH", getmetatable(TargetObject) == TargetObject)
             local Success, Message = Checker:_Check(getmetatable(TargetObject))
 
             if (Success) then
@@ -1769,7 +1785,7 @@ end
 do
     type BooleanTypeChecker = TypeChecker<BooleanTypeChecker, boolean>;
 
-    local Boolean: TypeCheckerConstructor<BooleanTypeChecker>, BooleanClass = TypeGuard.Template("Boolean")
+    local Boolean: TypeCheckerConstructor<BooleanTypeChecker> & {}, BooleanClass = TypeGuard.Template("Boolean")
     BooleanClass._Initial = CreateStandardInitial("boolean")
 
     BooleanClass.InitialConstraint = BooleanClass.Equals
@@ -1977,17 +1993,17 @@ function TypeGuard.Params(...: SignatureTypeChecker)
     end
 
     return function(...)
-        debug.profilebegin("Params")
+        debug.profilebegin("TG.P")
 
         local Size = select("#", ...)
 
-        if (ArgSize ~= Size) then
+        if (Size > ArgSize) then
             error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
         end
 
-        for Index = 1, Size do
+        for Index, Value in Args do
             local Arg = select(Index, ...)
-            local Success, Message = Args[Index]:_Check(Arg)
+            local Success, Message = Value:_Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
@@ -2004,7 +2020,7 @@ function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(...)
-        debug.profilebegin("Variadic")
+        debug.profilebegin("TG.V")
 
         local Size = select("#", ...)
 
@@ -2032,17 +2048,17 @@ function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
     end
 
     return function(Context: any?, ...)
-        debug.profilebegin("Params+")
+        debug.profilebegin("TG.P+")
 
         local Size = select("#", ...)
 
-        if (ArgSize ~= Size) then
+        if (Size > ArgSize) then
             error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
         end
 
-        for Index = 1, Size do
+        for Index, Value in Args do
             local Arg = select(Index, ...)
-            local Success, Message = Args[Index]:WithContext(Context):Check(Arg)
+            local Success, Message = Value:WithContext(Context):Check(Arg)
 
             if (not Success) then
                 error("Invalid argument #" .. Index .. " (" .. Message .. ")")
@@ -2059,7 +2075,7 @@ function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
     TypeGuard._AssertIsTypeBase(CompareType, 1)
 
     return function(Context: any?, ...)
-        debug.profilebegin("Variadic+")
+        debug.profilebegin("TG.V+")
 
         local Size = select("#", ...)
 
@@ -2107,5 +2123,73 @@ function TypeGuard.WrapFunctionVariadic(Call: (...any) -> (...any), VariadicPara
     end
 end
 TypeGuard.wrapFunctionVariadic = TypeGuard.WrapFunctionVariadic
+
+local Primitives = {
+    ["nil"] = "Nil";
+    ["string"] = "String";
+    ["number"] = "Number";
+    ["thread"] = "Thread";
+    ["boolean"] = "Boolean";
+    ["function"] = "Function";
+    ["userdata"] = "Userdata";
+}
+
+function TypeGuard.FromTemplate(Subject: any, Strict: boolean?)
+    local Type = typeof(Subject)
+    Type = Primitives[Type] or Type
+
+    if (Type == "table") then
+        if (Subject[1]) then
+            local Last
+            local LastType = ""
+
+            for Key, Value in Subject do
+                local Temp = TypeGuard.FromTemplate(Value, Strict)
+
+                if (Temp.Type == LastType) then
+                    continue
+                end
+
+                Last = if (Last) then Temp:Or(Last) else Temp
+                LastType = Temp.Type
+            end
+
+            return TypeGuard.Array(Strict and Last:Strict() or Last)
+        else
+            local Result = {}
+
+            for Key, Value in Subject do
+                Result[Key] = TypeGuard.FromTemplate(Value, Strict)
+            end
+
+            local Temp = TypeGuard.Object(Result)
+            return Strict and Temp:Strict() or Temp
+        end
+    end
+
+    if (Type == "Instance") then
+        local Structure = {}
+
+        for _, Child in Subject:GetChildren() do
+            Structure[Child.Name] = TypeGuard.FromTemplate(Child, Strict)
+        end
+
+        local Base = TypeGuard.Instance(Subject.ClassName)
+        Base = Strict and Base:Strict() or Base
+        return if (next(Structure)) then Base:OfStructure(Structure) else Base
+    end
+
+    if (Type == "EnumItem") then
+        return TypeGuard.Enum(Subject)
+    end
+
+    local Constructor = TypeGuard[Type]
+
+    if (not Constructor) then
+        error("Unknown type: " .. Type)
+    end
+
+    return Constructor()
+end
 
 return TypeGuard
