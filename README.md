@@ -129,5 +129,31 @@ local IsHumanoidAlive = TypeGuard.Instance("Model", {
 local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumanoidAlive)
 ```
 
+### 9: constructing a checker from a template object
+```lua
+local Tree = Instance.new("Model")
+    local Part1 = Instance.new("Part")
+    Part1.Name = "Part1"
+    Part1.Parent = Tree
+    local Part2 = Instance.new("Part")
+    Part2.Name = "Part2"
+    Part2.Parent = Tree
+
+local Checker = TypeGuard.FromTemplate({
+    X = 1;
+    Y = 2;
+    Z = 3;
+
+    P = {
+        Q = Vector3.new();
+        R = Tree;
+    };
+
+    Arr = {1, 2, "X", "Y"}; -- Accepts strings or numbers
+})
+-- ^ created a deep Object TypeChecker
+```
+
+
 ## Best Practices
 Avoid construction or copying of TypeCheckers for performance reasons. TypeCheckers are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
