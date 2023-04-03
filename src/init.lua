@@ -32,7 +32,9 @@ local function ExpectType(Target: any, ExpectedTypes: {string}, ArgKey: number |
         end
     end
 
-    assert(Satisfied, ("Invalid argument #%s (%s expected, got %s)"):format(tostring(ArgKey), table.concat(ExpectedTypes, " or "), GotType))
+    if (not Satisfied) then
+        error((`Invalid argument #{ArgKey} ({table.concat(ExpectedTypes, " or ")} expected, got {GotType})`))
+    end
 end
 
 local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (boolean, string?))
@@ -69,7 +71,7 @@ local STRUCTURE_TO_FLAT_STRING_MT = {
     end;
 }
 
-local WEAK_KEY_MT = {__mode = "k"}
+local WEAK_KEY_MT = {__mode = "ks"}
 
 -- Standard re-usable functions throughout all TypeCheckers
 local function IsAKeyIn(self, Store)
@@ -297,8 +299,11 @@ type TypeChecker<ExtensionClass, Primitive> = {
     lessThanOrEqualTo: TC_LessThanOrEqualTo<ExtensionClass, Primitive>;
 };
 
+local ScriptNameToContextEnabled = {}
+local ScriptNameToContext = {}
 local NegativeCacheValue = {} -- Exists for Cached() because nil causes problems
 local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
+local RootValue
 local TypeGuard = {}
 
 --- Creates a template TypeChecker object that can be used to extend behaviors via constraints
@@ -406,9 +411,9 @@ function TypeGuard.Template(Name: string)
     end
     TemplateClass.negate = TemplateClass.Negate
 
-    --- Sets a custom fail message to return if Check() fails
-    function TemplateClass:FailMessage(Message: string)
-        ExpectType(Message, EXPECT_STRING, 1)
+    --- Sets a custom fail message to return if Check() fails. Accepts a function which passes the value and context as arguments.
+    function TemplateClass:FailMessage(Message: string | ((any?, any?) -> (string)))
+        ExpectType(Message, EXPECT_STRING_OR_FUNCTION, 1)
 
         self = self:Copy()
         self._FailMessage = Message
@@ -435,7 +440,7 @@ function TypeGuard.Template(Name: string)
         local HasFunctions = false
 
         for _, Value in Args do
-            local ArgType = typeof(Value)
+            local ArgType = type(Value)
 
             if (ArgType == "function") then
                 HasFunctions = true
@@ -444,7 +449,6 @@ function TypeGuard.Template(Name: string)
         end
 
         local ActiveConstraints = self._ActiveConstraints
-        --assert(ActiveConstraints[ConstraintName] == nil, "Constraint already exists: " .. ConstraintName)
 
         if (AllowOnlyOne) then
             local Found = false
@@ -471,7 +475,10 @@ function TypeGuard.Template(Name: string)
     --- Adds a tag (for internal purposes)
     function TemplateClass:_AddTag(TagName)
         ExpectType(TagName, EXPECT_STRING, 1)
-        assert(self._Tags[TagName] == nil, "Tag already exists: " .. TagName)
+
+        if (self._Tags[TagName]) then
+            error(`Tag already exists: {TagName}.`)
+        end
 
         self = self:Copy()
         self._Tags[TagName] = true
@@ -503,10 +510,9 @@ function TypeGuard.Template(Name: string)
         -- Handle "type x or type y or type z ..."
         -- We do this before checking constraints to check if any of the other conditions succeed
         local Disjunctions = self._Disjunction
-        local DidTryDisjunction = Disjunctions[1] --(Disjunctions[1] ~= nil)
 
         for _, AlternateType in Disjunctions do
-            if (typeof(AlternateType) == "function") then
+            if (type(AlternateType) == "function") then
                 AlternateType = AlternateType(self)
             end
 
@@ -526,7 +532,10 @@ function TypeGuard.Template(Name: string)
             local Success, Message = Conjunction:_Check(Value)
 
             if (not Success) then
-                local Result = self._FailMessage or ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
+                local FailMessage = self._FailMessage
+                local Result =
+                    (type(FailMessage) == "function" and FailMessage(RootValue, RootContext) or FailMessage) or
+                    ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
 
                 if (CacheTag) then
                     Cache[Value or NegativeCacheValue] = {false, Result}
@@ -549,7 +558,7 @@ function TypeGuard.Template(Name: string)
         local Success, Message = self._Initial(Value)
 
         if (not Success) then
-            if (DidTryDisjunction) then
+            if (Disjunctions[1]) then
                 local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                 if (CacheTag) then
@@ -581,7 +590,7 @@ function TypeGuard.Template(Name: string)
                 Args = table.clone(Args)
 
                 for Index, Arg in Args do
-                    if (typeof(Arg) == "function") then
+                    if (type(Arg) == "function") then
                         Args[Index] = Arg(RootContext)
                     end
                 end
@@ -600,7 +609,7 @@ function TypeGuard.Template(Name: string)
             end
 
             if (not SubSuccess) then
-                if (DidTryDisjunction) then
+                if (Disjunctions[1]) then
                     local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
 
                     if (CacheTag) then
@@ -608,15 +617,15 @@ function TypeGuard.Template(Name: string)
                     end
 
                     return false, Result
-                else
-                    SubMessage = self._FailMessage or SubMessage
-
-                    if (CacheTag) then
-                        Cache[Value or NegativeCacheValue] = {false, SubMessage}
-                    end
-
-                    return false, SubMessage
                 end
+
+                SubMessage = self._FailMessage or SubMessage
+
+                if (CacheTag) then
+                    Cache[Value or NegativeCacheValue] = {false, SubMessage}
+                end
+
+                return false, SubMessage
             end
         end
 
@@ -635,7 +644,7 @@ function TypeGuard.Template(Name: string)
 
     --- Enqueues a new constraint to satisfy 'or' i.e. "check x or check y or check z or ..." must pass
     function TemplateClass:Or(OtherType)
-        if (typeof(OtherType) ~= "function") then
+        if (type(OtherType) ~= "function") then
             TypeGuard._AssertIsTypeBase(OtherType, 1)
         end
 
@@ -691,8 +700,10 @@ function TypeGuard.Template(Name: string)
 
     --- Check (like above) except sets a universal context for the duration of the check
     function TemplateClass:Check(Value)
+        RootValue = Value
         RootContext = self._Context
         local Success, Result = self:_Check(Value)
+        RootValue = nil
         RootContext = nil
         return Success, Result
     end
@@ -814,6 +825,7 @@ function TypeGuard.FromTypeSample<T>(TypeName: string, Sample: T)
 
     local CheckerFunction, CheckerClass = TypeGuard.Template(TypeName)
     CheckerClass._Initial = CreateStandardInitial(TypeName)
+    CheckerClass.InitialConstraint = CheckerClass.Equals
 
     type CustomTypeChecker = TypeChecker<CustomTypeChecker, T>
     return CheckerFunction :: TypeCheckerConstructor<CustomTypeChecker>
@@ -853,7 +865,7 @@ do
         isClose: SelfReturn<NumberTypeChecker, number | (any?) -> number, number | (any?) -> number>;
     };
 
-    local Number: TypeCheckerConstructor<NumberTypeChecker, SignatureTypeChecker?>, NumberClass = TypeGuard.Template("Number")
+    local Number: TypeCheckerConstructor<NumberTypeChecker, number?, number?>, NumberClass = TypeGuard.Template("Number")
     NumberClass._Initial = CreateStandardInitial("number")
 
     --- Checks if the value is whole
@@ -880,10 +892,15 @@ do
     end
     NumberClass.decimal = NumberClass.Decimal
 
-    --- Ensures a number is between or equal to a minimum and maxmimu value
+    --- Ensures a number is between or equal to a minimum and maximum value. Can also function as "equals" - useful for this being used as the InitialConstraint.
     function NumberClass:RangeInclusive(Min, Max)
         ExpectType(Min, EXPECT_NUMBER_OR_FUNCTION, 1)
+        Max = (Max == nil and Min or Max)
         ExpectType(Max, EXPECT_NUMBER_OR_FUNCTION, 2)
+
+        if (Max == Min) then
+            return self:Equals(Min)
+        end
 
         return self:GreaterThanOrEqualTo(Min):LessThanOrEqualTo(Max)
     end
@@ -956,6 +973,9 @@ do
             return false, "Expected " .. tostring(CloseTo) .. " +/- " .. tostring(Tolerance) .. ", got " .. tostring(NumberValue)
         end, CloseTo, Tolerance)
     end
+    NumberClass.isClose = NumberClass.IsClose
+
+    NumberClass.InitialConstraint = NumberClass.RangeInclusive
 
     TypeGuard.Number = Number
     TypeGuard.number = Number
@@ -979,7 +999,7 @@ do
         contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     };
 
-    local String: TypeCheckerConstructor<StringTypeChecker, SignatureTypeChecker?>, StringClass = TypeGuard.Template("String")
+    local String: TypeCheckerConstructor<StringTypeChecker, string?>, StringClass = TypeGuard.Template("String")
     StringClass._Initial = CreateStandardInitial("string")
 
     --- Ensures a string is at least a certain length
@@ -1037,7 +1057,7 @@ do
         end, SubstringValue)
     end
 
-    StringClass.InitialConstraintsVariadic = StringClass.Equals
+    StringClass.InitialConstraint = StringClass.Equals
 
     TypeGuard.String = String
     TypeGuard.string = String
@@ -1094,27 +1114,27 @@ do
     end
 
     function ArrayClass._Initial(TargetArray)
-        if (typeof(TargetArray) ~= "table") then
-            return false, "Expected table, got " .. typeof(TargetArray)
-        end
+        if (type(TargetArray) == "table") then
+            -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
+            --[[ for Key in TargetArray do
+                local KeyType = typeof(Key)
 
-        -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
-        --[[ for Key in TargetArray do
-            local KeyType = typeof(Key)
+                if (KeyType ~= "number") then
+                    return false, "Non-numeric key detected: " .. KeyType
+                end
+            end ]]
 
-            if (KeyType ~= "number") then
-                return false, "Non-numeric key detected: " .. KeyType
+            -- This will catch the majority of cases
+            local FirstKey = next(TargetArray)
+
+            if (FirstKey == nil or FirstKey == 1) then
+                return true
             end
-        end ]]
 
-        -- This will catch the majority of cases
-        local FirstKey = next(TargetArray)
-
-        if (FirstKey == nil or FirstKey == 1) then
-            return true
+            return false, "Array is empty"
         end
 
-        return false, "Array is empty"
+        return false, "Expected table, got " .. type(TargetArray)
     end
 
     --- Ensures an array is of a certain length
@@ -1310,6 +1330,18 @@ end
 
 
 do
+    type TableTypeChecker = TypeChecker<TableTypeChecker, {any}> & {};
+
+    local Table: TypeCheckerConstructor<TableTypeChecker, SignatureTypeChecker?>, TableClass = TypeGuard.Template("table")
+    TableClass._Initial = TypeGuard.Template("table")
+
+    TypeGuard.Table = Table
+end
+
+
+
+
+do
     type ObjectTypeChecker = TypeChecker<ObjectTypeChecker, {[any]: any}> & {
         OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
         ofStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
@@ -1339,23 +1371,23 @@ do
     local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: SignatureTypeChecker}?>, ObjectClass = TypeGuard.Template("Object")
 
     function ObjectClass._Initial(TargetObject)
-        if (typeof(TargetObject) ~= "table") then
-            return false, "Expected table, got " .. typeof(TargetObject)
-        end
+        if (type(TargetObject) == "table") then
+            -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
+            --[[ for Key in TargetObject do
+                if (typeof(Key) == "number") then
+                    return false, "Incorrect key type: number"
+                end
+            end ]]
 
-        -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile
-        --[[ for Key in TargetObject do
-            if (typeof(Key) == "number") then
-                return false, "Incorrect key type: number"
+            -- This will catch the majority of cases
+            if (rawget(TargetObject, 1) == nil) then
+                return true
             end
-        end ]]
 
-        -- This will catch the majority of cases
-        if (rawget(TargetObject, 1) ~= nil) then
             return false, "Incorrect key type: numeric index [1]"
         end
 
-        return true
+        return false, "Expected table, got " .. type(TargetObject)
     end
 
     --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs
@@ -1391,9 +1423,7 @@ do
             -- Check there are no extra fields which shouldn't be in the object
             if (SelfRef._Tags.Strict) then
                 for Key in StructureCopy do
-                    local Checker = SubTypes[Key]
-
-                    if (not Checker) then
+                    if (not SubTypes[Key]) then
                         return false, "[Key '" .. tostring(Key) .. "'] unexpected (strict)"
                     end
                 end
@@ -1669,9 +1699,9 @@ do
     function InstanceCheckerClass:HasTags(Tags: {string})
         ExpectType(Tags, EXPECT_TABLE_OR_FUNCTION, 1)
 
-        if (typeof(Tags) == "table") then
+        if (type(Tags) == "table") then
             for Index, Tag in Tags do
-                assert(typeof(Tag) == "string", "Expected tag #" .. Index .. " to be a string")
+                assert(type(Tag) == "string", "Expected tag #" .. Index .. " to be a string")
             end
         end
 
@@ -1691,9 +1721,9 @@ do
     function InstanceCheckerClass:HasAttributes(Attributes: {string})
         ExpectType(Attributes, EXPECT_TABLE_OR_FUNCTION, 1)
 
-        if (typeof(Attributes) == "table") then
+        if (type(Attributes) == "table") then
             for Index, Attribute in Attributes do
-                assert(typeof(Attribute) == "string", "Expected attribute #" .. Index .. " to be a string")
+                assert(type(Attribute) == "string", "Expected attribute #" .. Index .. " to be a string")
             end
         end
 
@@ -1714,7 +1744,7 @@ do
         ExpectType(AttributeCheckers, EXPECT_TABLE, 1)
 
         for Attribute, Checker in AttributeCheckers do
-            assert(typeof(Attribute) == "string", "Attribute '" .. tostring(Attribute) .. "' was not a string")
+            assert(type(Attribute) == "string", "Attribute '" .. tostring(Attribute) .. "' was not a string")
             TypeGuard._AssertIsTypeBase(Checker, "")
         end
 
@@ -1983,213 +2013,290 @@ TypeGuard.luserdata = TypeGuard.Userdata
 TypeGuard.Nil = TypeGuard.FromTypeSample("nil", nil)
 TypeGuard.lnil = TypeGuard.Nil
 
---- Creates a function which checks params as if they were a strict Array checker
-function TypeGuard.Params(...: SignatureTypeChecker)
-    local Args = {...}
-    local ArgSize = #Args
-
-    for Index, ParamChecker in Args do
-        TypeGuard._AssertIsTypeBase(ParamChecker, Index)
+do -- Misc functions
+    local function _GetScript(): string
+        local ScriptName = debug.info(3, "s")
+        local Splits = string.split(ScriptName, ".")
+        return Splits[#Splits] or ScriptName
     end
 
-    return function(...)
-        debug.profilebegin("TG.P")
+    local ValidTypeChecker = TypeGuard.Object({
+        _Check = TypeGuard.Function();
+    })
 
-        local Size = select("#", ...)
+    --- Creates a function which checks params as if they were a strict Array checker
+    function TypeGuard.Params(...: SignatureTypeChecker)
+        local Args = {...}
+        local ArgSize = #Args
 
-        if (Size > ArgSize) then
-            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+        for Index, ParamChecker in Args do
+            ValidTypeChecker:Assert(ParamChecker)
         end
 
-        for Index, Value in Args do
-            local Arg = select(Index, ...)
-            local Success, Message = Value:_Check(Arg)
+        local Script = _GetScript()
+        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
+                                            then ScriptNameToContextEnabled[Script]
+                                            else true
 
-            if (not Success) then
-                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+        return function(...)
+            if (not ScriptNameToContextEnabled[Script]) then
+                return
             end
-        end
 
-        debug.profileend()
-    end
-end
-TypeGuard.params = TypeGuard.Params
+            debug.profilebegin("TG.P")
 
---- Creates a function which checks variadic params against a single given TypeChecker
-function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
-    TypeGuard._AssertIsTypeBase(CompareType, 1)
+            local Size = select("#", ...)
 
-    return function(...)
-        debug.profilebegin("TG.V")
-
-        local Size = select("#", ...)
-
-        for Index = 1, Size do
-            local Arg = select(Index, ...)
-            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(Arg)
-
-            if (not Success) then
-                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+            if (Size > ArgSize) then
+                error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
             end
-        end
 
-        debug.profileend()
-    end
-end
-TypeGuard.variadic = TypeGuard.Variadic
+            for Index, Value in Args do
+                local Arg = select(Index, ...)
+                local Success, Message = Value:_Check(Arg)
 
---- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
-function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
-    local Args = {...}
-    local ArgSize = #Args
-
-    for Index, ParamChecker in Args do
-        TypeGuard._AssertIsTypeBase(ParamChecker, Index)
-    end
-
-    return function(Context: any?, ...)
-        debug.profilebegin("TG.P+")
-
-        local Size = select("#", ...)
-
-        if (Size > ArgSize) then
-            error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
-        end
-
-        for Index, Value in Args do
-            local Arg = select(Index, ...)
-            local Success, Message = Value:WithContext(Context):Check(Arg)
-
-            if (not Success) then
-                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                if (not Success) then
+                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                end
             end
+
+            debug.profileend()
         end
-
-        debug.profileend()
     end
-end
-TypeGuard.paramsWithContext = TypeGuard.ParamsWithContext
+    TypeGuard.params = TypeGuard.Params
 
---- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args
-function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
-    TypeGuard._AssertIsTypeBase(CompareType, 1)
+    local VariadicParams = TypeGuard.Params(ValidTypeChecker)
+    --- Creates a function which checks variadic params against a single given TypeChecker
+    function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
+        VariadicParams(CompareType)
 
-    return function(Context: any?, ...)
-        debug.profilebegin("TG.V+")
+        local Script = _GetScript()
+        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
+                                            then ScriptNameToContextEnabled[Script]
+                                            else true
 
-        local Size = select("#", ...)
-
-        for Index = 1, Size do
-            local Arg = select(Index, ...)
-            local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(Arg)
-
-            if (not Success) then
-                error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+        return function(...)
+            if (not ScriptNameToContextEnabled[Script]) then
+                return
             end
+
+            debug.profilebegin("TG.V")
+
+            local Size = select("#", ...)
+
+            for Index = 1, Size do
+                local Arg = select(Index, ...)
+                local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(Arg)
+
+                if (not Success) then
+                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                end
+            end
+
+            debug.profileend()
+        end
+    end
+    TypeGuard.variadic = TypeGuard.Variadic
+
+    local ParamsWithContextParams = TypeGuard.Variadic(ValidTypeChecker)
+    --- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args
+    function TypeGuard.ParamsWithContext(...: SignatureTypeChecker)
+        ParamsWithContextParams(...)
+
+        local Args = {...}
+        local ArgSize = #Args
+
+        for Index, ParamChecker in Args do
+            TypeGuard._AssertIsTypeBase(ParamChecker, Index)
         end
 
-        debug.profileend()
+        local Script = _GetScript()
+        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
+                                            then ScriptNameToContextEnabled[Script]
+                                            else true
+
+        return function(Context: any?, ...)
+            if (not ScriptNameToContextEnabled[Script]) then
+                return
+            end
+
+            debug.profilebegin("TG.P+")
+
+            local Size = select("#", ...)
+
+            if (Size > ArgSize) then
+                error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+            end
+
+            for Index, Value in Args do
+                local Arg = select(Index, ...)
+                local Success, Message = Value:WithContext(Context):Check(Arg)
+
+                if (not Success) then
+                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                end
+            end
+
+            debug.profileend()
+        end
     end
-end
-TypeGuard.variadicWithContext = TypeGuard.VariadicWithContext
+    TypeGuard.paramsWithContext = TypeGuard.ParamsWithContext
 
---- Wraps a function in a param checker function
-function TypeGuard.WrapFunctionParams(Call: (...any) -> (...any), ...: SignatureTypeChecker)
-    ExpectType(Call, EXPECT_FUNCTION, 1)
+    local VariadicWithContextParams = TypeGuard.Params(ValidTypeChecker)
+    --- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args
+    function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
+        VariadicWithContextParams(CompareType)
 
-    for Index = 1, select("#", ...) do
-        TypeGuard._AssertIsTypeBase(select(Index, ...), Index)
+        local Script = _GetScript()
+        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
+                                            then ScriptNameToContextEnabled[Script]
+                                            else true
+
+        return function(Context: any?, ...)
+            if (not ScriptNameToContextEnabled[Script]) then
+                return
+            end
+
+            debug.profilebegin("TG.V+")
+
+            local Size = select("#", ...)
+
+            for Index = 1, Size do
+                local Arg = select(Index, ...)
+                local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(Arg)
+
+                if (not Success) then
+                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                end
+            end
+
+            debug.profileend()
+        end
     end
+    TypeGuard.variadicWithContext = TypeGuard.VariadicWithContext
 
-    local ParamChecker = TypeGuard.Params(...)
+    local WrapFunctionParamsParams1 = TypeGuard.Params(TypeGuard.Function())
+    local WrapFunctionParamsParams2 = TypeGuard.Variadic(ValidTypeChecker)
+    --- Wraps a function in a param checker function
+    function TypeGuard.WrapFunctionParams(Call: (...any) -> (...any), ...: SignatureTypeChecker)
+        WrapFunctionParamsParams1(Call)
+        WrapFunctionParamsParams2(...)
 
-    return function(...)
-        ParamChecker(...)
-        return Call(...)
+        for Index = 1, select("#", ...) do
+            TypeGuard._AssertIsTypeBase(select(Index, ...), Index)
+        end
+
+        local ParamChecker = TypeGuard.Params(...)
+
+        return function(...)
+            ParamChecker(...)
+            return Call(...)
+        end
     end
-end
-TypeGuard.wrapFunctionParams = TypeGuard.WrapFunctionParams
+    TypeGuard.wrapFunctionParams = TypeGuard.WrapFunctionParams
 
---- Wraps a function in a variadic param checker function
-function TypeGuard.WrapFunctionVariadic(Call: (...any) -> (...any), VariadicParamType: SignatureTypeChecker)
-    ExpectType(Call, EXPECT_FUNCTION, 1)
-    TypeGuard._AssertIsTypeBase(VariadicParamType, 2)
+    local WrapFunctionVariadicParams = TypeGuard.Params(TypeGuard.Function(), ValidTypeChecker)
+    --- Wraps a function in a variadic param checker function
+    function TypeGuard.WrapFunctionVariadic(Call: (...any) -> (...any), VariadicParamType: SignatureTypeChecker)
+        WrapFunctionVariadicParams(Call, VariadicParamType)
 
-    local ParamChecker = TypeGuard.Variadic(VariadicParamType)
+        local ParamChecker = TypeGuard.Variadic(VariadicParamType)
 
-    return function(...)
-        ParamChecker(...)
-        return Call(...)
+        return function(...)
+            ParamChecker(...)
+            return Call(...)
+        end
     end
-end
-TypeGuard.wrapFunctionVariadic = TypeGuard.WrapFunctionVariadic
+    TypeGuard.wrapFunctionVariadic = TypeGuard.WrapFunctionVariadic
 
-local Primitives = {
-    ["nil"] = "Nil";
-    ["string"] = "String";
-    ["number"] = "Number";
-    ["thread"] = "Thread";
-    ["boolean"] = "Boolean";
-    ["function"] = "Function";
-    ["userdata"] = "Userdata";
-}
+    local Primitives = {
+        ["nil"] = "Nil";
+        ["string"] = "String";
+        ["number"] = "Number";
+        ["thread"] = "Thread";
+        ["boolean"] = "Boolean";
+        ["function"] = "Function";
+        ["userdata"] = "Userdata";
+    }
 
-function TypeGuard.FromTemplate(Subject: any, Strict: boolean?)
-    local Type = typeof(Subject)
-    Type = Primitives[Type] or Type
+    local function _FromTemplate(Subject: any, Strict: boolean?)
+        local Type = typeof(Subject)
+        Type = Primitives[Type] or Type
 
-    if (Type == "table") then
-        if (Subject[1]) then
-            local Last
-            local LastType = ""
+        if (Type == "table") then
+            if (Subject[1]) then
+                local Last
+                local LastType = ""
 
-            for Key, Value in Subject do
-                local Temp = TypeGuard.FromTemplate(Value, Strict)
+                for Key, Value in Subject do
+                    local Temp = _FromTemplate(Value, Strict)
 
-                if (Temp.Type == LastType) then
-                    continue
+                    if (Temp.Type == LastType) then
+                        continue
+                    end
+
+                    Last = if (Last) then Temp:Or(Last) else Temp
+                    LastType = Temp.Type
                 end
 
-                Last = if (Last) then Temp:Or(Last) else Temp
-                LastType = Temp.Type
+                return TypeGuard.Array(Strict and Last:Strict() or Last)
+            else
+                local Result = {}
+
+                for Key, Value in Subject do
+                    Result[Key] = _FromTemplate(Value, Strict)
+                end
+
+                local Temp = TypeGuard.Object(Result)
+                return Strict and Temp:Strict() or Temp
             end
-
-            return TypeGuard.Array(Strict and Last:Strict() or Last)
-        else
-            local Result = {}
-
-            for Key, Value in Subject do
-                Result[Key] = TypeGuard.FromTemplate(Value, Strict)
-            end
-
-            local Temp = TypeGuard.Object(Result)
-            return Strict and Temp:Strict() or Temp
-        end
-    end
-
-    if (Type == "Instance") then
-        local Structure = {}
-
-        for _, Child in Subject:GetChildren() do
-            Structure[Child.Name] = TypeGuard.FromTemplate(Child, Strict)
         end
 
-        local Base = TypeGuard.Instance(Subject.ClassName)
-        Base = Strict and Base:Strict() or Base
-        return if (next(Structure)) then Base:OfStructure(Structure) else Base
+        if (Type == "Instance") then
+            local Structure = {}
+
+            for _, Child in Subject:GetChildren() do
+                Structure[Child.Name] = _FromTemplate(Child, Strict)
+            end
+
+            local Base = TypeGuard.Instance(Subject.ClassName)
+            Base = Strict and Base:Strict() or Base
+            return if (next(Structure)) then Base:OfStructure(Structure) else Base
+        end
+
+        if (Type == "EnumItem") then
+            return TypeGuard.Enum(Subject)
+        end
+
+        local Constructor = TypeGuard[Type]
+
+        if (not Constructor) then
+            error("Unknown type: " .. Type)
+        end
+
+        return Constructor()
     end
 
-    if (Type == "EnumItem") then
-        return TypeGuard.Enum(Subject)
+    local FromTemplateParams = TypeGuard.Params(TypeGuard.Boolean():Optional())
+    --- Creates a TypeChecker from a template table.
+    function TypeGuard.FromTemplate(Subject: any, Strict: boolean?)
+        FromTemplateParams(Strict)
+        return _FromTemplate(Subject, Strict)
     end
 
-    local Constructor = TypeGuard[Type]
-
-    if (not Constructor) then
-        error("Unknown type: " .. Type)
+    local SetContextEnabledParams = TypeGuard.Params(TypeGuard.String():IsAKeyIn(ScriptNameToContextEnabled), TypeGuard.Boolean())
+    --- Certain scripts may want to disable type checking for a specific context for performance.
+    function TypeGuard.SetContextEnabled(Name: string, Enabled: boolean)
+        SetContextEnabledParams(Name, Enabled)
+        ScriptNameToContextEnabled[Name] = Enabled
     end
 
-    return Constructor()
+    local SetCurrentContextEnabledParams = TypeGuard.Params(TypeGuard.Boolean())
+    --- Sets the context for the calling script, which can be enabled or disabled with TypeGuard.SetContextEnabled.
+    function TypeGuard.SetCurrentContextEnabled(Enabled: boolean)
+        SetCurrentContextEnabledParams(Enabled)
+        ScriptNameToContextEnabled[_GetScript()] = Enabled
+    end
 end
 
 return TypeGuard
