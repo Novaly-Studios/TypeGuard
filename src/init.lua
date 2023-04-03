@@ -45,7 +45,7 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true
         end
 
-        return false, ("Expected %s, got %s"):format(ExpectedTypeName, ItemType)
+        return false, `Expected {ExpectedTypeName}, got {ItemType}.`
     end
 end
 
@@ -79,7 +79,13 @@ local function IsAKeyIn(self, Store)
 
     return self:_AddConstraint(false, "IsAKeyIn", function(_, Key, Store)
         if (Store[Key] == nil) then
-            return false, "Key " .. tostring(Key) .. " was not found in table: " .. tostring(Store)
+            local Keys = {}
+
+            for Key in Store do
+                table.insert(Keys, Key)
+            end
+
+            return false, `Key {Key} was not found in set ({ConcatWithToString(Keys, ", ")})`
         end
 
         return true
@@ -96,7 +102,7 @@ local function IsAValueIn(self, Store)
             end
         end
 
-        return false, "Value " .. tostring(TargetValue) .. " was not found in table: " .. tostring(Store)
+        return false, `Value {TargetValue} was not found in table {Store}`
     end, Store)
 end
 
@@ -106,7 +112,7 @@ local function Equals(self, ExpectedValue)
             return true
         end
 
-        return false, "Value " .. tostring(Value) .. " does not equal " .. tostring(ExpectedValue)
+        return false, `Value {Value} does not equal {ExpectedValue}`
     end, ExpectedValue)
 end
 
@@ -116,7 +122,7 @@ local function GreaterThan(self, GTValue)
             return true
         end
 
-        return false, "Value " .. tostring(Value) .. " is not greater than " .. tostring(GTValue)
+        return false, `Value {Value} is not greater than {GTValue}`
     end, GTValue)
 end
 
@@ -126,7 +132,7 @@ local function LessThan(self, LTValue)
             return true
         end
 
-        return false, "Value " .. tostring(Value) .. " is not less than " .. tostring(LTValue)
+        return false, `Value {Value} is not less than {LTValue}`
     end, LTValue)
 end
 
@@ -136,7 +142,7 @@ local function GreaterThanOrEqualTo(self, GTEValue)
             return true
         end
 
-        return false, "Value " .. tostring(Value) .. " is not greater than or equal to " .. tostring(GTEValue)
+        return false, `Value {Value} is not greater than or equal to {GTEValue}.`
     end, GTEValue)
 end
 
@@ -146,7 +152,7 @@ local function LessThanOrEqualTo(self, LTEValue)
             return true
         end
 
-        return false, "Value " .. tostring(Value) .. " is not less than or equal to " .. tostring(LTEValue)
+        return false, `Value {Value} is not less than or equal to {LTEValue}.`
     end, LTEValue)
 end
 
@@ -459,11 +465,10 @@ function TypeGuard.Template(Name: string)
             end
 
             if (Found) then
-                error("Attempt to apply a constraint marked as 'only once' more than once: " .. ConstraintName)
+                error(`Attempt to apply a constraint marked as 'only once' more than once: {ConstraintName}.`)
             end
         end
 
-        --ActiveConstraints[ConstraintName] = {Constraint, Args, HasFunctions, false}
         local NextIndex = #ActiveConstraints + 1
         ActiveConstraints[NextIndex] = {Constraint, Args, HasFunctions, false, ConstraintName}
         self._LastConstraint = NextIndex
@@ -533,7 +538,7 @@ function TypeGuard.Template(Name: string)
                 local FailMessage = self._FailMessage
                 local Result =
                     (type(FailMessage) == "function" and FailMessage(Value, RootContext) or FailMessage) or
-                    ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
+                    (`[Conjunction {Conjunction}] {Message}`)
 
                 if (CacheTag) then
                     Cache[Value or NegativeCacheValue] = {false, Result}
@@ -557,7 +562,7 @@ function TypeGuard.Template(Name: string)
 
         if (not Success) then
             if (Disjunctions[1]) then
-                local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
+                local Result = self._FailMessage or (`Disjunctions failed on {self}`)
 
                 if (CacheTag) then
                     Cache[Value or NegativeCacheValue] = {false, Result}
@@ -599,7 +604,7 @@ function TypeGuard.Template(Name: string)
 
             if (ShouldNegate) then
                 SubMessage = if (SubSuccess) then
-                                "Constraint '" .. ConstraintName .. "' succeeded but was expected to fail on value " .. tostring(Value)
+                                `Constraint '{ConstraintName}' succeeded but was expected to fail on value {Value}`
                                 else
                                 ""
 
@@ -608,7 +613,7 @@ function TypeGuard.Template(Name: string)
 
             if (not SubSuccess) then
                 if (Disjunctions[1]) then
-                    local Result = self._FailMessage or ("Disjunctions failed on " .. tostring(self))
+                    local Result = self._FailMessage or (`Disjunctions failed on {self}`)
 
                     if (CacheTag) then
                         Cache[Value or NegativeCacheValue] = {false, Result}
@@ -815,8 +820,7 @@ end
 --- Checks if an object contains the fields which define a type template from this module
 function TypeGuard._AssertIsTypeBase(Subject: any, Position: number | string)
     ExpectType(Subject, EXPECT_TABLE, Position)
-
-    assert(Subject.IsTemplate, "Subject is not a type template")
+    assert(Subject.IsTemplate, "Subject is not a type template.")
 end
 
 --- Cheap & easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof
@@ -875,7 +879,7 @@ do
                 return true
             end
 
-            return false, "Expected integer form, got " .. tostring(Item)
+            return false, `Expected integer form, got {Item}`
         end)
     end
     NumberClass.integer = NumberClass.Integer
@@ -887,7 +891,7 @@ do
                 return true
             end
 
-            return false, "Expected decimal form, got " .. tostring(Item)
+            return false, `Expected decimal form, got {Item}`
         end)
     end
     NumberClass.decimal = NumberClass.Decimal
@@ -916,7 +920,7 @@ do
     function NumberClass:Positive()
         return self:_AddConstraint(true, "Positive", function(_, Item)
             if (Item < 0) then
-                return false, "Expected positive number, got " .. tostring(Item)
+                return false, `Expected positive number, got {Item}`
             end
 
             return true
@@ -928,7 +932,7 @@ do
     function NumberClass:Negative()
         return self:_AddConstraint(true, "Negative", function(_, Item)
             if (Item >= 0) then
-                return false, "Expected negative number, got " .. tostring(Item)
+                return false, `Expected negative number, got {Item}`
             end
 
             return true
@@ -943,7 +947,7 @@ do
                 return true
             end
 
-            return false, "Expected NaN, got " .. tostring(Item)
+            return false, `Expected NaN, got {Item}`
         end)
     end
     NumberClass.isNaN = NumberClass.IsNaN
@@ -955,7 +959,7 @@ do
                 return true
             end
 
-            return false, "Expected infinite, got " .. tostring(Item)
+            return false, `Expected infinite, got {Item}`
         end)
     end
     NumberClass.isInfinite = NumberClass.IsInfinite
@@ -970,7 +974,7 @@ do
                 return true
             end
 
-            return false, "Expected " .. tostring(CloseTo) .. " +/- " .. tostring(Tolerance) .. ", got " .. tostring(NumberValue)
+            return false, `Expected {CloseTo} +/- {Tolerance}, got {NumberValue}`
         end, CloseTo, Tolerance)
     end
     NumberClass.isClose = NumberClass.IsClose
@@ -1008,7 +1012,7 @@ do
 
         return self:_AddConstraint(true, "MinLength", function(_, Item, MinLength)
             if (#Item < MinLength) then
-                return false, "Length must be at least " .. MinLength .. ", got " .. #Item
+                return false, `Length must be at least {MinLength}, got {#Item}`
             end
 
             return true
@@ -1022,7 +1026,7 @@ do
 
         return self:_AddConstraint(true, "MaxLength", function(_, Item, MaxLength)
             if (#Item > MaxLength) then
-                return false, "Length must be at most " .. MaxLength .. ", got " .. #Item
+                return false, `Length must be at most {MaxLength}, got {#Item}`
             end
 
             return true
@@ -1036,7 +1040,7 @@ do
 
         return self:_AddConstraint(false, "Pattern", function(_, Item, Pattern)
             if (string.match(Item, Pattern) ~= Item) then
-                return false, "String does not match pattern " .. tostring(Pattern)
+                return false, `String does not match pattern {Pattern}`
             end
 
             return true
@@ -1050,7 +1054,7 @@ do
 
         return self:_AddConstraint(false, "Contains", function(_, Item, Substring)
             if (string.find(Item, Substring) == nil) then
-                return false, "String does not contain substring " .. tostring(Substring)
+                return false, `String does not contain substring {Substring}`
             end
 
             return true
@@ -1134,7 +1138,7 @@ do
             return false, "Array is empty"
         end
 
-        return false, "Expected table, got " .. type(TargetArray)
+        return false, `Expected table, got {type(TargetArray)}`
     end
 
     --- Ensures an array is of a certain length
@@ -1143,7 +1147,7 @@ do
 
         return self:_AddConstraint(true, "Length", function(_, TargetArray, Length)
             if (#TargetArray ~= Length) then
-                return false, "Length must be " .. Length .. ", got " .. #TargetArray
+                return false, `Length must be {Length}, got {#TargetArray}`
             end
 
             return true
@@ -1157,7 +1161,7 @@ do
 
         return self:_AddConstraint(true, "MinLength", function(_, TargetArray, MinLength)
             if (#TargetArray < MinLength) then
-                return false, "Length must be at least " .. MinLength .. ", got " .. #TargetArray
+                return false, `Length must be at least {MinLength}, got {#TargetArray}`
             end
 
             return true
@@ -1171,7 +1175,7 @@ do
 
         return self:_AddConstraint(true, "MaxLength", function(_, TargetArray, MaxLength)
             if (#TargetArray > MaxLength) then
-                return false, "Length must be at most " .. MaxLength .. ", got " .. #TargetArray
+                return false, `Length must be at most {MaxLength}, got {#TargetArray}`
             end
 
             return true
@@ -1191,7 +1195,7 @@ do
 
         return self:_AddConstraint(false, "Contains", function(_, TargetArray, Value, StartPoint)
             if (table.find(TargetArray, Value, StartPoint) == nil) then
-                return false, "Value not found in array: " .. tostring(Value)
+                return false, `Value not found in array: {Value}`
             end
 
             return true
@@ -1308,9 +1312,9 @@ do
                 local Current = TargetArray[Index]
 
                 if (Descending and Last < Current) then
-                    return false, "Array is not ordered descending at index " .. Index
+                    return false, `Array is not ordered descending at index {Index}`
                 elseif (Ascending and Last > Current) then
-                    return false, "Array is not ordered ascending at index " .. Index
+                    return false, `Array is not ordered ascending at index {Index}`
                 end
 
                 Last = Current
@@ -1387,7 +1391,7 @@ do
             return false, "Incorrect key type: numeric index [1]"
         end
 
-        return false, "Expected table, got " .. type(TargetObject)
+        return false, `Expected table, got {type(TargetObject)}`
     end
 
     --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs
@@ -1410,13 +1414,13 @@ do
                 local RespectiveValue = StructureCopy[Key]
 
                 if (RespectiveValue == nil and not Checker._Tags.Optional) then
-                    return false, "[Key '" .. tostring(Key) .. "'] is nil"
+                    return false, `[Key '{Key}'] is nil`
                 end
 
                 local Success, SubMessage = Checker:_Check(RespectiveValue)
 
                 if (not Success) then
-                    return false, "[Key '" .. tostring(Key) .. "'] " .. SubMessage
+                    return false, `[Key '{Key}'] {SubMessage}`
                 end
             end
 
@@ -1424,7 +1428,7 @@ do
             if (SelfRef._Tags.Strict) then
                 for Key in StructureCopy do
                     if (not SubTypes[Key]) then
-                        return false, "[Key '" .. tostring(Key) .. "'] unexpected (strict)"
+                        return false, `[Key '{Key}'] unexpected (strict)`
                     end
                 end
             end
@@ -1443,7 +1447,7 @@ do
                 local Success, SubMessage = SubType:_Check(Value)
 
                 if (not Success) then
-                    return false, "[OfValueType: Key '" .. tostring(Index) .. "'] " .. SubMessage
+                    return false, `[OfValueType: Key '{Index}'] {SubMessage}`
                 end
             end
 
@@ -1461,7 +1465,7 @@ do
                 local Success, SubMessage = SubType:_Check(Key)
 
                 if (not Success) then
-                    return false, "[OfKeyType: Key '" .. tostring(Key) .. "'] " .. SubMessage
+                    return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
                 end
             end
 
@@ -1505,7 +1509,7 @@ do
                 return true
             end
 
-            return false, "[Metatable] " .. Message
+            return false, `[Metatable] {Message}`
         end, Checker)
     end
     ObjectClass.checkMetatable = ObjectClass.CheckMetatable
@@ -1603,7 +1607,7 @@ do
                 local Success, SubMessage = Checker:_Check(Value)
 
                 if (not Success) then
-                    return false, (typeof(Value) == "Instance" and "[Instance '" or "[Property '") .. tostring(Key) .. "'] " .. SubMessage
+                    return false, `{(typeof(Value) == "Instance" and "[Instance '" or "[Property '")}{Key}'] {SubMessage}`
                 end
             end
 
@@ -1614,7 +1618,7 @@ do
                     local Checker = SubTypes[Key]
 
                     if (not Checker) then
-                        return false, "[Instance '" .. tostring(Key) .. "'] unexpected (strict)"
+                        return false, `[Instance '{Key}'] unexpected (strict)`
                     end
                 end
             end
@@ -1630,7 +1634,7 @@ do
 
         return self:_AddConstraint(true, "IsA", function(_, InstanceRoot, InstanceIsA)
             if (not InstanceRoot:IsA(InstanceIsA)) then
-                return false, "Expected " .. InstanceIsA .. ", got " .. InstanceRoot.ClassName
+                return false, `Expected {InstanceIsA}, got {InstanceRoot.ClassName}`
             end
 
             return true
@@ -1659,7 +1663,7 @@ do
                 return true
             end
 
-            return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+            return false, `Expected tag '{Tag}' on Instance {InstanceRoot:GetFullName()}`
         end, Tag)
     end
     InstanceCheckerClass.hasTag = InstanceCheckerClass.HasTag
@@ -1673,7 +1677,7 @@ do
                 return true
             end
 
-            return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+            return false, `Expected attribute '{Attribute}' to exist on Instance {InstanceRoot:GetFullName()}`
         end, Attribute)
     end
     InstanceCheckerClass.hasAttribute = InstanceCheckerClass.HasAttribute
@@ -1687,7 +1691,7 @@ do
             local Success, SubMessage = (Checker :: SignatureTypeCheckerInternal):_Check(InstanceRoot:GetAttribute(Attribute))
 
             if (not Success) then
-                return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
+                return false, `Attribute '{Attribute}' not satisfied on Instance {InstanceRoot:GetFullName()}: {SubMessage}`
             end
 
             return true
@@ -1701,14 +1705,14 @@ do
 
         if (type(Tags) == "table") then
             for Index, Tag in Tags do
-                assert(type(Tag) == "string", "Expected tag #" .. Index .. " to be a string")
+                assert(type(Tag) == "string", `Expected tag #{Index} to be a string`)
             end
         end
 
         return self:_AddConstraint(false, "HasTags", function(_, InstanceRoot, Tags)
             for _, Tag in Tags do
                 if (not CollectionService:HasTag(InstanceRoot, Tag)) then
-                    return false, "Expected tag '" .. Tag .. "' on Instance " .. InstanceRoot:GetFullName()
+                    return false, `Expected tag '{Tag}' on Instance {InstanceRoot:GetFullName()}`
                 end
             end
 
@@ -1723,14 +1727,14 @@ do
 
         if (type(Attributes) == "table") then
             for Index, Attribute in Attributes do
-                assert(type(Attribute) == "string", "Expected attribute #" .. Index .. " to be a string")
+                assert(type(Attribute) == "string", `Expected attribute #{Index} to be a string`)
             end
         end
 
         return self:_AddConstraint(false, "HasAttributes", function(_, InstanceRoot, Attributes)
             for _, Attribute in Attributes do
                 if (InstanceRoot:GetAttribute(Attribute) == nil) then
-                    return false, "Expected attribute '" .. Attribute .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+                    return false, `Expected attribute '{Attribute}' to exist on Instance {InstanceRoot:GetFullName()}`
                 end
             end
 
@@ -1744,7 +1748,7 @@ do
         ExpectType(AttributeCheckers, EXPECT_TABLE, 1)
 
         for Attribute, Checker in AttributeCheckers do
-            assert(type(Attribute) == "string", "Attribute '" .. tostring(Attribute) .. "' was not a string")
+            assert(type(Attribute) == "string", `Attribute '{Attribute}' was not a string`)
             TypeGuard._AssertIsTypeBase(Checker, "")
         end
 
@@ -1753,7 +1757,7 @@ do
                 local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
 
                 if (not Success) then
-                    return false, "Attribute '" .. Attribute .. "' not satisfied on Instance " .. InstanceRoot:GetFullName() .. ": " .. SubMessage
+                    return false, `Attribute '{Attribute}' not satisfied on Instance "{InstanceRoot:GetFullName()}: {SubMessage}`
                 end
             end
 
@@ -1771,7 +1775,7 @@ do
                 return true
             end
 
-            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be a descendant of " .. Instance:GetFullName()
+            return false, `Expected Instance {SubjectInstance:GetFullName()} to be a descendant of {Instance:GetFullName()}`
         end, Instance)
     end
     InstanceCheckerClass.isDescendantOf = InstanceCheckerClass.IsDescendantOf
@@ -1785,7 +1789,7 @@ do
                 return true
             end
 
-            return false, "Expected Instance " .. SubjectInstance:GetFullName() .. " to be an ancestor of " .. Instance:GetFullName()
+            return false, `Expected Instance {SubjectInstance:GetFullName()} to be an ancestor of {Instance:GetFullName()}`
         end, Instance)
     end
     InstanceCheckerClass.isAncestorOf = InstanceCheckerClass.IsAncestorOf
@@ -1799,7 +1803,7 @@ do
                 return true
             end
 
-            return false, "Expected child '" .. Name .. "' to exist on Instance " .. InstanceRoot:GetFullName()
+            return false, `Expected child '{Name}' to exist on Instance {InstanceRoot:GetFullName()}`
         end, Name)
     end
     InstanceCheckerClass.hasChild = InstanceCheckerClass.HasChild
@@ -1842,7 +1846,7 @@ do
             return true
         end
 
-        return false, "Expected EnumItem or Enum, got " .. GotType
+        return false, `Expected EnumItem or Enum, got {GotType}`
     end
 
     --- Ensures that a passed EnumItem is either equivalent to an EnumItem or a sub-item of an Enum class
@@ -1858,12 +1862,12 @@ do
                     return true
                 end
 
-                return false, "Expected " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
+                return false, `Expected {TargetEnum}, got {Value}`
             end
 
             -- TargetType is an Enum
             if (table.find(TargetEnum:GetEnumItems(), Value) == nil) then
-                return false, "Expected a " .. tostring(TargetEnum) .. ", got " .. tostring(Value)
+                return false, `Expected a {TargetEnum}, got {Value}`
             end
 
             return true
@@ -1931,7 +1935,7 @@ do
                 return true
             end
 
-            return false, "Expected thread to have status '" .. Status .. "', got " .. CurrentStatus
+            return false, `Expected thread to have status '{Status}', got {CurrentStatus}`
         end, Status)
     end
 
@@ -2048,7 +2052,7 @@ do -- Misc functions
             local Size = select("#", ...)
 
             if (Size > ArgSize) then
-                error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+                error(`Expected {ArgSize} argument{(ArgSize == 1 and "" or "s")}, got {Size}.`)
             end
 
             for Index, Value in Args do
@@ -2056,7 +2060,7 @@ do -- Misc functions
                 local Success, Message = Value:_Check(Arg)
 
                 if (not Success) then
-                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                    error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
 
@@ -2089,7 +2093,7 @@ do -- Misc functions
                 local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(Arg)
 
                 if (not Success) then
-                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                    error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
 
@@ -2125,7 +2129,7 @@ do -- Misc functions
             local Size = select("#", ...)
 
             if (Size > ArgSize) then
-                error("Expected " .. ArgSize .. " argument" .. (ArgSize == 1 and "" or "s") .. ", got " .. Size)
+                error(`Expected {ArgSize} argument{(ArgSize == 1 and "" or "s")}, got {Size}.`)
             end
 
             for Index, Value in Args do
@@ -2133,7 +2137,7 @@ do -- Misc functions
                 local Success, Message = Value:WithContext(Context):Check(Arg)
 
                 if (not Success) then
-                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                    error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
 
@@ -2166,7 +2170,7 @@ do -- Misc functions
                 local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(Arg)
 
                 if (not Success) then
-                    error("Invalid argument #" .. Index .. " (" .. Message .. ")")
+                    error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
 
