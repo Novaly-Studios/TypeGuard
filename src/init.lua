@@ -300,10 +300,8 @@ type TypeChecker<ExtensionClass, Primitive> = {
 };
 
 local ScriptNameToContextEnabled = {}
-local ScriptNameToContext = {}
 local NegativeCacheValue = {} -- Exists for Cached() because nil causes problems
 local RootContext -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards
-local RootValue
 local TypeGuard = {}
 
 --- Creates a template TypeChecker object that can be used to extend behaviors via constraints
@@ -534,7 +532,7 @@ function TypeGuard.Template(Name: string)
             if (not Success) then
                 local FailMessage = self._FailMessage
                 local Result =
-                    (type(FailMessage) == "function" and FailMessage(RootValue, RootContext) or FailMessage) or
+                    (type(FailMessage) == "function" and FailMessage(Value, RootContext) or FailMessage) or
                     ("[Conjunction " .. tostring(Conjunction) .. "] " .. Message)
 
                 if (CacheTag) then
@@ -689,6 +687,8 @@ function TypeGuard.Template(Name: string)
         end
     end
     TemplateClass.wrapCheck = TemplateClass.WrapCheck
+    TemplateClass.AsPredicate = TemplateClass.WrapCheck
+    TemplateClass.asPredicate = TemplateClass.WrapCheck
 
     --- Wraps Assert into its own callable function
     function TemplateClass:WrapAssert()
@@ -697,13 +697,13 @@ function TypeGuard.Template(Name: string)
         end
     end
     TemplateClass.wrapAssert = TemplateClass.WrapAssert
+    TemplateClass.AsAssertion = TemplateClass.WrapAssert
+    TemplateClass.asAssertion = TemplateClass.WrapAssert
 
     --- Check (like above) except sets a universal context for the duration of the check
     function TemplateClass:Check(Value)
-        RootValue = Value
         RootContext = self._Context
         local Success, Result = self:_Check(Value)
-        RootValue = nil
         RootContext = nil
         return Success, Result
     end
