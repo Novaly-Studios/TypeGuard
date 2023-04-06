@@ -106,6 +106,10 @@ local function IsAValueIn(self, Store)
     end, Store)
 end
 
+local function VariadicIsAValueIn(self, ...)
+    return IsAValueIn(self, {...})
+end
+
 local function Equals(self, ExpectedValue)
     return self:_AddConstraint(true, "Equals", function(_, Value, ExpectedValue)
         if (Value == ExpectedValue) then
@@ -316,6 +320,7 @@ function TypeGuard.Template(Name: string)
 
     local TemplateClass = {}
     TemplateClass.__index = TemplateClass
+    TemplateClass.InitialConstraintsDirectVariadic = nil
     TemplateClass.InitialConstraintsVariadic = nil
     TemplateClass.InitialConstraints = nil
     TemplateClass.InitialConstraint = nil
@@ -367,6 +372,12 @@ function TypeGuard.Template(Name: string)
             end
 
             return self
+        end
+
+        local InitialConstraintsDirectVariadic = TemplateClass.InitialConstraintsDirectVariadic
+
+        if (InitialConstraintsDirectVariadic and NumArgs > 0) then
+            return InitialConstraintsDirectVariadic(self, ...)
         end
 
         return self
@@ -1003,7 +1014,7 @@ do
         contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     };
 
-    local String: TypeCheckerConstructor<StringTypeChecker, string?>, StringClass = TypeGuard.Template("String")
+    local String: TypeCheckerConstructor<StringTypeChecker, ...string?>, StringClass = TypeGuard.Template("String")
     StringClass._Initial = CreateStandardInitial("string")
 
     --- Ensures a string is at least a certain length
@@ -1061,7 +1072,7 @@ do
         end, SubstringValue)
     end
 
-    StringClass.InitialConstraint = StringClass.Equals
+    StringClass.InitialConstraintsDirectVariadic = VariadicIsAValueIn
 
     TypeGuard.String = String
     TypeGuard.string = String
@@ -1411,13 +1422,7 @@ do
         return self:_AddConstraint(true, "OfStructure", function(SelfRef, StructureCopy, SubTypes)
             -- Check all fields which should be in the object exist (unless optional) and the type check for each passes
             for Key, Checker in SubTypes do
-                local RespectiveValue = StructureCopy[Key]
-
-                if (RespectiveValue == nil and not Checker._Tags.Optional) then
-                    return false, `[Key '{Key}'] is nil`
-                end
-
-                local Success, SubMessage = Checker:_Check(RespectiveValue)
+                local Success, SubMessage = Checker:_Check(StructureCopy[Key])
 
                 if (not Success) then
                     return false, `[Key '{Key}'] {SubMessage}`
