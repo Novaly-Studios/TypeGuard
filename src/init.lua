@@ -45,7 +45,7 @@ local function CreateStandardInitial(ExpectedTypeName: string): ((...any) -> (bo
             return true
         end
 
-        return false, `Expected {ExpectedTypeName}, got {ItemType}.`
+        return false, `Expected {ExpectedTypeName}, got {ItemType}`
     end
 end
 
@@ -146,7 +146,7 @@ local function GreaterThanOrEqualTo(self, GTEValue)
             return true
         end
 
-        return false, `Value {Value} is not greater than or equal to {GTEValue}.`
+        return false, `Value {Value} is not greater than or equal to {GTEValue}`
     end, GTEValue)
 end
 
@@ -156,7 +156,7 @@ local function LessThanOrEqualTo(self, LTEValue)
             return true
         end
 
-        return false, `Value {Value} is not less than or equal to {LTEValue}.`
+        return false, `Value {Value} is not less than or equal to {LTEValue}`
     end, LTEValue)
 end
 
