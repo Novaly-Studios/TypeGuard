@@ -29,14 +29,22 @@ local function GenerateTests(Context: string, TG)
             ["Cat"] = "Fluffy";
         };
         Friends = {"Alice", "Charlie"};
-        Instances = {workspace, workspace, workspace, workspace, workspace}
+        Instances = {workspace, workspace, workspace, workspace, workspace};
     }
 
     local Simple1Arg = TG.Params(TG.Number())
     local Simple5Arg = TG.Params(TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number())
     local Simple10Arg = TG.Params(TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number(), TG.Number())
 
+    local SimpleCheck = TG.Number()
+
     return {
+        [Context .. "SC"] = function()
+            for Iter = 1, 10e3 do
+                SimpleCheck:Check(Iter)
+            end
+        end;
+
         [Context .. "S1A"] = function()
             for Iter = 1, 10e3 do
                 Simple1Arg(Iter)

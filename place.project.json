@@ -3,7 +3,9 @@
 	"tree": {
 		"$className": "DataModel",
 		"ReplicatedFirst": {
+			"$ignoreUnknownInstances": true,
 			"$className": "ReplicatedFirst",
+			"$path": "Packages",
 			"TypeGuard": {
 				"$path": "src"
 			}
