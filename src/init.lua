@@ -96,14 +96,6 @@ end
 
 -- Core functions...
 do
-    local ScriptNameToContextEnabled = {}
-
-    local function _GetScript(): string
-        local ScriptName = debug.info(3, "s") or "Unknown"
-        local Splits = string.split(ScriptName, ".")
-        return Splits[#Splits] or ScriptName
-    end
-
     local ValidTypeChecker = TypeGuard.Object({
         _Check = TypeGuard.Function();
     })
@@ -117,16 +109,7 @@ do
             ValidTypeChecker:Assert(ParamChecker)
         end
 
-        local Script = _GetScript()
-        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
-                                            then ScriptNameToContextEnabled[Script]
-                                            else true
-
         return function(...)
-            if (not ScriptNameToContextEnabled[Script]) then
-                return
-            end
-
             debug.profilebegin("TG.P")
 
             local Size = select("#", ...)
@@ -153,16 +136,7 @@ do
     function TypeGuard.Variadic<T>(CompareType: TypeChecker<any, T>): ((...T) -> ())
         VariadicParams(CompareType)
 
-        local Script = _GetScript()
-        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
-                                            then ScriptNameToContextEnabled[Script]
-                                            else true
-
         return function(...)
-            if (not ScriptNameToContextEnabled[Script]) then
-                return
-            end
-
             debug.profilebegin("TG.V")
 
             local Size = select("#", ...)
@@ -192,16 +166,7 @@ do
             AssertIsTypeBase(ParamChecker, Index)
         end
 
-        local Script = _GetScript()
-        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
-                                            then ScriptNameToContextEnabled[Script]
-                                            else true
-
         return function(Context: any?, ...)
-            if (not ScriptNameToContextEnabled[Script]) then
-                return
-            end
-
             debug.profilebegin("TG.P+")
 
             local Size = select("#", ...)
@@ -228,16 +193,7 @@ do
     function TypeGuard.VariadicWithContext<T>(CompareType: TypeChecker<any, T>): ((any?, ...T) -> ())
         VariadicWithContextParams(CompareType)
 
-        local Script = _GetScript()
-        ScriptNameToContextEnabled[Script] = if (ScriptNameToContextEnabled[Script] ~= nil)
-                                            then ScriptNameToContextEnabled[Script]
-                                            else true
-
         return function(Context, ...)
-            if (not ScriptNameToContextEnabled[Script]) then
-                return
-            end
-
             debug.profilebegin("TG.V+")
 
             local Size = select("#", ...)
@@ -328,20 +284,6 @@ do
     function TypeGuard.FromTemplate(Subject: any, Strict: boolean?)
         FromTemplateParams(Strict)
         return _FromTemplate(Subject, Strict)
-    end
-
-    local SetContextEnabledParams = TypeGuard.Params(TypeGuard.String():IsAKeyIn(ScriptNameToContextEnabled), TypeGuard.Boolean())
-    --- Certain scripts may want to disable type checking for a specific context for performance.
-    function TypeGuard.SetContextEnabled(Name: string, Enabled: boolean)
-        SetContextEnabledParams(Name, Enabled)
-        ScriptNameToContextEnabled[Name] = Enabled
-    end
-
-    local SetCurrentContextEnabledParams = TypeGuard.Params(TypeGuard.Boolean())
-    --- Sets the context for the calling script, which can be enabled or disabled with TypeGuard.SetContextEnabled.
-    function TypeGuard.SetCurrentContextEnabled(Enabled: boolean)
-        SetCurrentContextEnabledParams(Enabled)
-        ScriptNameToContextEnabled[_GetScript()] = Enabled
     end
 end
 
