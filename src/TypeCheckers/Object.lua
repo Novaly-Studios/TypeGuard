@@ -11,27 +11,15 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
     local Expect = Util.Expect
 
 type ObjectTypeChecker = TypeChecker<ObjectTypeChecker, {[any]: any}> & {
-    OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
+    ContainsValueOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
+    ContainsKeyOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     CheckMetatable: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     OfValueType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
     OfKeyType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     IsFrozen: SelfReturn<ObjectTypeChecker>;
-    OfClass: SelfReturn<ObjectTypeChecker, any>;
-    Strict: SelfReturn<ObjectTypeChecker>;
-};
-
-type _ObjectTypeChecker<T> = TypeChecker<ObjectTypeChecker, T> & {
-    ContainsValueOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>; -- To test
-    ContainsKeyOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>; -- To test
-    OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
-    CheckMetatable: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
-    OfValueType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
-    OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
-    OfKeyType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
-    IsFrozen: SelfReturn<ObjectTypeChecker>;
-    MinSize: SelfReturn<ObjectTypeChecker, number>; -- To test
-    MaxSize: SelfReturn<ObjectTypeChecker, number>; -- To test
+    MinSize: SelfReturn<ObjectTypeChecker, number | (any?) -> number>;
+    MaxSize: SelfReturn<ObjectTypeChecker, number | (any?) -> number>;
     OfClass: SelfReturn<ObjectTypeChecker, any>;
     Strict: SelfReturn<ObjectTypeChecker>;
 };
@@ -134,11 +122,6 @@ end
 --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure.
 function ObjectClass:Strict()
     return self:_AddTag("Strict")
-end
-
---- Ensures no additional key-value pairs exist in the object other than what's verified here.
-function ObjectClass:OfStructureStrict(Structure)
-    return self:OfStructure(Structure):Strict()
 end
 
 --- Checks if an object is frozen.

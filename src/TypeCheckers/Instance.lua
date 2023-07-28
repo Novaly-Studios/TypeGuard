@@ -15,7 +15,6 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
     local Expect = Util.Expect
 
 type InstanceTypeChecker = TypeChecker<InstanceTypeChecker, Instance> & {
-    OfStructureStrict: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
     CheckAttributes: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker} | (any?) -> {[string]: SignatureTypeChecker}>;
     IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
     CheckAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string, SignatureTypeChecker>;
@@ -121,11 +120,6 @@ end
 --- Activates strict tag for OfStructure.
 function InstanceCheckerClass:Strict()
     return self:_AddTag("Strict")
-end
-
---- OfStructure + strict tag i.e. no extra children exist beyond what is specified.
-function InstanceCheckerClass:OfStructureStrict(Structure)
-    return self:OfStructure(Structure):Strict()
 end
 
 --- Checks if an Instance has a particular tag.

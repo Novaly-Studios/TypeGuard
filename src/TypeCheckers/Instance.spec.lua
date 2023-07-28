@@ -159,7 +159,7 @@ return function()
         end)
     end)
 
-    describe("OfStructureStrict (Strict + OfStructure)", function()
+    describe("Strict + OfStructure", function()
         it("should reject extra flat children", function()
             local SampleTree = Instance.new("Folder")
                 local Test = Instance.new("Folder")
@@ -170,16 +170,16 @@ return function()
                 Test2.Parent = SampleTree
 
             expect(
-                Base:OfStructureStrict({
+                Base:OfStructure({
                     Test = TypeGuard.Instance("Folder");
-                }):Check(SampleTree)
+                }):Strict():Check(SampleTree)
             ).to.equal(false)
 
             expect(
-                Base:OfStructureStrict({
+                Base:OfStructure({
                     Test = TypeGuard.Instance("Folder");
                     Test2 = TypeGuard.Instance("Folder");
-                }):Check(SampleTree)
+                }):Strict():Check(SampleTree)
             ).to.equal(true)
         end)
 
@@ -196,21 +196,21 @@ return function()
                     Test22.Parent = Test
 
             expect(
-                Base:OfStructureStrict({
-                    Test = TypeGuard.Instance("Folder"):OfStructureStrict({
+                Base:OfStructure({
+                    Test = TypeGuard.Instance("Folder"):OfStructure({
                         Test2 = TypeGuard.Instance("Folder");
                         -- No Test22, should reject
-                    });
-                }):Check(SampleTree)
+                    }):Strict();
+                }):Strict():Check(SampleTree)
             ).to.equal(false)
 
             expect(
-                Base:OfStructureStrict({
-                    Test = TypeGuard.Instance("Folder"):OfStructureStrict({
+                Base:OfStructure({
+                    Test = TypeGuard.Instance("Folder"):OfStructure({
                         Test2 = TypeGuard.Instance("Folder");
                         Test22 = TypeGuard.Instance("Folder");
-                    });
-                }):Check(SampleTree)
+                    }):Strict();
+                }):Strict():Check(SampleTree)
             ).to.equal(true)
         end)
     end)

@@ -503,7 +503,7 @@ return function()
             end)
 
             it("should cache results if Cached is used on complex types", function()
-                local Check = TypeGuard.Object():OfStructureStrict({X = TypeGuard.Number()}):Cached()
+                local Check = TypeGuard.Object():OfStructure({X = TypeGuard.Number()}):Strict():Cached()
                 local Test = {X = 1}
                 expect(Check:Check(Test)).to.equal(true)
                 Test.Y = 2

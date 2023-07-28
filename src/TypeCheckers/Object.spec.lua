@@ -77,35 +77,35 @@ return function()
         end)
     end)
 
-    describe("OfStructureStrict (OfStructure + Strict)", function()
+    describe("OfStructure + Strict", function()
         it("should accept an object with the given structure", function()
-            expect(Base:OfStructureStrict({
+            expect(Base:OfStructure({
                 Test = TypeGuard.Number(),
                 Another = TypeGuard.Boolean()
-            }):Check({Test = 123, Another = true})).to.equal(true)
+            }):Strict():Check({Test = 123, Another = true})).to.equal(true)
         end)
 
         it("should reject an object with a different structure", function()
-            expect(Base:OfStructureStrict({
+            expect(Base:OfStructure({
                 Test = TypeGuard.Number(),
                 Another = TypeGuard.Boolean()
-            }):Check({Test = 123, Another = "true"})).to.equal(false)
+            }):Strict():Check({Test = 123, Another = "true"})).to.equal(false)
         end)
 
         it("should reject additional fields when not in strict mode", function()
-            expect(Base:OfStructureStrict({
+            expect(Base:OfStructure({
                 Test = TypeGuard.Number(),
                 Another = TypeGuard.Boolean()
-            }):Check({Test = 123, Another = true, Test2 = "123"})).to.equal(false)
+            }):Strict():Check({Test = 123, Another = true, Test2 = "123"})).to.equal(false)
         end)
 
         it("should recurse given sub object TypeCheckers but not enforce strict recursively", function()
-            expect(Base:OfStructureStrict({
+            expect(Base:OfStructure({
                 Test = TypeGuard.Object({
                     Test = TypeGuard.Number(),
                     Another = TypeGuard.Boolean()
                 })
-            }):Check({Test = {Test = 123, Another = true, Final = {}}})).to.equal(true)
+            }):Strict():Check({Test = {Test = 123, Another = true, Final = {}}})).to.equal(true)
         end)
     end)
 

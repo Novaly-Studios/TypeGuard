@@ -12,7 +12,6 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
 
 type ArrayTypeChecker = TypeChecker<ArrayTypeChecker, {any}> & {
     ContainsValueOfType: SelfReturn<ArrayTypeChecker, SignatureTypeChecker, number?>;
-    OfStructureStrict: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
     OfStructure: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
     MinLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
     MaxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
@@ -193,11 +192,6 @@ function ArrayClass:OfStructure(SubTypesAtPositions)
 
         return true
     end, SubTypesCopy, SubTypesAtPositions)
-end
-
---- OfStructure but strict.
-function ArrayClass:OfStructureStrict(Other)
-    return self:OfStructure(Other):Strict()
 end
 
 --- Tags this ArrayTypeChecker as strict i.e. no extra indexes allowed in OfStructure constraint.
