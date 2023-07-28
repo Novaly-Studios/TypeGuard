@@ -11,16 +11,17 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
     local Expect = Util.Expect
 
 type ArrayTypeChecker = TypeChecker<ArrayTypeChecker, {any}> & {
-    OfLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+    ContainsValueOfType: SelfReturn<ArrayTypeChecker, SignatureTypeChecker, number?>;
+    OfStructureStrict: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
+    OfStructure: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
     MinLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
     MaxLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
+    IsOrdered: SelfReturn<ArrayTypeChecker, boolean | (any?) -> boolean>;
+    IsFrozen: SelfReturn<ArrayTypeChecker>;
+    OfLength: SelfReturn<ArrayTypeChecker, number | (any?) -> number>;
     Contains: SelfReturn<ArrayTypeChecker, any>;
     OfType: SelfReturn<ArrayTypeChecker, SignatureTypeChecker>;
-    OfStructure: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
-    OfStructureStrict: SelfReturn<ArrayTypeChecker, {SignatureTypeChecker}>;
     Strict: SelfReturn<ArrayTypeChecker>;
-    IsFrozen: SelfReturn<ArrayTypeChecker>;
-    IsOrdered: SelfReturn<ArrayTypeChecker, boolean | (any?) -> boolean>;
 };
 
 local Array: TypeCheckerConstructor<ArrayTypeChecker, SignatureTypeChecker?>, ArrayClass = Template.Create("Array")
@@ -107,6 +108,35 @@ function ArrayClass:Contains(Value, StartPoint)
 
         return true
     end, Value, StartPoint)
+end
+
+--- Ensures an array contains a value satisfying the provided TypeChecker.
+function ArrayClass:ContainsValueOfType(Checker, StartPoint)
+    AssertIsTypeBase(Checker, 1)
+
+    if (StartPoint ~= nil) then
+        ExpectType(StartPoint, Expect.NUMBER_OR_FUNCTION, 2)
+    end
+
+    return self:_AddConstraint(false, "ContainsValueOfType", function(_, TargetArray, Checker, StartPoint)
+        if (StartPoint) then
+            for Index = StartPoint, #TargetArray do
+                local Value = TargetArray[Index]
+
+                if (Checker:_Check(Value)) then
+                    return true
+                end
+            end
+        else
+            for Index, Value in TargetArray do
+                if (Checker:_Check(Value)) then
+                    return true
+                end
+            end
+        end
+
+        return false, `No value in array satisfied the checker`
+    end, Checker, StartPoint)
 end
 
 --- Ensures each value in the template array satisfies the passed TypeChecker.

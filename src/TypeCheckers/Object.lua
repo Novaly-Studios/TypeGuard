@@ -11,14 +11,29 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
     local Expect = Util.Expect
 
 type ObjectTypeChecker = TypeChecker<ObjectTypeChecker, {[any]: any}> & {
-    OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
     OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
-    Strict: SelfReturn<ObjectTypeChecker>;
+    CheckMetatable: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     OfValueType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
+    OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
     OfKeyType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     IsFrozen: SelfReturn<ObjectTypeChecker>;
-    CheckMetatable: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
     OfClass: SelfReturn<ObjectTypeChecker, any>;
+    Strict: SelfReturn<ObjectTypeChecker>;
+};
+
+type _ObjectTypeChecker<T> = TypeChecker<ObjectTypeChecker, T> & {
+    ContainsValueOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>; -- To test
+    ContainsKeyOfType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>; -- To test
+    OfStructureStrict: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
+    CheckMetatable: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
+    OfValueType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
+    OfStructure: SelfReturn<ObjectTypeChecker, {[any]: SignatureTypeChecker}>;
+    OfKeyType: SelfReturn<ObjectTypeChecker, SignatureTypeChecker>;
+    IsFrozen: SelfReturn<ObjectTypeChecker>;
+    MinSize: SelfReturn<ObjectTypeChecker, number>; -- To test
+    MaxSize: SelfReturn<ObjectTypeChecker, number>; -- To test
+    OfClass: SelfReturn<ObjectTypeChecker, any>;
+    Strict: SelfReturn<ObjectTypeChecker>;
 };
 
 local Object: TypeCheckerConstructor<ObjectTypeChecker, {[any]: SignatureTypeChecker}?>, ObjectClass = Template.Create("Object")
@@ -158,6 +173,76 @@ function ObjectClass:OfClass(Class)
     assert(Class.__index, "Class must have an __index")
 
     return self:CheckMetatable(Object():Equals(Class))
+end
+
+--- Checks if an object contains a value which satisfies the given TypeChecker.
+function ObjectClass:ContainsValueOfType(Checker)
+    AssertIsTypeBase(Checker, 1)
+
+    return self:_AddConstraint(false, "ContainsValueOfType", function(_, TargetObject, Checker)
+        for _, Value in TargetObject do
+            local Success = Checker:_Check(Value)
+
+            if (Success) then
+                return true
+            end
+        end
+
+        return false, `[ContainsValueOfType] did not contain any values which satisfied {Checker}`
+    end, Checker)
+end
+
+--- Checks if an object contains a value which satisfies the given TypeChecker.
+function ObjectClass:ContainsKeyOfType(Checker)
+    AssertIsTypeBase(Checker, 1)
+
+    return self:_AddConstraint(false, "ContainsKeyOfType", function(_, TargetObject, Checker)
+        for Key in TargetObject do
+            local Success = Checker:_Check(Key)
+
+            if (Success) then
+                return true
+            end
+        end
+
+        return false, `[ContainsKeyOfType] did not contain any values which satisfied {Checker}`
+    end, Checker)
+end
+
+function ObjectClass:MinSize(MinSize)
+    ExpectType(MinSize, Expect.NUMBER_OR_FUNCTION, 1)
+
+    return self:_AddConstraint(true, "MinSize", function(_, TargetObject, MinSize)
+        local Count = 0
+
+        for _ in TargetObject do
+            Count += 1
+        end
+
+        if (Count < MinSize) then
+            return false, `[MinSize] expected at least {MinSize} elements, got {Count}`
+        end
+
+        return true
+    end, MinSize)
+end
+
+function ObjectClass:MaxSize(MaxSize)
+    ExpectType(MaxSize, Expect.NUMBER_OR_FUNCTION, 1)
+
+    return self:_AddConstraint(true, "MaxSize", function(_, TargetObject, MaxSize)
+        local Count = 0
+
+        for _ in TargetObject do
+            Count += 1
+        end
+
+        if (Count > MaxSize) then
+            return false, `[MaxSize] expected at most {MaxSize} elements, got {Count}`
+        end
+
+        return true
+    end, MaxSize)
 end
 
 ObjectClass.InitialConstraint = ObjectClass.OfStructure

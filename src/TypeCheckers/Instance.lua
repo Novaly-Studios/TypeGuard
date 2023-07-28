@@ -15,18 +15,19 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
     local Expect = Util.Expect
 
 type InstanceTypeChecker = TypeChecker<InstanceTypeChecker, Instance> & {
-    OfStructure: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
     OfStructureStrict: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
-    IsA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-    Strict: SelfReturn<InstanceTypeChecker>;
-    IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
-    IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
-    HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-    HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
-    CheckAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string, SignatureTypeChecker>;
-    HasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
-    HasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
     CheckAttributes: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker} | (any?) -> {[string]: SignatureTypeChecker}>;
+    IsDescendantOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+    CheckAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string, SignatureTypeChecker>;
+    HasAttributes: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+    IsAncestorOf: SelfReturn<InstanceTypeChecker, Instance | (any?) -> Instance>;
+    HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+    OfChildType: SelfReturn<InstanceTypeChecker, SignatureTypeChecker>;
+    OfStructure: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
+    HasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
+    HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
+    Strict: SelfReturn<InstanceTypeChecker>;
+    IsA: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
 };
 
 local function Get(Inst, Key)
@@ -98,6 +99,23 @@ function InstanceCheckerClass:IsA(InstanceIsA)
 
         return true
     end, InstanceIsA)
+end
+
+--- Checks that all children of an Instance satisfy the given TypeChecker.
+function InstanceCheckerClass:OfChildType(Checker)
+    AssertIsTypeBase(Checker, 1)
+
+    return self:_AddConstraint(true, "OfChildType", function(_, InstanceRoot, Checker)
+        for _, Child in InstanceRoot:GetChildren() do
+            local Success, Result = Checker:_Check(Child)
+
+            if (not Success) then
+                return false, `Child {Child.Name} did not satisfy the given TypeChecker - {Result}`
+            end
+        end
+
+        return true
+    end, Checker)
 end
 
 --- Activates strict tag for OfStructure.

@@ -1,4 +1,9 @@
 --!nonstrict
+-- Allows easy command bar paste.
+if (not script) then
+    script = game:GetService("ReplicatedFirst").TypeGuard
+end
+
 local Util = require(script:WaitForChild("Util"))
     local CreateStandardInitial = Util.CreateStandardInitial
     local AssertIsTypeBase = Util.AssertIsTypeBase
@@ -32,28 +37,13 @@ end
 -- Complex type checker imports...
 do
     TypeGuard.Number = require(TypeCheckers:WaitForChild("Number"))
-    TypeGuard.number = TypeGuard.Number
-
     TypeGuard.String = require(TypeCheckers:WaitForChild("String"))
-    TypeGuard.string = TypeGuard.String
-
     TypeGuard.Array = require(TypeCheckers:WaitForChild("Array"))
-    TypeGuard.array = TypeGuard.Array
-
     TypeGuard.Object = require(TypeCheckers:WaitForChild("Object"))
-    TypeGuard.object = TypeGuard.Object
-
     TypeGuard.Instance = require(TypeCheckers:WaitForChild("Instance"))
-    TypeGuard.instance = TypeGuard.Instance
-
     TypeGuard.Enum = require(TypeCheckers:WaitForChild("Enum"))
-    TypeGuard.enum = TypeGuard.Enum
-
     TypeGuard.Thread = require(TypeCheckers:WaitForChild("Thread"))
-    TypeGuard.thread = TypeGuard.Thread
-
     TypeGuard.Any = require(TypeCheckers:WaitForChild("Any"))
-    TypeGuard.any = TypeGuard.Any
 end
 
 -- Luau data types must be manually enumerated here because the LSP will not autosuggest them otherwise...
@@ -98,19 +88,10 @@ do
 
     -- Extra base Lua data types
     TypeGuard.Function = TypeGuard.FromTypeSample("function", function() end)
-    TypeGuard.lfunction = TypeGuard.Function
-
     TypeGuard.Userdata = TypeGuard.FromTypeSample("userdata", newproxy(true))
-    TypeGuard.luserdata = TypeGuard.Userdata
-
     TypeGuard.Nil = TypeGuard.FromTypeSample("nil", nil)
-    TypeGuard.lnil = TypeGuard.Nil
-
     TypeGuard.Table = TypeGuard.FromTypeSample("table", {})
-    TypeGuard.table = TypeGuard.Table
-
     TypeGuard.Boolean = TypeGuard.FromTypeSample("boolean", true)
-    TypeGuard.boolean = TypeGuard.Boolean
 end
 
 -- Core functions...
@@ -166,11 +147,10 @@ do
             debug.profileend()
         end
     end
-    TypeGuard.params = TypeGuard.Params
 
     local VariadicParams = TypeGuard.Params(ValidTypeChecker)
     --- Creates a function which checks variadic params against a single given TypeChecker.
-    function TypeGuard.Variadic(CompareType: SignatureTypeChecker)
+    function TypeGuard.Variadic<T>(CompareType: TypeChecker<any, T>): ((...T) -> ())
         VariadicParams(CompareType)
 
         local Script = _GetScript()
@@ -189,7 +169,7 @@ do
 
             for Index = 1, Size do
                 local Arg = select(Index, ...)
-                local Success, Message = (CompareType :: SignatureTypeCheckerInternal):_Check(Arg)
+                local Success, Message = CompareType:_Check(Arg)
 
                 if (not Success) then
                     error(`Invalid argument #{Index} ({Message}).`)
@@ -199,7 +179,6 @@ do
             debug.profileend()
         end
     end
-    TypeGuard.variadic = TypeGuard.Variadic
 
     local ParamsWithContextParams = TypeGuard.Variadic(ValidTypeChecker)
     --- Creates a function which checks params as if they were a strict Array checker, using context as the first param; context is passed down to functional constraint args.
@@ -243,11 +222,10 @@ do
             debug.profileend()
         end
     end
-    TypeGuard.paramsWithContext = TypeGuard.ParamsWithContext
 
     local VariadicWithContextParams = TypeGuard.Params(ValidTypeChecker)
     --- Creates a function which checks variadic params against a single given TypeChecker, using context as the first param; context is passed down to functional constraint args.
-    function TypeGuard.VariadicWithContext(CompareType: SignatureTypeChecker)
+    function TypeGuard.VariadicWithContext<T>(CompareType: TypeChecker<any, T>): ((any?, ...T) -> ())
         VariadicWithContextParams(CompareType)
 
         local Script = _GetScript()
@@ -255,7 +233,7 @@ do
                                             then ScriptNameToContextEnabled[Script]
                                             else true
 
-        return function(Context: any?, ...)
+        return function(Context, ...)
             if (not ScriptNameToContextEnabled[Script]) then
                 return
             end
@@ -266,7 +244,7 @@ do
 
             for Index = 1, Size do
                 local Arg = select(Index, ...)
-                local Success, Message = (CompareType :: SignatureTypeCheckerInternal):WithContext(Context):Check(Arg)
+                local Success, Message = CompareType:WithContext(Context):Check(Arg)
 
                 if (not Success) then
                     error(`Invalid argument #{Index} ({Message}).`)
@@ -276,41 +254,6 @@ do
             debug.profileend()
         end
     end
-    TypeGuard.variadicWithContext = TypeGuard.VariadicWithContext
-
-    local WrapFunctionParamsParams1 = TypeGuard.Params(TypeGuard.Function())
-    local WrapFunctionParamsParams2 = TypeGuard.Variadic(ValidTypeChecker)
-    --- Wraps a function in a param checker function.
-    function TypeGuard.WrapFunctionParams(Call: (...any) -> (...any), ...: SignatureTypeChecker)
-        WrapFunctionParamsParams1(Call)
-        WrapFunctionParamsParams2(...)
-
-        for Index = 1, select("#", ...) do
-            AssertIsTypeBase(select(Index, ...), Index)
-        end
-
-        local ParamChecker = TypeGuard.Params(...)
-
-        return function(...)
-            ParamChecker(...)
-            return Call(...)
-        end
-    end
-    TypeGuard.wrapFunctionParams = TypeGuard.WrapFunctionParams
-
-    local WrapFunctionVariadicParams = TypeGuard.Params(TypeGuard.Function(), ValidTypeChecker)
-    --- Wraps a function in a variadic param checker function.
-    function TypeGuard.WrapFunctionVariadic(Call: (...any) -> (...any), VariadicParamType: SignatureTypeChecker)
-        WrapFunctionVariadicParams(Call, VariadicParamType)
-
-        local ParamChecker = TypeGuard.Variadic(VariadicParamType)
-
-        return function(...)
-            ParamChecker(...)
-            return Call(...)
-        end
-    end
-    TypeGuard.wrapFunctionVariadic = TypeGuard.WrapFunctionVariadic
 
     local Primitives = {
         ["nil"] = "Nil";

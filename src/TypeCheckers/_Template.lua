@@ -35,6 +35,7 @@ export type TypeCheckerConstructor<T, P...> = ((P...) -> T)
 
 export type TypeChecker<ExtensionClass, Primitive> = {
     _TC: true;
+    _P: Primitive;
 
     -- Methods available in all TypeCheckers.
     FailMessage: SelfReturn<ExtensionClass, string>;

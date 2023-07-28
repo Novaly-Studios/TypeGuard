@@ -11,8 +11,8 @@ local Util = require(script.Parent.Parent:WaitForChild("Util"))
 type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
     MinLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
     MaxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
-    Pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     Contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+    Pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
 };
 
 local String: TypeCheckerConstructor<StringTypeChecker, ...string?>, StringClass = Template.Create("String")
