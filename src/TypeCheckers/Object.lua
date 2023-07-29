@@ -139,7 +139,7 @@ end
 function ObjectClass:CheckMetatable(Checker)
     AssertIsTypeBase(Checker, 1)
 
-    return self:_AddConstraint(true, "CheckMetatable", function(_, TargetObject, Checker)
+    return self:_AddConstraint(false, "CheckMetatable", function(_, TargetObject, Checker)
         local Success, Message = Checker:_Check(getmetatable(TargetObject))
 
         if (Success) then
