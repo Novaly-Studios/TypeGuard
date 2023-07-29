@@ -110,8 +110,6 @@ do
         end
 
         return function(...)
-            debug.profilebegin("TG.P")
-
             local Size = select("#", ...)
 
             if (Size > ArgSize) then
@@ -126,8 +124,6 @@ do
                     error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
-
-            debug.profileend()
         end
     end
 
@@ -137,8 +133,6 @@ do
         VariadicParams(CompareType)
 
         return function(...)
-            debug.profilebegin("TG.V")
-
             local Size = select("#", ...)
 
             for Index = 1, Size do
@@ -149,8 +143,6 @@ do
                     error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
-
-            debug.profileend()
         end
     end
 
@@ -167,8 +159,6 @@ do
         end
 
         return function(Context: any?, ...)
-            debug.profilebegin("TG.P+")
-
             local Size = select("#", ...)
 
             if (Size > ArgSize) then
@@ -183,8 +173,6 @@ do
                     error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
-
-            debug.profileend()
         end
     end
 
@@ -194,8 +182,6 @@ do
         VariadicWithContextParams(CompareType)
 
         return function(Context, ...)
-            debug.profilebegin("TG.V+")
-
             local Size = select("#", ...)
 
             for Index = 1, Size do
@@ -206,8 +192,6 @@ do
                     error(`Invalid argument #{Index} ({Message}).`)
                 end
             end
-
-            debug.profileend()
         end
     end
 
