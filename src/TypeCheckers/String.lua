@@ -70,6 +70,7 @@ function StringClass:Contains(SubstringValue)
     end, SubstringValue)
 end
 
+-- This can be optimized with custom implementation using arg select.
 local IsAValueIn = Template.BaseMethods.IsAValueIn
 StringClass.InitialConstraintsDirectVariadic = function(self, ...)
     return IsAValueIn(self, {...})

@@ -27,7 +27,7 @@ function ThreadCheckerClass:HasStatus(Status)
             return true
         end
 
-        return false, `Expected thread to have status '{Status}', got {CurrentStatus}`
+        return false, `Expected thread to have status {Status}, got {CurrentStatus}`
     end, Status)
 end
 

@@ -23,6 +23,7 @@ type InstanceTypeChecker = TypeChecker<InstanceTypeChecker, Instance> & {
     HasAttribute: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
     OfChildType: SelfReturn<InstanceTypeChecker, SignatureTypeChecker>;
     OfStructure: SelfReturn<InstanceTypeChecker, {[string]: SignatureTypeChecker}>;
+    HasChild: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
     HasTags: SelfReturn<InstanceTypeChecker, {string} | (any?) -> {string}>;
     HasTag: SelfReturn<InstanceTypeChecker, string | (any?) -> string>;
     Strict: SelfReturn<InstanceTypeChecker>;
