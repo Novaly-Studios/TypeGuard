@@ -49,11 +49,11 @@ function StringClass:Pattern(PatternString)
     ExpectType(PatternString, Expect.STRING_OR_FUNCTION, 1)
 
     return self:_AddConstraint(false, "Pattern", function(_, Item, Pattern)
-        if (string.match(Item, Pattern) ~= Item) then
-            return false, `String does not match pattern {Pattern}`
+        if (string.match(Item, Pattern) == Item) then
+            return true
         end
 
-        return true
+        return false, `String does not match pattern {Pattern}`
     end, PatternString)
 end
 
@@ -62,11 +62,11 @@ function StringClass:Contains(SubstringValue)
     ExpectType(SubstringValue, Expect.STRING_OR_FUNCTION, 1)
 
     return self:_AddConstraint(false, "Contains", function(_, Item, Substring)
-        if (string.find(Item, Substring) == nil) then
-            return false, `String does not contain substring {Substring}`
+        if (string.match(Item, Substring)) then
+            return true
         end
 
-        return true
+        return false, `String does not contain substring {Substring}`
     end, SubstringValue)
 end
 
