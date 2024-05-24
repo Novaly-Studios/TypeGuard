@@ -70,6 +70,17 @@ function StringClass:Contains(SubstringValue)
     end, SubstringValue)
 end
 
+--- Ensures a string is valid UTF-8.
+function StringClass:IsUTF8()
+    return self:_AddConstraint(true, "IsUTF8", function(_, Item)
+        if (utf8.len(Item)) then
+            return true
+        end
+
+        return false, "String is not valid UTF-8"
+    end)
+end
+
 -- This can be optimized with custom implementation using arg select.
 local IsAValueIn = Template.BaseMethods.IsAValueIn
 StringClass.InitialConstraintsDirectVariadic = function(self, ...)
