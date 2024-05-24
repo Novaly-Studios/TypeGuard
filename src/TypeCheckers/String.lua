@@ -13,6 +13,7 @@ type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
     MaxLength: SelfReturn<StringTypeChecker, number | (any?) -> number>;
     Contains: SelfReturn<StringTypeChecker, string | (any?) -> string>;
     Pattern: SelfReturn<StringTypeChecker, string | (any?) -> string>;
+    IsUTF8: SelfReturn<StringTypeChecker, string | (any?) -> boolean>;
 };
 
 local String: TypeCheckerConstructor<StringTypeChecker, ...string?>, StringClass = Template.Create("String")
@@ -73,7 +74,7 @@ end
 --- Ensures a string is valid UTF-8.
 function StringClass:IsUTF8()
     return self:_AddConstraint(true, "IsUTF8", function(_, Item)
-        if (utf8.len(Item)) then
+        if (utf8.len(Item) ~= nil) then
             return true
         end
 
