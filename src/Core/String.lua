@@ -23,6 +23,7 @@ type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
     MaxLength: ((StringTypeChecker, MaxLength: FunctionalArg<number>) -> (StringTypeChecker));
     Contains: ((StringTypeChecker, Search: FunctionalArg<string>) -> (StringTypeChecker));
     Pattern: ((StringTypeChecker, Pattern: FunctionalArg<string>) -> (StringTypeChecker));
+    IsUTF8: SelfReturn<StringTypeChecker, string | (any?) -> boolean>;
 };
 
 local String: ((PossibleValue: FunctionalArg<string?>, ...FunctionalArg<string?>) -> (StringTypeChecker)), StringClass = Template.Create("String")
@@ -66,6 +67,17 @@ function StringClass:Pattern(PatternString)
 
         return false, `String does not match pattern {Pattern}`
     end, PatternString)
+end
+
+--- Ensures a string is valid UTF-8.
+function StringClass:IsUTF8()
+    return self:_AddConstraint(true, "IsUTF8", function(_, Item)
+        if (utf8.len(Item) ~= nil) then
+            return true
+        end
+
+        return false, "String is not valid UTF-8"
+    end)
 end
 
 --- Ensures a string contains a certain substring.
