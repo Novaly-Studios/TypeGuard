@@ -149,6 +149,39 @@ local Checker = TypeGuard.FromTemplate({
 -- ^ created a deep Object TypeChecker
 ```
 
+### 10: serialization & deserialization
+
+```lua
+local Any = TypeGuard.BaseAny(1) -- Version 1 of Any serialization scheme.
+local Serialize1 = Any:Serialize({
+    X = 1;
+    Y = 2;
+    P = {"AHHHH", "----", { 
+        Q = true;
+        R = false;
+    }};
+})
+print(Any:Deserialize(Serialize1))
+
+local TestObject = TypeGuard.Object({
+    X = TypeGuard.Number(0, 100);
+    Y = TypeGuard.Number(0, 10):Integer();
+    Z = TypeGuard.String():MaxLenght(1000);
+
+    W = TypeGuard.Optional(TypeGuard.Object():OfKeyType(TypeGuard.Boolean()):OfValueType(TypeGuard.String()));
+})
+local Serialize2 = TestObject:Serialize({
+    X = 1;
+    Y = 2;
+    Z = "------------";
+    W = {
+        [true] = "H";
+        [false] = "H";
+    };
+})
+print(TestObject:Deserialize(Serialize2))
+```
+
 
 ## Best Practices
 Avoid construction or copying of TypeCheckers for performance reasons. TypeCheckers are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.
