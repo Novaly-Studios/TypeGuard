@@ -59,7 +59,7 @@ return function()
 
         it("should reject a 1 time constraint if instantiated more than once on a checker", function()
             expect(function()
-                Base:GreaterThan(3):GreaterThan(5)
+                Base:Equals(3):Equals(5)
             end).to.throw()
         end)
     end)
@@ -308,17 +308,6 @@ return function()
 
     -- These behaviors extend to all TypeChecker implementations
     describe("TypeChecker", function()
-        describe("Optional", function()
-            it("should accept nil as a checked value", function()
-                expect(TypeGuard.Number():Optional():Check(nil)).to.equal(true)
-            end)
-
-            it("should accept the target constraint as a checked value if not nil", function()
-                expect(TypeGuard.Number():Optional():Check(1)).to.equal(true)
-                expect(TypeGuard.Number():Optional():Check("Test")).to.equal(false)
-            end)
-        end)
-
         describe("Alias", function()
             it("should reject non-string args", function()
                 expect(function()
@@ -406,73 +395,6 @@ return function()
                 local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
                 expect(Check:Check("Test")).to.equal(false)
                 expect(Check:Check({})).to.equal(false)
-            end)
-        end)
-
-        describe("And", function()
-            it("should reject non-TypeChecker args", function()
-                expect(function()
-                    TypeGuard.Number():And(1)
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():And({})
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():And(true)
-                end).to.throw()
-            end)
-
-            it("should accept TypeChecker args", function()
-                expect(function()
-                    TypeGuard.Number():And(TypeGuard.Number())
-                end).never.to.throw()
-
-                expect(function()
-                    TypeGuard.Number():And(TypeGuard.String())
-                end).never.to.throw()
-
-                expect(function()
-                    TypeGuard.Number():And(TypeGuard.Array())
-                end).never.to.throw()
-            end)
-
-            it("should reject inputs if they do not satisfy at least one TypeChecker in the and chain", function()
-                local Check = TypeGuard.Number():And(TypeGuard.Boolean())
-                expect(Check:Check(1)).to.equal(false)
-                expect(Check:Check(true)).to.equal(false)
-                expect(Check:Check(false)).to.equal(false)
-            end)
-
-            it("should accept inputs if they satisfy all TypeCheckers in the and chain and reject if they do not (for objects)", function()
-                local Check = TypeGuard.Object():OfStructure({X = TypeGuard.Number()})
-                                :And(TypeGuard.Object():OfStructure({Y = TypeGuard.String()}))
-                                :And(TypeGuard.Object():OfStructure({Z = TypeGuard.Boolean()}))
-
-                expect(Check:Check({X = 1, Y = "A", Z = false})).to.equal(true)
-                expect(Check:Check({X = 1})).to.equal(false)
-                expect(Check:Check({X = 1, Y = "A", Z = {}})).to.equal(false)
-            end)
-
-            it("should accept inputs if they satisfy all TypeCheckers in the and chain and reject if they do not (for Instances)", function()
-                local Check = TypeGuard.Instance():OfStructure({Name = TypeGuard.String()})
-                              :And(TypeGuard.Instance():OfStructure({
-                                  SomeChild = TypeGuard.Instance();
-                              }))
-
-                local TestInstance = Instance.new("Folder")
-                    local SomeChild = Instance.new("Folder")
-                    SomeChild.Name = "SomeChild"
-                    SomeChild.Parent = TestInstance
-
-                local TestInstance2 = Instance.new("Folder")
-                    local SomeChild2 = Instance.new("Folder")
-                    SomeChild2.Name = "SomeChild2"
-                    SomeChild2.Parent = TestInstance2
-
-                expect(Check:Check(TestInstance)).to.equal(true)
-                expect(Check:Check(TestInstance2)).to.equal(false)
             end)
         end)
 

@@ -1,0 +1,13 @@
+- Array, Disjunction: add _MapCheckers (ideally generic in _Template) [x]
+- Disjunction: if passed another Disjunction, then concatenate [x]
+- Disjunction: rename to Or [x]
+- Disjunction: add GetTypeIndex for quick type checking [x]
+- Template: if IsAValueIn -> serialize & deserialize into a Disjunction
+- Template: move LessThan, LessThanOrEqualTo, GreaterThan, GreaterThanOrEqualTo from Template to Number
+- Template: rename GetConstraint to _GetConstraint, GetConstraints to _GetConstraints
+- Object: support OfKeyType and OfValueType combinations [x]
+- Object: support And merge [x]
+- Enum: build on top of Disjunction so it flattens?
+- All: add functional param generic [x]
+- All: name the params [x]
+- All: functional constraints support for serialization (just resort to worst case scenario due to uncertainty)

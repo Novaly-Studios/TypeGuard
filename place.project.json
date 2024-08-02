@@ -9,6 +9,11 @@
 			"TypeGuard": {
 				"$path": "src"
 			}
+		},
+		"ServerScriptService": {
+			"$ignoreUnknownInstances": true,
+			"$className": "ServerScriptService",
+			"$path": "src/TestServerScripts"
 		}
 	}
 }

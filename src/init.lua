@@ -1,4 +1,7 @@
+--!native
+--!optimize 2
 --!nonstrict
+
 -- Allows easy command bar paste.
 if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard
@@ -7,15 +10,18 @@ end
 local Util = require(script:WaitForChild("Util"))
     local CreateStandardInitial = Util.CreateStandardInitial
     local AssertIsTypeBase = Util.AssertIsTypeBase
+    local ByteSerializer = Util.ByteSerializer
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local TypeCheckers = script:WaitForChild("TypeCheckers")
-    local Template = require(TypeCheckers:WaitForChild("_Template"))
-        type SignatureTypeCheckerInternal = Template.SignatureTypeCheckerInternal
-        type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
-        type SignatureTypeChecker = Template.SignatureTypeChecker
-        type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
+local Roblox = script.Roblox
+local Core = script.Core
+
+local Template = require(script:WaitForChild("_Template"))
+    type SignatureTypeCheckerInternal = Template.SignatureTypeCheckerInternal
+    type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
+    type SignatureTypeChecker = Template.SignatureTypeChecker
+    type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
 
 local TypeGuard = {
     CreateTemplate = Template.Create;
@@ -23,75 +29,65 @@ local TypeGuard = {
 }
 
 --- This provides an easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof.
-function TypeGuard.FromTypeSample<T>(TypeName: string, Sample: T)
+local FromTypeSample = function(TypeName, Sample, Serialize, Deserialize)
     ExpectType(TypeName, Expect.STRING, 1)
 
     local CheckerFunction, CheckerClass = Template.Create(TypeName)
     CheckerClass._Initial = CreateStandardInitial(TypeName)
     CheckerClass.InitialConstraint = CheckerClass.Equals
 
-    type CustomTypeChecker = TypeChecker<CustomTypeChecker, T>
-    return CheckerFunction :: TypeCheckerConstructor<CustomTypeChecker>
-end
+    if (Serialize) then
+        if (type(Serialize) == "table") then
+            CheckerClass._Serialize = Serialize._Serialize
+            CheckerClass._Deserialize = Serialize._Deserialize
+        else
+            CheckerClass._Serialize = Serialize
+            CheckerClass._Deserialize = Deserialize
+        end
+    end
+
+    return CheckerFunction
+end ::
+    (<T>(TypeName: string, Sample: T, Serialize: ((typeof(ByteSerializer()), T) -> ()), Deserialize: ((typeof(ByteSerializer())) -> T)) -> (TypeCheckerConstructor<TypeChecker<any, T>>)) &
+    (<T>(TypeName: string, Sample: T, Serialize: TypeChecker<any, T>) -> (TypeCheckerConstructor<TypeChecker<any, T>>)) &
+    (<T>(TypeName: string, Sample: T) -> (TypeCheckerConstructor<TypeChecker<any, T>>))
+
+TypeGuard.FromTypeSample = FromTypeSample
 
 -- Complex type checker imports...
 do
-    TypeGuard.Number = require(TypeCheckers:WaitForChild("Number"))
-    TypeGuard.String = require(TypeCheckers:WaitForChild("String"))
-    TypeGuard.Array = require(TypeCheckers:WaitForChild("Array"))
-    TypeGuard.Object = require(TypeCheckers:WaitForChild("Object"))
-    TypeGuard.Instance = require(TypeCheckers:WaitForChild("Instance"))
-    TypeGuard.Enum = require(TypeCheckers:WaitForChild("Enum"))
-    TypeGuard.Thread = require(TypeCheckers:WaitForChild("Thread"))
-    TypeGuard.Any = require(TypeCheckers:WaitForChild("Any"))
+    TypeGuard.Function = require(Core.Function)
+    TypeGuard.Boolean = require(Core.Boolean)
+    TypeGuard.BaseAny = require(Core.BaseAny)
+    TypeGuard.Number = require(Core.Number)
+    TypeGuard.String = require(Core.String)
+    TypeGuard.Object = require(Core.Object)
+    TypeGuard.Thread = require(Core.Thread)
+    TypeGuard.Buffer = require(Core.Buffer)
+    TypeGuard.Array = require(Core.Array)
+    TypeGuard.Nil = require(Core.Nil)
+    TypeGuard.Or = require(Core.Or)
 end
 
 -- Luau data types must be manually enumerated here because the LSP will not autosuggest them otherwise...
 do
-    local Any: any = {}
-    local Sample = TypeGuard.FromTypeSample
-
-    TypeGuard.Axes = Sample("Axes", Axes.new())
-    TypeGuard.BrickColor = Sample("BrickColor", BrickColor.Black())
-    TypeGuard.CatalogSearchParams = Sample("CatalogSearchParams", CatalogSearchParams.new())
-    TypeGuard.CFrame = Sample("CFrame", CFrame.new())
-    TypeGuard.Color3 = Sample("Color3", Color3.new())
-    TypeGuard.ColorSequence = Sample("ColorSequence", ColorSequence.new(Color3.new()))
-    TypeGuard.ColorSequenceKeypoint = Sample("ColorSequenceKeypoint", ColorSequenceKeypoint.new(0, Color3.new()))
-    TypeGuard.DateTime = Sample("DateTime", DateTime.now())
-    TypeGuard.DockWidgetPluginGuiInfo = Sample("DockWidgetPluginGuiInfo", DockWidgetPluginGuiInfo.new())
-    TypeGuard.Enums = Sample("Enums", Enum)
-    TypeGuard.Faces = Sample("Faces", Faces.new())
-    TypeGuard.FloatCurveKey = Sample("FloatCurveKey", Any)
-    TypeGuard.NumberRange = Sample("NumberRange", NumberRange.new(0, 0))
-    TypeGuard.NumberSequence = Sample("NumberSequence", NumberSequence.new(1))
-    TypeGuard.NumberSequenceKeypoint = Sample("NumberSequenceKeypoint", NumberSequenceKeypoint.new(1, 1))
-    TypeGuard.OverlapParams = Sample("OverlapParams", OverlapParams.new())
-    TypeGuard.PathWaypoint = Sample("PathWaypoint", PathWaypoint.new(Vector3.new(), Enum.PathWaypointAction.Jump))
-    TypeGuard.PhysicalProperties = Sample("PhysicalProperties", PhysicalProperties.new(Enum.Material.Air))
-    TypeGuard.Random = Sample("Random", Random.new())
-    TypeGuard.Ray = Sample("Ray", Ray.new(Vector3.new(), Vector3.new()))
-    TypeGuard.RaycastParams = Sample("RaycastParams", RaycastParams.new())
-    TypeGuard.RaycastResult = Sample("RaycastResult", Any)
-    TypeGuard.RBXScriptConnection = Sample("RBXScriptConnection", Instance.new("BindableEvent").Event:Connect(function() end))
-    TypeGuard.RBXScriptSignal = Sample("RBXScriptSignal", Instance.new("BindableEvent").Event)
-    TypeGuard.Rect = Sample("Rect", Rect.new(Vector2.new(), Vector2.new()))
-    TypeGuard.Region3 = Sample("Region3", Region3.new(Vector3.new(), Vector3.new()))
-    TypeGuard.Region3int16 = Sample("Region3int16", Region3int16.new(Vector3int16.new(), Vector3int16.new()))
-    TypeGuard.TweenInfo = Sample("TweenInfo", TweenInfo.new())
-    TypeGuard.UDim = Sample("UDim", UDim.new())
-    TypeGuard.UDim2 = Sample("UDim2", UDim2.new())
-    TypeGuard.Vector2 = Sample("Vector2", Vector2.new())
-    TypeGuard.Vector2int16 = Sample("Vector2int16", Vector2int16.new(0, 0))
-    TypeGuard.Vector3 = Sample("Vector3", Vector3.new())
-    TypeGuard.Vector3int16 = Sample("Vector3int16", Vector3int16.new())
-
-    -- Extra base Lua data types
-    TypeGuard.Function = TypeGuard.FromTypeSample("function", function() end)
-    TypeGuard.Userdata = TypeGuard.FromTypeSample("userdata", newproxy(true))
-    TypeGuard.Nil = TypeGuard.FromTypeSample("nil", nil)
-    TypeGuard.Table = TypeGuard.FromTypeSample("table", {})
-    TypeGuard.Boolean = TypeGuard.FromTypeSample("boolean", true)
+    -- Roblox Luau data types.
+    TypeGuard.CFrame = require(Roblox.CFrame)
+    TypeGuard.Color3 = require(Roblox.Color3)
+    TypeGuard.ColorSequence = require(Roblox.ColorSequence)
+    TypeGuard.ColorSequenceKeypoint = require(Roblox.ColorSequenceKeypoint)
+    TypeGuard.Enum = require(Roblox.Enum)
+    TypeGuard.Instance = require(Roblox.Instance)
+    TypeGuard.NumberSequence = require(Roblox.NumberSequence)
+    TypeGuard.UDim = require(Roblox.UDim)
+    TypeGuard.UDim2 = require(Roblox.UDim2)
+    TypeGuard.Vector2 = require(Roblox.Vector2)
+    TypeGuard.Vector3 = require(Roblox.Vector3)
+    TypeGuard.TweenInfo = require(Roblox.TweenInfo)
+    TypeGuard.Ray = require(Roblox.Ray)
+    TypeGuard.Any = require(Roblox.Any)
+    TypeGuard.NumberSequenceKeypoint = require(Roblox.NumberSequenceKeypoint)
+    TypeGuard.NumberSequence = require(Roblox.NumberSequence)
 end
 
 -- Core functions...
@@ -137,7 +133,7 @@ do
 
             for Index = 1, Size do
                 local Arg = select(Index, ...)
-                local Success, Message = CompareType:_Check(Arg)
+                local Success, Message = (CompareType :: any):_Check(Arg)
 
                 if (not Success) then
                     error(`Invalid argument #{Index} ({Message}).`)
@@ -199,6 +195,7 @@ do
         ["nil"] = "Nil";
         ["string"] = "String";
         ["number"] = "Number";
+        ["buffer"] = "Buffer";
         ["thread"] = "Thread";
         ["boolean"] = "Boolean";
         ["function"] = "Function";
@@ -263,7 +260,7 @@ do
         return Constructor()
     end
 
-    local FromTemplateParams = TypeGuard.Params(TypeGuard.Boolean():Optional())
+    local FromTemplateParams = TypeGuard.Params(TypeGuard.Or(TypeGuard.Boolean(), TypeGuard.Nil()))
     --- Creates a TypeChecker from a template table.
     function TypeGuard.FromTemplate(Subject: any, Strict: boolean?)
         FromTemplateParams(Strict)

@@ -1,0 +1,12 @@
+{
+	"name": "TableUtil",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedFirst": {
+			"$className": "ReplicatedFirst",
+			"TableUtil": {
+				"$path": "src"
+			}
+		}
+	}
+}

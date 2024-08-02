@@ -1,6 +1,6 @@
 # TypeGuard
 
-A runtime assertion & type-checking library. This aims to replace most assertions and manual type checks with a consistent, callable pattern.
+A runtime assertion, type-checking, and serialization library. This aims to replace most assertions and manual type checks with a consistent, callable pattern.
 
 ## Usage Examples
 
@@ -21,7 +21,6 @@ end
 ### 2: each provided arg must be an integer
 ```lua
 local AssertSumInts = TypeGuard.Variadic(TypeGuard.Number():Integer())
-
 local function SumInts(...: number)
     AssertSumInts(...)
     -- ...
@@ -31,10 +30,11 @@ end
 ### 3: TypeChecker disjunction with a custom failure message
 ```lua
 local AssertStringOrNumberOrBoolean = TypeGuard.Params(
-    TypeGuard.String()
-        :Or(TypeGuard.Number())
-        :Or(TypeGuard.Boolean())
-        :FailMessage("expected a string, number, or boolean")
+    TypeGuard.Or(
+        TypeGuard.String()
+        TypeGuard.Number()
+        TypeGuard.Boolean()
+    ):FailMessage("expected a string, number, or boolean")
 )
 
 local function Test(Input: string | number | boolean)
@@ -46,18 +46,13 @@ end
 ### 4: TypeChecker conjunction
 ```lua
 local AssertStructureCombined = TypeGuard.Params(
-    -- 'And' only really makes sense on non-strict structural checks for arrays, objects, and Instances
     TypeGuard.Object({
         X = TypeGuard.Number();
-    }):And(
-        TypeGuard.Object({
-            Y = TypeGuard.Number();
-        })
-    ):And(
-        TypeGuard.Object({
-            Z = TypeGuard.Number();
-        })
-    )
+    }):And(TypeGuard.Object({
+        Y = TypeGuard.Number();
+    })):And(TypeGuard.Object({
+        Z = TypeGuard.Number();
+    }))
 )
 
 local function Test(Input: {X: number} & {Y: number} & {Z: number})
@@ -104,7 +99,7 @@ local AssertValidTest = TypeGuard.Params(
         R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
 
         S = TypeGuard.Object({
-            Key1 = TypeGuard.String():Optional();
+            Key1 = TypeGuard.Optional(TypeGuard.String());
             Key2 = TypeGuard.Enum(Enum.Material);
         }):Strict();
 
@@ -131,13 +126,13 @@ local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumano
 
 ### 9: constructing a checker from a template object
 ```lua
-local Tree = Instance.new("Model")
+local Instances = Instance.new("Model")
     local Part1 = Instance.new("Part")
     Part1.Name = "Part1"
-    Part1.Parent = Tree
+    Part1.Parent = Instances
     local Part2 = Instance.new("Part")
     Part2.Name = "Part2"
-    Part2.Parent = Tree
+    Part2.Parent = Instances
 
 local Checker = TypeGuard.FromTemplate({
     X = 1;
@@ -146,7 +141,7 @@ local Checker = TypeGuard.FromTemplate({
 
     P = {
         Q = Vector3.new();
-        R = Tree;
+        R = Instances;
     };
 
     Arr = {1, 2, "X", "Y"}; -- Accepts strings or numbers

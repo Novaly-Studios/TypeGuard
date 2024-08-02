@@ -1,0 +1,41 @@
+return function()
+    local MergeMany = require(script.Parent.MergeMany)
+
+    describe("Map/MergeMany", function()
+        it("should return a blank table for no inputs", function()
+            local Result = MergeMany()
+            expect(next(Result)).never.to.be.ok()
+        end)
+
+        it("should return a blank table for one blank table input", function()
+            local Result = MergeMany({})
+            expect(next(Result)).never.to.be.ok()
+        end)
+
+        it("should return a blank table for multiple blank table inputs", function()
+            local Result = MergeMany({}, {}, {}, {})
+            expect(next(Result)).never.to.be.ok()
+        end)
+
+        it("should merge two tables", function()
+            local Result = MergeMany({A = 1, B = 2}, {C = 3})
+            expect(Result.A).to.equal(1)
+            expect(Result.B).to.equal(2)
+            expect(Result.C).to.equal(3)
+        end)
+
+        it("should overwrite former tables", function()
+            local Result = MergeMany({A = 1, B = 2}, {B = 3}, {B = 4})
+            expect(Result.A).to.equal(1)
+            expect(Result.B).to.equal(4)
+        end)
+
+        it("should merge several tables", function()
+            local Result = MergeMany({A = 1, B = 2}, {C = 3}, {D = 4})
+            expect(Result.A).to.equal(1)
+            expect(Result.B).to.equal(2)
+            expect(Result.C).to.equal(3)
+            expect(Result.D).to.equal(4)
+        end)
+    end)
+end
