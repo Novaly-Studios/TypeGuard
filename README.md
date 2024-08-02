@@ -95,7 +95,7 @@ local AssertValidTest = TypeGuard.Params(
 
     TypeGuard.Object({
         P = TypeGuard.Number():IsAValueIn({1, 2, 3, 4, 5});
-        Q = TypeGuard.Number():Integer():RangeInclusive(-100, 100);
+        Q = TypeGuard.Number(-100, 100):Integer();
         R = TypeGuard.Array(TypeGuard.String()):MaxLength(100);
 
         S = TypeGuard.Object({
