@@ -79,7 +79,7 @@ end
 ```lua
 local AssertTestOptional = TypeGuard.Params(
     TypeGuard.String(),
-    TypeGuard.Vector3():Optional()
+    TypeGuard.Optional(TypeGuard.Vector3())
 )
 
 local function Test(X: string, Y: Vector3?)
