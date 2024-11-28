@@ -4,21 +4,31 @@ expect = expect or anyfn
 describe = describe or anyfn
 
 return function()
+    local GetValues = require(script.Parent._TestValues)
     local TypeGuard = require(script.Parent.Parent)
     local Base = TypeGuard.Array()
 
     describe("Init", function()
-        it("should accept an array", function()
+        it("should reject non-arrays", function()
+            for _, Value in GetValues("Array") do
+                expect(Base:Check(Value)).to.equal(false)
+            end
+        end)
+
+        it("should accept arrays", function()
             expect(Base:Check({})).to.equal(true)
             expect(Base:Check({1})).to.equal(true)
             expect(Base:Check({1, 2})).to.equal(true)
         end)
 
-        it("should reject non-arrays", function()
-            expect(Base:Check(1)).to.equal(false)
-            expect(Base:Check(function() end)).to.equal(false)
-            expect(Base:Check(nil)).to.equal(false)
-            expect(Base:Check({Test = true})).to.equal(false)
+        it("should serialize and deserialize", function()
+            local Serializer = Base
+            local Serialized = Serializer:Serialize({1, 2, 3, "XYZ"})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
         end)
     end)
 
@@ -43,6 +53,16 @@ return function()
                 return 5
             end):Check({1, 2, 3, 4, 5, 6})).to.equal(false)
         end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):OfLength(3)
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+        end)
     end)
 
     describe("MinLength", function()
@@ -65,6 +85,16 @@ return function()
             expect(Base:MinLength(function()
                 return 5
             end):Check({1, 2, 3, 4, 5, 6})).to.equal(true)
+        end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):MinLength(2)
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
         end)
     end)
 
@@ -89,6 +119,16 @@ return function()
                 return 5
             end):Check({1, 2, 3, 4})).to.equal(true)
         end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):MaxLength(4)
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+        end)
     end)
 
     describe("Contains", function()
@@ -105,6 +145,16 @@ return function()
                 return 1
             end):Check({2, 3, 4})).to.equal(false)
         end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):Contains(3)
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+        end)
     end)
 
     describe("OfType", function()
@@ -114,6 +164,16 @@ return function()
 
         it("should reject arrays containing elements of other types", function()
             expect(Base:OfType(TypeGuard.Number()):Check({1, "Test", 3, 4})).to.equal(false)
+        end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number())
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
         end)
     end)
 
@@ -188,6 +248,16 @@ return function()
                 return 3
             end):Check({1, 2, "P", "Q"})).to.equal(false)
         end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):ContainsValueOfType(TypeGuard.Number())
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+        end)
     end)
 
     describe("OfStructure", function()
@@ -243,13 +313,33 @@ return function()
                 [2] = Base:OfStructure({TypeGuard.Boolean()});
             }):Check({ {"Test"}, {true} })).to.equal(true)
         end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):OfStructure({TypeGuard.Number(), TypeGuard.Number(), TypeGuard.Number()})
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+        end)
     end)
 
-    describe("Strict + OfStructure", function()
+    describe("Strict", function()
         it("should reject arrays with additional contents", function()
             local Checker = Base:OfStructure({TypeGuard.Number(), TypeGuard.Number()}):Strict()
             expect(Checker:Check({1, 2})).to.equal(true)
             expect(Checker:Check({1, 2, 3})).to.equal(false)
+        end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):OfStructure({TypeGuard.Number(), TypeGuard.Number()}):Strict()
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
         end)
     end)
 
@@ -263,6 +353,17 @@ return function()
         it("should reject non-frozen arrays", function()
             local Test = {1, 2, 3}
             expect(Base:IsFrozen():Check(Test)).to.equal(false)
+        end)
+
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):IsFrozen()
+            local Serialized = Serializer:Serialize(table.freeze({1, 2, 3}))
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
+            expect(table.isfrozen(Deserialized)).to.equal(true)
         end)
     end)
 
@@ -326,36 +427,15 @@ return function()
                 return true
             end):Check({1, 2, 4, 3})).to.equal(false)
         end)
-    end)
 
-    describe("Serialize, Deserialize", function()
-        it("should correctly serialize & deserialize an array of arbitrary string keys & values in order", function()
-            local String = require(script.Parent.String)
-            local Serializer = Base:OfType(String())
-            local Test = {"Test1", "Test2", "Test3"}
-            local Result = Serializer:Deserialize(Serializer:Serialize(Test))
-
-            for Key, Value in Test do
-                expect(Result[Key]).to.equal(Value)
-            end
-        end)
-
-        it("should correctly serialize & deserialize an array of arbitrary string keys & values in order given size constraints", function()
-            local String = require(script.Parent.String)
-            local Serializer = Base:OfType(String()):MinLength(0):MaxLength(3)
-            local Final = {"Test1", "Test2", "Test3"}
-            local Test = {}
-
-            for Count = 0, 3 do
-                if (Count ~= 0) then
-                    table.insert(Test, Final[Count])
-                end
-
-                local Result = Serializer:Deserialize(Serializer:Serialize(Test))
-                for Key, Value in Test do
-                    expect(Result[Key]).to.equal(Value)
-                end
-            end
+        it("should serialize and deserialize", function()
+            local Serializer = Base:OfType(TypeGuard.Number()):IsOrdered()
+            local Serialized = Serializer:Serialize({1, 2, 3})
+            local Deserialized = Serializer:Deserialize(Serialized)
+            expect(#Deserialized).to.equal(3)
+            expect(Deserialized[1]).to.equal(1)
+            expect(Deserialized[2]).to.equal(2)
+            expect(Deserialized[3]).to.equal(3)
         end)
     end)
 end

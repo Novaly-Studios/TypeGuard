@@ -7,7 +7,7 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard
 end
 
-local Util = require(script:WaitForChild("Util"))
+local Util = require(script.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local AssertIsTypeBase = Util.AssertIsTypeBase
     local ByteSerializer = Util.ByteSerializer
@@ -17,7 +17,7 @@ local Util = require(script:WaitForChild("Util"))
 local Roblox = script.Roblox
 local Core = script.Core
 
-local Template = require(script:WaitForChild("_Template"))
+local Template = require(script._Template)
     type SignatureTypeCheckerInternal = Template.SignatureTypeCheckerInternal
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
@@ -56,6 +56,7 @@ TypeGuard.FromTypeSample = FromTypeSample
 
 -- Complex type checker imports...
 do
+    TypeGuard.ValueCache = require(Core.ValueCache)
     TypeGuard.Function = require(Core.Function)
     TypeGuard.Boolean = require(Core.Boolean)
     TypeGuard.BaseAny = require(Core.BaseAny)

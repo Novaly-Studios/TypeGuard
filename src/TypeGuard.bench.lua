@@ -1,4 +1,4 @@
-local TypeGuard = require(game:GetService("ReplicatedFirst"):WaitForChild("TypeGuard"))
+local TypeGuard = require(game:GetService("ReplicatedFirst").TypeGuard)
 
 local function GenerateTests(Context: string, TG)
     -- Thanks Copilot
@@ -90,7 +90,7 @@ local function GenerateTests(Context: string, TG)
 end
 
 local CombinedTests = {}
-local OldTG = game:GetService("ReplicatedFirst"):WaitForChild("TypeGuard"):FindFirstChild("Old")
+local OldTG = game:GetService("ReplicatedFirst").TypeGuard:FindFirstChild("Old")
 
 if (OldTG) then
     for Name, Test in GenerateTests("Old", require(OldTG)) do

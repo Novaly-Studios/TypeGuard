@@ -5,14 +5,14 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.ValueCache
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
 
 local String = require(script.Parent.String)
@@ -24,15 +24,14 @@ type ValueCacheTypeChecker = TypeChecker<ValueCacheTypeChecker, nil> & {
     Using: ((self: ValueCacheTypeChecker, Serializer: FunctionalArg<SignatureTypeChecker>) -> (ValueCacheTypeChecker));
 };
 
-local ValueCacheChecker: (() -> (ValueCacheTypeChecker)), ValueCacheCheckerClass = Template.Create("ValueCache")
+local ValueCache: (() -> (ValueCacheTypeChecker)), ValueCacheCheckerClass = Template.Create("ValueCache")
 ValueCacheCheckerClass._Initial = CreateStandardInitial("ValueCache")
 ValueCacheCheckerClass.InitialConstraint = ValueCacheCheckerClass.Using
 
 function ValueCacheCheckerClass:Using(Serializer)
-    self = self:Copy()
-    self._Using = Serializer
-    self:_Changed()
-    return self
+    return self:Modify({
+        _Using = Serializer;
+    })
 end
 
 function ValueCacheCheckerClass._Initial()
@@ -56,30 +55,41 @@ function ValueCacheCheckerClass:_UpdateSerialize()
     self._Serialize = function(Buffer, Value, _Cache)
         local Items = {}
         local Count = 0
+
         local function Cache(Value)
             local Index = Items[Value]
-            if (not Index) then
-                Count += 1
-                Index = Count
-                Items[Value] = Index
+            if (Index) then
+                return Index
             end
+
+            Index = Count + 1
+            Count = Index
+            Items[Value] = Index
             return Index
         end
+
         local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true, Cache))
-        UIntSerialize(Buffer, #SubBuffer)
-        Buffer.WriteString(SubBuffer)
+        local Length = #SubBuffer
+        UIntSerialize(Buffer, Length)
+        Buffer.WriteString(SubBuffer, Length * 8)
         CacheSerializerSerialize(Buffer, Items)
+        --[[ local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true))
+        Buffer.WriteString(SubBuffer, Length * 8) ]]
     end
     self._Deserialize = function(Buffer, Cache)
         local CacheSize = UIntDeserialize(Buffer)
         Buffer.SetPosition(32 + CacheSize * 8)
+
         local ReversedCache = {}
         for Cached, Index in CacheSerializerDeserialize(Buffer) do
             ReversedCache[Index] = Cached
         end
         Buffer.SetPosition(32)
+
         return SerializerDeserialize(Buffer, ReversedCache)
+
+        --[[ return SerializerDeserialize(Buffer) ]]
     end
 end
 
-return ValueCacheChecker
+return ValueCache

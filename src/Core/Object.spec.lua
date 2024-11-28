@@ -418,13 +418,13 @@ return function()
 
         it("should correctly serialize & deserialize an object whose structure is strict", function()
             local String = require(script.Parent.String)
-            local Serializer = Base:OfKeyType(String()):OfValueType(String())
             local Test = {Key1 = "Test1", Key2 = "Test2"}
-            local Result = Serializer:OfStructure({
+            local Structure = Base:OfStructure({
                 Key1 = String();
                 Key2 = String();
             }):Strict()
 
+            local Result = Structure:Deserialize(Structure:Serialize(Test))
             for Key, Value in Test do
                 expect(Result[Key]).to.equal(Value)
             end

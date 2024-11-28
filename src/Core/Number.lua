@@ -5,13 +5,13 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Number
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
@@ -25,6 +25,7 @@ export type NumberTypeChecker = TypeChecker<NumberTypeChecker, number> & {
     IsClose: ((self: NumberTypeChecker, Target: FunctionalArg<number>, Tolerance: FunctionalArg<number>) -> (NumberTypeChecker));
     Integer: ((self: NumberTypeChecker, Bits: FunctionalArg<number?>, Signed: FunctionalArg<boolean?>) -> (NumberTypeChecker));
     Decimal: ((self: NumberTypeChecker) -> (NumberTypeChecker));
+    Dynamic: ((self: NumberTypeChecker) -> (NumberTypeChecker));
     Float: ((self: NumberTypeChecker, Bits: FunctionalArg<number>) -> (NumberTypeChecker));
     IsNaN: ((self: NumberTypeChecker) -> (NumberTypeChecker));
 };
@@ -38,37 +39,40 @@ NumberClass._TypeOf = {"number"}
 
 --- Checks if the value is whole.
 function NumberClass:Integer(Bits, Signed)
+    Signed = if (Signed == nil) then true else Signed
+    Bits = Bits or 53
+
     if (Bits) then
-        assert(Bits <= 32, "Integers can only be 32 bits or less")
         assert(Bits >= 1, "Integers must have at least 1 bit")
     end
 
     self = self:_AddConstraint(true, "Integer", function(_, Item)
-        if (Item // 1 == Item) then
+        if (Item % 1 == 0) then
             return true
         end
 
         return false, `Expected integer form, got {Item}`
-    end)
+    end, Bits)
 
-    if (Bits) then
-        self = Signed and
-                self:RangeInclusive(-2 ^ (Bits - 1), 2 ^ (Bits - 1) - 1) or
-                self:RangeInclusive(0, 2 ^ Bits - 1)
-    end
-
-    return self
+    return (Signed and self:RangeInclusive(-2 ^ (Bits - 1), 2 ^ (Bits - 1) - 1) or self:RangeInclusive(0, 2 ^ Bits - 1))
 end
 
 --- Checks if the number is not whole.
 function NumberClass:Decimal()
     return self:_AddConstraint(true, "Decimal", function(_, Item)
-        if (Item // 1 ~= Item) then
+        if (Item % 1 ~= 0) then
             return true
         end
 
         return false, `Expected decimal form, got {Item}`
     end)
+end
+
+--- Makes an int dynamically sized during serialization.
+function NumberClass:Dynamic()
+    return self:Modify({
+        _Dynamic = true;
+    })
 end
 
 --- Ensures a number is between or equal to a minimum and maximum value. Can also function as "equals" - useful for this being used as the InitialConstraint.
@@ -192,17 +196,21 @@ function NumberClass:_UpdateSerialize()
     end
 
     -- Multiple range constraints can exist, so find the boundaries here.
-    local Min, Max
+    local Min
+    local Max
+
     for _, Args in self:GetConstraints("GreaterThanOrEqualTo") do
         local Value = Args[1]
         Min = math.min(Min or Value, Value)
     end
+
     for _, Args in self:GetConstraints("LessThanOrEqualTo") do
         local Value = Args[1]
         Max = math.max(Max or Value, Value)
     end
 
-    if (self:GetConstraint("Integer")) then
+    local Integer = self:GetConstraint("Integer")
+    if (Integer and Integer[1] <= 32) then -- No support for >32 bit ints yet, they will be serialized as floats.
         -- The number of bits required to store the integer can be reduced if the range
         -- is known to be between two concrete values.
         if (Min and Max) then
@@ -216,45 +224,71 @@ function NumberClass:_UpdateSerialize()
             return
         end
 
-        -- Positive UInt32.
-        if (self:GetConstraint("Positive")) then
+        local Positive = self:GetConstraint("Positive")
+        local Negative = self:GetConstraint("Negative")
+
+        -- Dynamic-sized integer:
+            -- Positive or Negative undefined -> 6 bits for size of the number (up to 64 bits), 1 bit for sign, and the rest for the unsigned value.
+            -- Positive or Negative defined -> 6 bits for size of the number, and the rest for the unsigned value.
+        if (self._Dynamic) then
+            if (Positive or Negative) then
+                self._Serialize = function(Buffer, Value, _Cache)
+                    Value = (Negative and -Value or Value)
+                    local Bits = 32 - bit32.countlz(Value)
+                    Buffer.WriteUInt(6, Bits)
+                    Buffer.WriteUInt(Bits, Value)
+                end
+                self._Deserialize = function(Buffer, _Cache)
+                    local ReadUInt = Buffer.ReadUInt
+                    local Value = ReadUInt(ReadUInt(6))
+                    return (Negative and -Value or Value)
+                end
+            end
+
+            self._Serialize = function(Buffer, Value, _Cache)
+                local Sign = (Value < 0)
+                Value = (Sign and -Value or Value)
+                local Bits = 32 - bit32.countlz(Value)
+                local Metadata = bit32.bor(Bits, Sign and 0b1000000 or 0)
+
+                local WriteUInt = Buffer.WriteUInt
+                WriteUInt(7, Metadata)
+                WriteUInt(Bits, Value)
+            end
+            self._Deserialize = function(Buffer, _Cache)
+                local ReadUInt = Buffer.ReadUInt
+                local Metadata = ReadUInt(6)
+                local Sign = (bit32.band(Metadata, 0b1000000) == 0)
+                local Bits = bit32.extract(Metadata, 0, 6)
+                local Value = ReadUInt(Bits)
+                return (Sign and Value or -Value)
+            end
+
+            return
+        end
+
+        -- Positive / UInt.
+        if (Positive or Integer[2]) then
             self._Serialize = function(Buffer, Value, _Cache)
                 Buffer.WriteUInt(32, Value)
             end
             self._Deserialize = function(Buffer, _Cache)
                 return Buffer.ReadUInt(32)
             end
+
             return
         end
 
         -- If it's known the integer is negative, we don't need to store the sign.
-        if (self:GetConstraint("Negative")) then
+        if (Negative) then
             self._Serialize = function(Buffer, Value, _Cache)
                 Buffer.WriteUInt(32, -Value)
             end
             self._Deserialize = function(Buffer, _Cache)
                 return -Buffer.ReadUInt(32)
             end
-            return
-        end
 
-        -- Dynamic-sized integer: 6 bits for size, 1 bit for sign, and the rest for the value.
-        -- Todo: bor
-        if (self._Tags.Dynamic) then
-            self._Serialize = function(Buffer, Value, _Cache)
-                local Sign = Value < 0
-                Value = Sign and -Value or Value
-                local Bits = math.log(Value, 2) // 1 + 1
-                Buffer.WriteUInt(6, Bits) -- 2^6 -> 64-bit maximum
-                Buffer.WriteUInt(1, Sign and 1 or 0)
-                Buffer.WriteUInt(Bits, Value)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                local Bits = Buffer.ReadUInt(6)
-                local Sign = Buffer.ReadUInt(1) == 1
-                local Value = Buffer.ReadUInt(Bits)
-                return Sign and -Value or Value
-            end
+            return
         end
 
         -- Last resort: 32-bit signed integer.
@@ -264,6 +298,7 @@ function NumberClass:_UpdateSerialize()
         self._Deserialize = function(Buffer, _Cache)
             return Buffer.ReadInt(32)
         end
+
         return
     end
 

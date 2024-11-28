@@ -5,7 +5,7 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Function
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
@@ -14,7 +14,7 @@ local Template = require(script.Parent.Parent:WaitForChild("_Template"))
 local Number = require(script.Parent.Number)
     type NumberTypeChecker = Number.NumberTypeChecker
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local AssertIsTypeBase = Util.AssertIsTypeBase
 

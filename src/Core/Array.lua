@@ -5,13 +5,13 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Array
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local StructureStringMT = Util.StructureStringMT
     local AssertIsTypeBase = Util.AssertIsTypeBase
     local ExpectType = Util.ExpectType
@@ -52,11 +52,9 @@ function ArrayClass:_Initial(TargetArray)
 
         -- This will catch the majority of cases.
         local FirstKey = next(TargetArray)
-
         if (FirstKey == nil or FirstKey == 1) then
             return true
         end
-
         return false, "Array is empty"
     end
 
@@ -187,7 +185,7 @@ function ArrayClass:OfStructure(SubTypesAtPositions)
         end
 
         -- Check there are no extra indexes which shouldn't be in the object.
-        if (SelfRef._Tags.Strict) then
+        if (SelfRef._Strict) then
             for Index in TargetArray do
                 local Checker = SubTypesAtPositions[Index]
 
@@ -288,21 +286,18 @@ end
 
 ArrayClass.InitialConstraint = ArrayClass.OfType
 
-local DynamicUInt = Number():Integer():Positive()
+local DynamicUInt = Number(0, 2^16-1):Integer()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
 function ArrayClass:_UpdateSerialize()
     local Type = self:GetConstraint("OfType")
+    local HasFunctionalConstraints = self:_HasFunctionalConstraints()
 
-    if (not Type) then
-        self._Serialize = function(Buffer, Value, _Cache)
-            error("No OfType constraint: cannot serialize")
-        end
-        self._Deserialize = function(Buffer, _Cache)
-            error("No OfType constraint: cannot deserialize")
-        end
-
+    if (HasFunctionalConstraints or not Type) then
+        local BaseAny = require(script.Parent.BaseAny) :: any
+        self._Serialize = BaseAny._Serialize
+        self._Deserialize = BaseAny._Deserialize
         return
     end
 

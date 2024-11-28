@@ -73,6 +73,7 @@ local STRUCTURE_STRING_MT = {
 
 return {
     ByteSerializer = require(script.ByteSerializer);
+    BitSerializer = require(script.BitSerializer);
 
     CreateStandardInitial = CreateStandardInitial;
     ConcatWithToString = ConcatWithToString;

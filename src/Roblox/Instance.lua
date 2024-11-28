@@ -10,7 +10,7 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
     local IsClient = RunService:IsClient()
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type SignatureTypeCheckerInternal = Template.SignatureTypeCheckerInternal
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
@@ -18,7 +18,7 @@ local Template = require(script.Parent.Parent:WaitForChild("_Template"))
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local StructureStringMT = Util.StructureStringMT
     local AssertIsTypeBase = Util.AssertIsTypeBase
@@ -136,7 +136,7 @@ function InstanceCheckerClass:OfStructure(OriginalSubTypes)
         end
 
         -- Check there are no extra children which shouldn't be in the Instance.
-        if (SelfRef._Tags.Strict) then
+        if (SelfRef._Strict) then
             for _, Value in InstanceRoot:GetChildren() do
                 local Key = Value.Name
                 local Checker = SubTypes[Key]

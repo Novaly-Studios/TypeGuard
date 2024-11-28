@@ -5,14 +5,14 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Or
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local ConcatWithToString = Util.ConcatWithToString
     local StructureStringMT = Util.StructureStringMT
     local AssertIsTypeBase = Util.AssertIsTypeBase
@@ -40,18 +40,18 @@ end
 
 function OrClass:DefineGetType(GetTypeIndexFromValue)
     ExpectType(GetTypeIndexFromValue, Expect.FUNCTION, 1)
-    self = self:Copy()
-    self._GetTypeIndexFromValue = GetTypeIndexFromValue
-    self:_Changed()
-    return self
+    return self:Modify({
+        _GetTypeIndexFromValue = function()
+            return GetTypeIndexFromValue
+        end;
+    })
 end
 
 function OrClass:DefineDivide(Divider)
     ExpectType(Divider, Expect.FUNCTION, 1)
-    self = self:Copy()
-    self._Divider = Divider
-    self:_Changed()
-    return self
+    return self:Modify({
+        _Divider = Divider;
+    })
 end
 
 local function _IsAValueIn(_self, TargetValue, Options)
@@ -147,7 +147,7 @@ function OrClass:IsATypeIn(Options)
             table.insert(CompleteList, Checker)
         end
 
-        local Copy = self:Copy()
+        local Copy = table.clone(self)
         local NewActiveConstraints = table.clone(Copy._ActiveConstraints)
         NewActiveConstraints[Index] = table.clone(NewActiveConstraints[Index])
         NewActiveConstraints[Index][2] = {CompleteList}
@@ -176,7 +176,7 @@ function OrClass:InitialConstraintsDirectVariadic(...)
     end
     
     -- Otherwise we use a disjunction of values.
-    -- Always more efficient to put it in a dict than using table.find with a list.
+    -- More efficient to put it in a dict than using table.find with a list.
     -- But only possible to do efficiently during serialization with deterministically orderable values.
     if (pcall(TestComparability, First, (select(2, ...)))) then
         local AsKeys = {}
@@ -187,6 +187,30 @@ function OrClass:InitialConstraintsDirectVariadic(...)
     end
 
     return self:IsAValueIn(Packed)
+end
+
+--- Internal function to update the IsATypeIn function performance caches for serialization.
+--- Necessary with Any types because of their cyclic recursive nature - don't want to regenerate
+--- _Serialize when the same technique is also used by objects to cache functions of Any.
+function OrClass:_UpdateSerializeFunctionCache()
+    local IsATypeIn = self:GetConstraint("IsATypeIn")
+        local Types = IsATypeIn[1]
+
+    local KeyToSerializeFunction = self._KeyToSerializeFunction or table.clone(Types)
+    table.clear(KeyToSerializeFunction)
+    setmetatable(KeyToSerializeFunction, nil)
+    for Key, Value in Types do
+        KeyToSerializeFunction[Key] = Value._Serialize
+    end
+    self._KeyToSerializeFunction = KeyToSerializeFunction
+
+    local KeyToDeserializeFunction = self._KeyToDeserializeFunction or table.clone(Types)
+    table.clear(KeyToDeserializeFunction)
+    setmetatable(KeyToDeserializeFunction, nil)
+    for Key, Value in Types do
+        KeyToDeserializeFunction[Key] = Value._Deserialize
+    end
+    self._KeyToDeserializeFunction = KeyToDeserializeFunction
 end
 
 function OrClass:_UpdateSerialize()
@@ -261,64 +285,71 @@ function OrClass:_UpdateSerialize()
     -- Serializes one of multiple types.
     local IsATypeIn = self:GetConstraint("IsATypeIn")
     local GetTypeIndexFromValue = self._GetTypeIndexFromValue
+
     if (IsATypeIn or GetTypeIndexFromValue) then
         local Types = IsATypeIn[1]
         local NumberSerializer = Number(1, math.max(1, #Types)):Integer()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
+        self:_UpdateSerializeFunctionCache()
+
+        local KeyToDeserializeFunction = self._KeyToDeserializeFunction
+        local KeyToSerializeFunction = self._KeyToSerializeFunction
         local Divider = self._Divider
+
         if (GetTypeIndexFromValue) then
             self._Serialize = Divider and function(Buffer, Value, Cache)
                 local Index = GetTypeIndexFromValue(Value)
-                local Serializer = Types[Index]
+                local Serializer = KeyToSerializeFunction[Index]
                 if (Serializer) then
                     NumberSerialize(Buffer, Index, Cache)
-                    Serializer._Serialize(Buffer, Value, Cache)
-                    if (Divider) then
-                        Divider()
-                    end
+                    Serializer(Buffer, Value, Cache)
+                    Divider()
                     return
                 end
                 error(`Value {Value} did not satisfy any type definition`)
             end or function(Buffer, Value, Cache)
                 local Index = GetTypeIndexFromValue(Value)
-                local Serializer = Types[Index]
+                local Serializer = KeyToSerializeFunction[Index]
+
                 if (Serializer) then
                     NumberSerialize(Buffer, Index, Cache)
-                    Serializer._Serialize(Buffer, Value, Cache)
+                    Serializer(Buffer, Value, Cache)
                     return
                 end
                 error(`Value {Value} did not satisfy any type definition`)
             end
-        else
+        else -- Run through an array of types, calling _Check on each until something satisfies.
             self._Serialize = Divider and function(Buffer, Value, Cache)
-                for Index, TypeChecker in Types do
-                    if (TypeChecker:_Check(Value)) then
+                for Index, SubType in Types do
+                    if (SubType:_Check(Value)) then
+                        local Serializer = KeyToSerializeFunction[Index]
                         NumberSerialize(Buffer, Index, Cache)
-                        TypeChecker._Serialize(Buffer, Value, Cache)
+                        Serializer(Buffer, Value, Cache)
                         Divider()
                         return
                     end
                 end
                 error(`Value {Value} did not satisfy any type definition`)
             end or function(Buffer, Value, Cache)
-                for Index, TypeChecker in Types do
-                    if (TypeChecker:_Check(Value)) then
+                for Index, SubType in Types do
+                    if (SubType:_Check(Value)) then
+                        local Serializer = KeyToSerializeFunction[Index]
                         NumberSerialize(Buffer, Index, Cache)
-                        TypeChecker._Serialize(Buffer, Value, Cache)
+                        Serializer(Buffer, Value, Cache)
                         return
                     end
                 end
                 error(`Value {Value} did not satisfy any type definition`)
             end
         end
-        self._Deserialize = function(Buffer, Cache)
-            local Result = Types[NumberDeserialize(Buffer, Cache)]._Deserialize(Buffer, Cache)
-            if (Divider) then
-                Divider()
-            end
+        self._Deserialize = Divider and function(Buffer, Cache)
+            local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
+            Divider()
             return Result
+        end or function(Buffer, Cache)
+            return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
         end
         return
     end

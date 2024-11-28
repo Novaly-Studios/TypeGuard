@@ -19,4 +19,16 @@ return function()
             expect(Base:Check(function() end)).to.equal(true)
         end)
     end)
+
+    describe("CheckParamCount", function()
+        it("should reject functions whose param count does not satisfy the checker", function()
+            local Checker = Base:CheckParamCount(TypeGuard.Number():LessThan(3))
+            expect(Checker:Check(function() end)).to.equal(false)
+        end)
+
+        it("should accept functions whose param count does satisfy the checker", function()
+            local Checker = Base:CheckParamCount(TypeGuard.Number():LessThan(3))
+            expect(Checker:Check(function(X, Y, Z, W) end)).to.equal(true)
+        end)
+    end)
 end

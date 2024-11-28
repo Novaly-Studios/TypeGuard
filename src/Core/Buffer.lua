@@ -5,13 +5,15 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Buffer
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
+
+local String = require(script.Parent.String)
 
 type BufferTypeChecker = TypeChecker<BufferTypeChecker, buffer> & {
 
@@ -22,13 +24,15 @@ BufferClass._Initial = CreateStandardInitial("buffer")
 BufferClass._TypeOf = {"buffer"}
 
 function BufferClass:_UpdateSerialize()
-    self._Serialize = function(Buffer, Value, _Cache)
-        local AsString = buffer.tostring(Value)
-        Buffer.WriteUInt(32, #AsString)
-        Buffer.WriteString(AsString)
+    local Serializer = String()
+        local Deserialize = Serializer._Deserialize
+        local Serialize = Serializer._Serialize
+
+    self._Serialize = function(Buffer, Value, Cache)
+        Serialize(Buffer, buffer.tostring(Value), Cache)
     end
-    self._Deserialize = function(Buffer, _Cache)
-        return buffer.fromstring(Buffer.ReadString(Buffer.ReadUInt(32) * 8))
+    self._Deserialize = function(Buffer, Cache)
+        return buffer.fromstring(Deserialize(Buffer, Cache))
     end
 end
 

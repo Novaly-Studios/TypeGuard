@@ -5,13 +5,13 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Thread
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
+local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect

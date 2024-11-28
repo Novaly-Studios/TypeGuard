@@ -1,9 +1,12 @@
 --!optimize 2
 --!native
 
+if (not script) then
+    script = game:GetService("ReplicatedFirst").TypeGuard.Util.ByteSerializer
+end
+
 local bwritestring = buffer.writestring
 local breadstring = buffer.readstring
-local btostring = buffer.tostring
 local bwriteu16 = buffer.writeu16
 local bwritei16 = buffer.writei16
 local bwriteu32 = buffer.writeu32
@@ -24,27 +27,32 @@ local bcreate = buffer.create
 local bcopy = buffer.copy
 local blen = buffer.len
 
+local mceil = math.ceil
+local mlog = math.log
+
+local DEFAULT_MIN_SIZE = 16
+
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
 --- between byte-level and bit-level buffers. Intended for long duration
 --- lifetime.
-local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: number?)
-    ResizeFactor = ResizeFactor or 2
-    Buffer = Buffer or bcreate(Size or 16)
-    Size = Size or blen(Buffer :: buffer)
+local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
+    Size = Size or (Buffer and blen(Buffer :: buffer)) or DEFAULT_MIN_SIZE
+    Buffer = Buffer or bcreate(Size :: number)
 
     local Position = 0
 
     local function CheckResize(AdditionalBytes: number)
-        local Resize = ResizeFactor :: number ^ math.ceil(math.log(Position + AdditionalBytes, ResizeFactor))
-        if (Resize == Size) then
+        -- As soon as we are about to hit the size limit, allocate a new buffer with double the size.
+        local Sum = Position + AdditionalBytes
+        if (Sum < Size) then
             return
         end
 
-        local NewBuffer = bcreate(Resize)
+        Size = 2 ^ mceil(mlog(Sum, 2))
+        local NewBuffer = bcreate(Size)
         bcopy(NewBuffer, 0, Buffer :: buffer)
         Buffer = NewBuffer
-        Size = Resize
     end
 
     local function GetClippedBuffer(): buffer
@@ -53,16 +61,17 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: numb
         return New
     end
 
-    local function GetChunks(ChunkSize: number): {buffer}
-        local Chunks = math.ceil(Position / ChunkSize)
-        local Result = table.create(Chunks)
+    --[[ local function GetChunks(ChunkSize: number): {buffer}
         -- Todo. Useful for unreliable events data splitting.
         error("Unimplemented")
-        return Result
+    end ]]
+
+    local function WriteError()
+        error("Attempt to write to read-only ByteSerializer")
     end
 
-    return {
-        WriteUInt = function(Bits: number, Value: number)
+    local Result = {
+        WriteUInt = ReadOnly and WriteError or function(Bits: number, Value: number)
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwriteu8 or Bytes == 2 and bwriteu16 or bwriteu32)
@@ -77,7 +86,7 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: numb
             return Value
         end;
 
-        WriteInt = function(Bits: number, Value: number)
+        WriteInt = ReadOnly and WriteError or function(Bits: number, Value: number)
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwritei8 or Bytes == 2 and bwritei16 or bwritei32)
@@ -92,7 +101,7 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: numb
             return Value
         end;
 
-        WriteFloat = function(Bits: number, Value: number)
+        WriteFloat = ReadOnly and WriteError or function(Bits: number, Value: number)
             local Bytes = (Bits < 33 and 4 or 8)
             CheckResize(Bytes)
             local Writer = (Bytes == 4 and bwritef32 or bwritef64)
@@ -107,14 +116,14 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: numb
             return Result
         end;
 
-        WriteString = function(String: string)
-            local Bytes = #String
+        WriteString = ReadOnly and WriteError or function(String: string, Length: number)
+            local Bytes = mceil(Length / 8)
             CheckResize(Bytes)
-            bwritestring(Buffer :: buffer, Position, String)
+            bwritestring(Buffer :: buffer, Position, String, Bytes)
             Position += Bytes
         end;
         ReadString = function(Length: number): string
-            local Bytes = math.ceil(Length / 8)
+            local Bytes = mceil(Length / 8)
             local Result = breadstring(Buffer :: buffer, Position, Bytes)
             Position += Bytes
             return Result
@@ -130,25 +139,22 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ResizeFactor: numb
         GetPosition = function(): number
             return Position * 8
         end;
-        SetPositionBytes = function(Byte: number)
-            if (Byte < 0 or Byte > Size) then
-                error(`Position out of bounds (0-${Size})`)
-            end
-
-            Position = Byte
-        end;
-        GetPositionBytes = function(): number
-            return Position
-        end;
-        GetClippedBuffer = GetClippedBuffer;
-        GetChunks = GetChunks;
-        GetBuffer = function(): buffer
+        GetBuffer = function()
             return Buffer :: buffer
         end;
-        ToClippedString = function()
-            return btostring(GetClippedBuffer())
-        end;
+        GetClippedBuffer = GetClippedBuffer;
     }
+
+    --[[ for Key, Value in Result do
+        Result[Key] = function(...)
+            debug.profilebegin(Key)
+            local Result = Value(...)
+            debug.profileend()
+            return Result
+        end
+    end ]]
+
+    return Result
 end
 
 return ByteSerializer

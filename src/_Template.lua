@@ -7,8 +7,14 @@ local Util = require(script.Parent.Util)
     local ConcatWithToString = Util.ConcatWithToString
     local ByteSerializer = Util.ByteSerializer
         type ByteSerializer = typeof(ByteSerializer)
+    local BitSerializer = Util.BitSerializer
+        type BitSerializer = typeof(BitSerializer)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
+
+local TableUtil = require(script.Parent.Parent.TableUtil)
+    local MergeDeep = TableUtil.Map.MergeDeep
+    local Insert = TableUtil.Array.Insert
 
 export type AnyMethod = (...any) -> (...any)
 export type SignatureTypeChecker = {
@@ -35,11 +41,6 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
     Check: AnyMethod;
     Alias: AnyMethod;
     Copy: AnyMethod;
-
-    _AddConstraint: AnyMethod;
-    _CreateCache: AnyMethod;
-    _AddTag: AnyMethod;
-    _Check: AnyMethod;
 }
 
 export type TypeCheckerConstructor<T, P...> = ((P...) -> T)
@@ -78,28 +79,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
 };
-
-local function Merge(X, Y)
-    if (next(Y) == nil) then
-        return X
-    end
-    local Result = table.clone(X)
-    for Key, Value in Y do
-        Result[Key] = Value
-    end
-    return Result
-end
-
-local function Join(X, Y)
-    if (next(Y) == nil) then
-        return X
-    end
-    local Result = table.clone(X)
-    for _, Value in Y do
-        table.insert(Result, Value)
-    end
-    return Result
-end
 
 local function Equals(self, ExpectedValue)
     return self:_AddConstraint(true, "Equals", function(_, Value, ExpectedValue)
@@ -201,7 +180,6 @@ local function CreateTemplate(Name: string)
 
     function TemplateClass.new(...)
         local self = {
-            _Tags = {};
             _ActiveConstraints = {};
 
             --[[
@@ -270,47 +248,82 @@ local function CreateTemplate(Name: string)
         return self
     end
 
-    --- Creates a copy of this TypeChecker.
-    function TemplateClass:Copy()
-        return table.clone(self)
-    end
-
     --- Wraps & negates the last constraint (i.e. if it originally would fail, it passes, and vice versa).
     function TemplateClass:Negate()
-        self = self:Copy()
-
         local LastConstraint = self._LastConstraint
-        assert(LastConstraint ~= "", "Nothing to negate! (No constraints active)")
-        self._ActiveConstraints[LastConstraint][4] = true
+        assert(LastConstraint ~= "", "Nothing to negate (no constraints active)")
 
-        return self
+        return self:Modify({
+            _ActiveConstraints = {
+                [LastConstraint] = {
+                    Negated = function(Value)
+                        return (not Value)
+                    end;
+                };
+            };
+        })
     end
 
     --- Sets a custom fail message to return if Check() fails. Also accepts a function which passes the value and context as arguments, expecting a formatted string showing the error.
     function TemplateClass:FailMessage(Message: string | ((any?, any?) -> (string)))
         ExpectType(Message, Expect.STRING_OR_FUNCTION, 1)
 
-        self = self:Copy()
-        self._FailMessage = Message
-        return self
+        return self:Modify({
+            _FailMessage = Message;
+        })
     end
 
     --- Sets a flag which caches the result of the last Check() call.
     function TemplateClass:Cached()
-        return self:_AddTag("Cached")
+        return self:Modify({
+            _Cached = true;
+        })
     end
 
     --- Bypasses the check on the type checker (i.e. for serialization speed).
     function TemplateClass:NoConstraints()
-        return self:_AddTag("NoConstraints")
+        return self:Modify({
+            _NoConstraints = true;
+        })
     end
 
     function TemplateClass:NoCheck()
-        return self:_AddTag("NoCheck")
+        return self:Modify({
+            _NoCheck = true;
+        })
+    end
+
+    function TemplateClass:Modify(Modifications: {[any]: any})
+        local Previous = self
+        self = MergeDeep(self, Modifications)
+
+        -- Top level will be the same if no changes were made deep in the object.
+        if (self == Previous) then
+            return self
+        end
+
+        self:_Changed()
+        return self
+    end
+
+    function TemplateClass:ModifyConstraints(ID, Modifier)
+        local ActiveConstraints = self._ActiveConstraints
+        for ConstraintIndex, Constraint in ActiveConstraints do
+            if (Constraint.Name == ID) then
+                self = self:Modify({
+                    _ActiveConstraints = {
+                        [ConstraintIndex] = {
+                            Args = Modifier;
+                        };
+                    };
+                })
+            end
+        end
+        return self
     end
 
     function TemplateClass:_MapCheckers(Mapper, Recursive)
-        local Copy = self:Copy()
+        --[[ local Copy = table.clone(self)
         local ConstraintsModify = {}
 
         for ConstraintIndex, Constraint in Copy._ActiveConstraints do
@@ -349,23 +362,71 @@ local function CreateTemplate(Name: string)
 
         Copy._ActiveConstraints = Merge(Copy._ActiveConstraints, ConstraintsModify)
         Copy:_UpdateSerialize()
-        return Copy
+        return Copy ]]
+
+        return self:Modify({
+            _ActiveConstraints = function(ActiveConstraints)
+                for ConstraintIndex, Constraint in ActiveConstraints do
+                    ActiveConstraints = MergeDeep(ActiveConstraints, {
+                        [ConstraintIndex] = {
+                            Args = function(Args)
+                                local NewArgs = Args
+
+                                for Index, Arg in Args do
+                                    if (type(Arg) ~= "table") then
+                                        continue
+                                    end
+
+                                    -- Case 1: arg is a checker.
+                                    if (Arg._MapCheckers) then
+                                        NewArgs = MergeDeep(NewArgs, {
+                                            [Index] = function(Arg)
+                                                return Mapper(Arg:_MapCheckers(Mapper, Recursive))
+                                            end;
+                                        })
+                                        continue
+                                    end
+
+                                    -- Case 2: arg is a table of checkers.
+                                    local _, FirstItem = next(Arg)
+                                    if (type(FirstItem) == "table" and FirstItem._MapCheckers) then
+                                        local Changes = {}
+                                        for Index, Checker in Arg do
+                                            Changes[Index] = Mapper(Checker:_MapCheckers(Mapper, Recursive))
+                                        end
+                                        NewArgs = MergeDeep(NewArgs, {
+                                            [Index] = Changes;
+                                        })
+                                        continue
+                                    end
+                                end
+
+                                return NewArgs
+                            end;
+                        };
+                    })
+                end
+
+                return ActiveConstraints
+            end
+        })
     end
 
     --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing.
     function TemplateClass:Alias(AliasName)
         ExpectType(AliasName, Expect.STRING, 1)
 
-        self = self:Copy()
-        self._Alias = AliasName
-        return self
+        return self:Modify({
+            _Alias = AliasName;
+        })
     end
 
     --- Passes down a "context" value to constraints with functional values.
     --- We don't copy here because performance is important at the checking phase.
     function TemplateClass:WithContext(Context)
-        self._Context = Context
-        return self
+        return self:Modify({
+            _Context = Context;
+        })
     end
 
     --- Wraps a Check into its own callable function.
@@ -396,49 +457,53 @@ local function CreateTemplate(Name: string)
         assert(Success, Result)
     end
 
-    function TemplateClass:_AddConstraint(AllowOnlyOne, ConstraintName, Constraint, ...)
+    function TemplateClass:_AddConstraint(AllowOnlyOne, Name, Constraint, ...)
         if (AllowOnlyOne ~= nil) then
             ExpectType(AllowOnlyOne, Expect.BOOLEAN, 1)
         end
 
-        ExpectType(ConstraintName, Expect.STRING, 2)
+        ExpectType(Name, Expect.STRING, 2)
         ExpectType(Constraint, Expect.FUNCTION, 3)
-
-        self = self:Copy()
 
         local Args = {...}
         local HasFunctions = false
+        local ActiveConstraints = self._ActiveConstraints
 
-        for _, Value in Args do
-            local ArgType = type(Value)
-
-            if (ArgType == "function") then
+        -- Find any functional constraints.
+        for Index, Value in Args do
+            if (type(Value) == "function") then
                 HasFunctions = true
-                continue
+                break
             end
         end
 
-        local ActiveConstraints = self._ActiveConstraints
-
         if (AllowOnlyOne) then
             local Found = false
-
             for _, ConstraintData in ActiveConstraints do
-                if (ConstraintData[5] == ConstraintName) then
+                if (ConstraintData.Name == Name) then
                     Found = true
                     break
                 end
             end
-
             if (Found) then
-                error(`Attempt to apply a constraint marked as 'only once' more than once: {ConstraintName}.`)
+                error(`Attempt to apply a constraint marked as 'only once' more than once: {Name}.`)
             end
         end
 
-        self._ActiveConstraints = Join(ActiveConstraints, {{Constraint, Args, HasFunctions, false, ConstraintName}})
-        self._LastConstraint = #ActiveConstraints
-        self:_Changed()
-        return self
+        return self:Modify({
+            _ActiveConstraints = function(ActiveConstraints)
+                return Insert(ActiveConstraints, {
+                    HasFunctions = HasFunctions;
+                    ShouldNegate = false;
+                    Function = Constraint;
+                    Name = Name;
+                    Args = Args;
+                })
+            end;
+            _LastConstraint = function(Value)
+                return (Value or 0) + 1
+            end;
+        })
     end
 
     function TemplateClass:_Changed()
@@ -446,7 +511,7 @@ local function CreateTemplate(Name: string)
         -- No bits written or read from buffer.
         local Equals = self:GetConstraint("Equals")
         if (Equals) then
-            if (self._Tags.NonSerialized) then
+            if (self._NonSerialized) then
                 return
             end
             local Value = Equals[1]
@@ -454,7 +519,7 @@ local function CreateTemplate(Name: string)
             self._Deserialize = function(_, _)
                 return Value
             end
-            self:_AddTag("NonSerialized")
+            self._NonSerialized = true
             return
         end
 
@@ -498,7 +563,7 @@ local function CreateTemplate(Name: string)
 
         -- Let the implementation update its _Serialize and _Deserialize functions.
         local UpdateSerialize = self._UpdateSerialize
-        if (UpdateSerialize and not self._Tags.NonSerialized) then
+        if (UpdateSerialize and not self._NonSerialized) then
             UpdateSerialize(self)
         end
 
@@ -507,34 +572,21 @@ local function CreateTemplate(Name: string)
         self._Deserialize = self._DefineDeserialize or self._Deserialize
     end
 
-    function TemplateClass:_AddTag(TagName)
-        ExpectType(TagName, Expect.STRING, 1)
-
-        if (self._Tags[TagName]) then
-            error(`Tag already exists: {TagName}.`)
-        end
-
-        self = self:Copy()
-        self._Tags = Merge(self._Tags, {[TagName] = true})
-        self:_Changed()
-        return self
-    end
-
     function TemplateClass:Map(Processor)
-        self = self:Copy()
-        self._Map = Processor
-        return self
+        return self:Modify({
+            _Map = Processor;
+        })
     end
 
     function TemplateClass:Unmap(Processor)
-        self = self:Copy()
-        self._Unmap = Processor
-        return self
+        return self:Modify({
+            _Unmap = Processor;
+        })
     end
 
     function TemplateClass:_HasFunctionalConstraints()
         for _, Constraint in self._ActiveConstraints do
-            if (Constraint[3]) then
+            if (Constraint.HasFunctions) then
                 return true
             end
         end
@@ -545,8 +597,8 @@ local function CreateTemplate(Name: string)
         ExpectType(ID, Expect.STRING, 1)
 
         for Index, ConstraintData in self._ActiveConstraints do
-            if (ConstraintData[5] == ID) then
-                return ConstraintData[2], Index
+            if (ConstraintData.Name == ID) then
+                return ConstraintData.Args, Index
             end
         end
 
@@ -558,30 +610,20 @@ local function CreateTemplate(Name: string)
 
         local Result = {}
         for Index, ConstraintData in self._ActiveConstraints do
-            if (ConstraintData[5] == ID) then
-                table.insert(Result, ConstraintData[2])
+            if (ConstraintData.Name == ID) then
+                table.insert(Result, ConstraintData.Args)
             end
         end
         return Result
     end
 
-    ---- Internal Methods ----
-
-    function TemplateClass:_CreateCache()
-        local Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables.
-        self._Cache = Cache
-        return Cache
-    end
-
     --- Checks if the value is of the correct type.
     function TemplateClass:_Check(Value)
-        local Tags = self._Tags
-        if (Tags.NoCheck) then
+        if (self._NoCheck) then
             return true
         end
 
-        local NoConstraintsTag = Tags.NoConstraints
-        local CacheTag = Tags.Cached
+        local CacheTag = self._Cached
         local Cache
 
         local Processor = self._Map
@@ -589,7 +631,11 @@ local function CreateTemplate(Name: string)
 
         -- Handle any cached value.
         if (CacheTag) then
-            Cache = self._Cache or self:_CreateCache()
+            Cache = self._Cache
+            if (not Cache) then
+                Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables.
+                self._Cache = Cache
+            end
 
             local CacheValue = Cache[Value or NegativeCacheValue]
             if (CacheValue) then
@@ -610,22 +656,21 @@ local function CreateTemplate(Name: string)
         end
 
         -- No constraints tag -> only handle initial type check and no constraints.
-        if (NoConstraintsTag) then
+        if (self._NoConstraints) then
             return true
         end
 
         -- Handle active constraints.
         for _, Constraint in self._ActiveConstraints do
-            local Call = Constraint[1]
-            local Args = Constraint[2]
-            local HasFunctionalParams = Constraint[3]
-            local ShouldNegate = Constraint[4]
-            local ConstraintName = Constraint[5]
+            local HasFunctionalParams = Constraint.HasFunctions
+            local ShouldNegate = Constraint.ShouldNegate
+            local Call = Constraint.Function
+            local Args = Constraint.Args
+            local Name = Constraint.Name
 
             -- Functional params -> transform into values when type checking.
             if (HasFunctionalParams) then
                 Args = table.clone(Args)
-
                 for Index, Arg in Args do
                     if (type(Arg) == "function") then
                         Args[Index] = Arg(RootContext)
@@ -637,7 +682,7 @@ local function CreateTemplate(Name: string)
             local SubSuccess, SubMessage = Call(self, Value, unpack(Args))
             if (ShouldNegate) then
                 SubMessage = if (SubSuccess) then
-                                `Constraint '{ConstraintName}' succeeded but was expected to fail on value {Value}`
+                                `Constraint '{Name}' succeeded but was expected to fail on value {Value}`
                                 else
                                 ""
                 SubSuccess = not SubSuccess
@@ -645,11 +690,9 @@ local function CreateTemplate(Name: string)
 
             if (not SubSuccess) then
                 SubMessage = self._FailMessage or SubMessage
-
                 if (CacheTag) then
                     Cache[Value or NegativeCacheValue] = {false, SubMessage}
                 end
-
                 return false, SubMessage
             end
         end
@@ -657,22 +700,21 @@ local function CreateTemplate(Name: string)
         if (CacheTag) then
             Cache[Value or NegativeCacheValue] = {true}
         end
-
         return true
     end
 
     function TemplateClass:DefineDeserialize(Deserializer)
-        self = self:Copy()
-        self._DefineDeserialize = Deserializer
-        self._Deserialize = Deserializer
-        return self
+        return self:Modify({
+            _DefineDeserialize = Deserializer;
+            _Deserialize = Deserializer;
+        })
     end
 
     function TemplateClass:DefineSerialize(Serializer)
-        self = self:Copy()
-        self._DefineSerialize = Serializer
-        self._Serialize = Serializer
-        return self
+        return self:Modify({
+            _DefineSerialize = Serializer;
+            _Serialize = Serializer;
+        })
     end
 
     function TemplateClass._Serialize(Buffer, Value)
@@ -683,21 +725,32 @@ local function CreateTemplate(Name: string)
         error(`Deserialization not implemented for '{Name}'`)
     end
 
-    function TemplateClass:Serialize(Value, Atom, BypassCheck, Cache): buffer
+    function TemplateClass:Serialize(Value, Atom, BypassCheck, Cache)
         if (not BypassCheck) then
             self:Assert(Value)
         end
-        Atom = Atom or "Byte"
-    
-        local Serializer = ByteSerializer(buffer.create(1))
+
+        local Serializer = ((Atom or "Byte") == "Byte" and ByteSerializer or BitSerializer)(buffer.create(1))
+        local PreSerialize = self.PreSerialize
+
+        if (PreSerialize) then
+            PreSerialize(self, Serializer, Cache)
+        end
+
         self._Serialize(Serializer, Value, Cache)
         return Serializer.GetClippedBuffer()
     end
 
-    function TemplateClass:Deserialize(Buffer, Atom, BypassCheck, Cache): any
-        Atom = Atom or "Byte"
-    
-        local Value = self._Deserialize(ByteSerializer(Buffer), Cache)
+    function TemplateClass:Deserialize(Buffer, Atom, BypassCheck, Cache)
+        local Deserializer = ((Atom or "Byte") == "Byte" and ByteSerializer or BitSerializer)(Buffer)
+        local PreDeserialize = self.PreDeserialize
+        local Value
+
+        if (PreDeserialize) then
+            Value = PreDeserialize(self, Deserializer, Cache)
+        end
+
+        Value = Value or self._Deserialize(Deserializer, Cache)
         if (not BypassCheck) then
             self:Assert(Value)
         end
@@ -705,10 +758,11 @@ local function CreateTemplate(Name: string)
     end
 
     function TemplateClass:NonSerialized()
-        self = self:_AddTag("NonSerialized")
-        self._Deserialize = EmptyFunction
-        self._Serialize = EmptyFunction
-        return self
+        return self:Modify({
+            _NonSerialized = true;
+            _Deserialize = EmptyFunction;
+            _Serialize = EmptyFunction;
+        })
     end
 
     function TemplateClass:__tostring()
@@ -725,7 +779,7 @@ local function CreateTemplate(Name: string)
         if (next(ActiveConstraints) ~= nil) then
             local InnerConstraints = {}
             for _, Constraint in ActiveConstraints do
-                table.insert(InnerConstraints, Constraint[5] .. "(" .. ConcatWithToString(Constraint[2], ", ") .. ")")
+                table.insert(InnerConstraints, Constraint.Name .. "(" .. ConcatWithToString(Constraint.Args, ", ") .. ")")
             end
             table.insert(Fields, "Constraints = {" .. ConcatWithToString(InnerConstraints, ", ") .. "}")
         end

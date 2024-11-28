@@ -1,105 +1,81 @@
 --!native
+--!nonstrict
 --!optimize 2
 
 if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Object
 end
 
-local Template = require(script.Parent.Parent:WaitForChild("_Template"))
+local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
-local Util = require(script.Parent.Parent:WaitForChild("Util"))
-    local StructureStringMT = Util.StructureStringMT
+local Util = require(script.Parent.Parent.Util)
     local AssertIsTypeBase = Util.AssertIsTypeBase
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local TableUtil = require(script.Parent.Parent.Parent:WaitForChild("TableUtil"))
-    local Merge = TableUtil.Map.Merge
-    local Map = TableUtil.Map.Map
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+    local MergeDeep = TableUtil.Map.MergeDeep
 
-type StructureTypeChecker = TypeChecker<StructureTypeChecker, {[any]: any}> & {
-    ContainsValueOfType: ((self: StructureTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (StructureTypeChecker));
-    ContainsKeyOfType: ((self: StructureTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (StructureTypeChecker));
-    CheckMetatable: ((self: StructureTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (StructureTypeChecker));
-    UnmapStructure: ((self: StructureTypeChecker, Unmapper: FunctionalArg<(any?) -> (any?)>) -> (StructureTypeChecker));
-    MapStructure: ((self: StructureTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (StructureTypeChecker));
-    OfValueType: ((self: StructureTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (StructureTypeChecker));
-    OfStructure: ((self: StructureTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (StructureTypeChecker));
-    OfKeyType: ((self: StructureTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (StructureTypeChecker));
-    IsFrozen: ((self: StructureTypeChecker) -> (StructureTypeChecker));
-    MinSize: ((self: StructureTypeChecker, MinSize: FunctionalArg<number>) -> (StructureTypeChecker));
-    MaxSize: ((self: StructureTypeChecker, MaxSize: FunctionalArg<number>) -> (StructureTypeChecker));
-    OfClass: ((self: StructureTypeChecker, Class: FunctionalArg<{[string]: any}>) -> (StructureTypeChecker));
-    Strict: ((self: StructureTypeChecker) -> (StructureTypeChecker));
-    And: ((self: StructureTypeChecker, Other: FunctionalArg<StructureTypeChecker>) -> (StructureTypeChecker));
+type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
+    ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    ContainsKeyOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    CheckMetatable: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    UnmapStructure: ((self: IndexableTypeChecker, Unmapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
+    OfStructureFC: ((self: IndexableTypeChecker, Structure: FunctionalArg<{{[any]: SignatureTypeChecker}}>) -> (IndexableTypeChecker));
+    MapStructure: ((self: IndexableTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
+    OfValueType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    OfStructure: ((self: IndexableTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (IndexableTypeChecker));
+    OfKeyType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    IsFrozen: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    MinSize: ((self: IndexableTypeChecker, MinSize: FunctionalArg<number>) -> (IndexableTypeChecker));
+    MaxSize: ((self: IndexableTypeChecker, MaxSize: FunctionalArg<number>) -> (IndexableTypeChecker));
+    OfClass: ((self: IndexableTypeChecker, Class: FunctionalArg<{[string]: any}>) -> (IndexableTypeChecker));
+    Strict: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    And: ((self: IndexableTypeChecker, Other: FunctionalArg<IndexableTypeChecker>) -> (IndexableTypeChecker));
 
-    Similarity: ((self: StructureTypeChecker, Value: any) -> (number));
-    GroupKV: ((self: StructureTypeChecker) -> (StructureTypeChecker));
+    Similarity: ((self: IndexableTypeChecker, Value: any) -> (number));
+    GroupKV: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
 };
 
-local Structure: ((Structure: FunctionalArg<{[any]: SignatureTypeChecker}?>) -> (StructureTypeChecker)), StructureClass = Template.Create("Structure")
-StructureClass._TypeOf = {"table"}
+-- Todo: move arrays support into this?
 
-function StructureClass:_Initial(TargetStructure)
+local Indexable: (<Structure>(Structure: Structure?) -> (IndexableTypeChecker)), IndexableClass = Template.Create("Structure")
+IndexableClass._TypeOf = {"table"}
+IndexableClass.Type = "table"
+
+function IndexableClass:_Initial(TargetStructure)
     local Type = typeof(TargetStructure)
 
-    if (Type == "table") then
-        -- This is fully reliable but uncomfortably slow, and therefore disabled for the meanwhile.
-        --[[
-            for Key in TargetStructure do
-                if (typeof(Key) == "number") then
-                    return false, "Incorrect key type: number"
-                end
-            end
-        ]]
-
-        -- This will catch the majority of cases.
-        if (rawget(TargetStructure, 1) == nil) then
-            return true
-        end
-
-        return false, "Incorrect key type: numeric index [1]"
-    end
-
-    -- Some "objects" are userdata & typeof will report their name directly. Serializers will overwrite 'Type' with the name.
-    if (Type == self.Type) then
+    -- Some structures are userdata & typeof will report their name directly. Serializers will overwrite 'Type' with the name.
+    local ExpectedType = self.Type
+    if (Type == ExpectedType) then
         return true
     end
 
-    return false, `Expected table, got {Type}`
+    return false, `Expected {ExpectedType}, got {Type}`
 end
 
---- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. no extra key-value pairs.
-function StructureClass:OfStructure(OriginalSubTypes)
-    ExpectType(OriginalSubTypes, Expect.SOMETHING, 1)
+--- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. extra keys which don't exist in the spec are rejected.
+function IndexableClass:OfStructure(SubTypes)
+    ExpectType(SubTypes, Expect.SOMETHING, 1)
 
-    -- Just in case the user does any weird mutation.
-    local SubTypesCopy    
-    local Type = type(OriginalSubTypes)
-
-    if (Type == "userdata" or Type == "vector") then
-        SubTypesCopy = OriginalSubTypes
-    else
-        ExpectType(OriginalSubTypes, Expect.SOMETHING, 1)
-        SubTypesCopy = {}
-
-        for Index, Value in OriginalSubTypes do
-            AssertIsTypeBase(Value, Index)
-            SubTypesCopy[Index] = Value
-        end
-    
-        setmetatable(SubTypesCopy, StructureStringMT)
+    for Index, Value in SubTypes do
+        AssertIsTypeBase(Value, Index)
     end
 
-    return self:_AddConstraint(true, "OfStructure", function(SelfRef, StructureCopy, SubTypes)
+    if (not table.isfrozen(SubTypes)) then
+        table.freeze(SubTypes)
+    end
+
+    return self:_AddConstraint(true, "OfStructure", function(SelfRef, StructureToCheck, SubTypes)
         -- Check all fields which should be in the structure exist and the type check for each passes.
-        for Key, Checker in SubTypes do
-            local Success, SubMessage = Checker:_Check(StructureCopy[Key])
+        for Key, SubType in SubTypes do
+            local Success, SubMessage = SubType:_Check(StructureToCheck[Key])
 
             if (not Success) then
                 return false, `[Key '{Key}'] {SubMessage}`
@@ -107,8 +83,8 @@ function StructureClass:OfStructure(OriginalSubTypes)
         end
 
         -- Check there are no extra fields which shouldn't be in the structure.
-        if (SelfRef._Tags.Strict and type(StructureCopy) == "table") then
-            for Key in StructureCopy do
+        if (SelfRef._Strict and type(StructureToCheck) == "table") then
+            for Key in StructureToCheck do
                 if (not SubTypes[Key]) then
                     return false, `[Key '{Key}'] unexpected (strict)`
                 end
@@ -116,19 +92,20 @@ function StructureClass:OfStructure(OriginalSubTypes)
         end
 
         return true
-    end, SubTypesCopy)
+    end, SubTypes)
 end
 
 --- For all values in the passed table, they must satisfy the TypeChecker passed to this constraint.
-function StructureClass:OfValueType(SubType)
+function IndexableClass:OfValueType(SubType)
     if (type(SubType) ~= "function") then
         AssertIsTypeBase(SubType, 1)
     end
 
     return self:_AddConstraint(true, "OfValueType", function(_, TargetArray, SubType)
-        for Index, Value in TargetArray do
-            local Success, SubMessage = SubType:_Check(Value)
+        local Check = SubType._Check
 
+        for Index, Value in TargetArray do
+            local Success, SubMessage = Check(SubType, Value)
             if (not Success) then
                 return false, `[OfValueType: Key '{Index}'] {SubMessage}`
             end
@@ -139,15 +116,16 @@ function StructureClass:OfValueType(SubType)
 end
 
 --- For all keys in the passed table, they must satisfy the TypeChecker passed to this constraint.
-function StructureClass:OfKeyType(SubType)
+function IndexableClass:OfKeyType(SubType)
     if (type(SubType) ~= "function") then
         AssertIsTypeBase(SubType, 1)
     end
 
     return self:_AddConstraint(true, "OfKeyType", function(_, TargetArray, SubType)
-        for Key in TargetArray do
-            local Success, SubMessage = SubType:_Check(Key)
+        local Check = SubType._Check
 
+        for Key in TargetArray do
+            local Success, SubMessage = Check(SubType, Key)
             if (not Success) then
                 return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
             end
@@ -158,9 +136,9 @@ function StructureClass:OfKeyType(SubType)
 end
 
 --- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
-function StructureClass:And(Other)
+function IndexableClass:And(Other)
     AssertIsTypeBase(Other, 1)
-    assert(StructureClass.And, "Conjunction is not a structural checker.")
+    assert(IndexableClass.And, "Conjunction is not a structural checker.")
 
     local SelfOfStructure, Index = self:GetConstraint("OfStructure")
     assert(SelfOfStructure, "OfStructure constraint not present on self.")
@@ -168,28 +146,26 @@ function StructureClass:And(Other)
     local OtherOfStructure = Other:GetConstraint("OfStructure")
     assert(OtherOfStructure, "OfStructure constraint not present on conjunction.")
 
-    local Copy = self:Copy()
-    local Merged = table.clone(SelfOfStructure[1])
-    for Key, Value in OtherOfStructure[1] do
-        Merged[Key] = Value
-    end
-    Copy._ActiveConstraints = Merge(Copy._ActiveConstraints, {
-        [Index] = Merge(Copy._ActiveConstraints[Index], {
-            [2] = Map(Copy._ActiveConstraints[Index][2], function(Value, Index)
-                return (Index == 2 and Merged or Value)
-            end);
-        });
+    return self:Modify({
+        _ActiveConstraints = {
+            [Index] = {
+                Args = function(ExistingOfStructureArgs)
+                    return MergeDeep(ExistingOfStructureArgs, SelfOfStructure[1])
+                end;
+            };
+        };
     })
-    return Copy
 end
 
 --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure.
-function StructureClass:Strict()
-    return self:_AddTag("Strict")
+function IndexableClass:Strict()
+    return self:Modify({
+        _Strict = true;
+    })
 end
 
 --- Checks if an object is frozen.
-function StructureClass:IsFrozen()
+function IndexableClass:IsFrozen()
     return self:_AddConstraint(true, "IsFrozen", function(_, Target)
         if (table.isfrozen(Target)) then
             return true
@@ -200,7 +176,7 @@ function StructureClass:IsFrozen()
 end
 
 --- Checks an object's metatable.
-function StructureClass:CheckMetatable(Checker)
+function IndexableClass:CheckMetatable(Checker)
     AssertIsTypeBase(Checker, 1)
 
     return self:_AddConstraint(false, "CheckMetatable", function(_, Target, Checker)
@@ -215,20 +191,22 @@ function StructureClass:CheckMetatable(Checker)
 end
 
 --- Checks if an object's __index points to the specified class.
-function StructureClass:OfClass(Class)
+function IndexableClass:OfClass(Class)
     ExpectType(Class, Expect.TABLE, 1)
     assert(Class.__index, "Class must have an __index")
 
-    return self:CheckMetatable(Structure():Equals(Class))
+    return self:CheckMetatable(Indexable():Equals(Class))
 end
 
 --- Checks if an object contains a value which satisfies the given TypeChecker.
-function StructureClass:ContainsValueOfType(Checker)
+function IndexableClass:ContainsValueOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
     return self:_AddConstraint(false, "ContainsValueOfType", function(_, Target, Checker)
+        local Check = Checker._Check
+
         for _, Value in Target do
-            local Success = Checker:_Check(Value)
+            local Success = Check(Checker, Value)
 
             if (Success) then
                 return true
@@ -240,12 +218,14 @@ function StructureClass:ContainsValueOfType(Checker)
 end
 
 --- Checks if an object contains a value which satisfies the given TypeChecker.
-function StructureClass:ContainsKeyOfType(Checker)
+function IndexableClass:ContainsKeyOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
     return self:_AddConstraint(false, "ContainsKeyOfType", function(_, Target, Checker)
+        local Check = Checker._Check
+
         for Key in Target do
-            local Success = Checker:_Check(Key)
+            local Success = Check(Checker, Key)
 
             if (Success) then
                 return true
@@ -256,7 +236,7 @@ function StructureClass:ContainsKeyOfType(Checker)
     end, Checker)
 end
 
-function StructureClass:MinSize(MinSize)
+function IndexableClass:MinSize(MinSize)
     ExpectType(MinSize, Expect.NUMBER_OR_FUNCTION, 1)
 
     return self:_AddConstraint(true, "MinSize", function(_, Target, MinSize)
@@ -274,7 +254,7 @@ function StructureClass:MinSize(MinSize)
     end, MinSize)
 end
 
-function StructureClass:MaxSize(MaxSize)
+function IndexableClass:MaxSize(MaxSize)
     ExpectType(MaxSize, Expect.NUMBER_OR_FUNCTION, 1)
 
     return self:_AddConstraint(true, "MaxSize", function(_, Target, MaxSize)
@@ -292,8 +272,8 @@ function StructureClass:MaxSize(MaxSize)
     end, MaxSize)
 end
 
-local Original = StructureClass._MapCheckers
-function StructureClass:_MapCheckers(Type, Mapper, Recursive)
+local Original = IndexableClass._MapCheckers
+function IndexableClass:_MapCheckers(Type, Mapper, Recursive)
     local Copy = Original(self, Type, Mapper, Recursive)
         local MapStructure = Copy._MapStructure
 
@@ -304,21 +284,21 @@ function StructureClass:_MapCheckers(Type, Mapper, Recursive)
     return Copy
 end
 
-function StructureClass:MapStructure(SubStructure, Mapper)
-    self = self:Copy()
-    self._MapStructure = {SubStructure, Mapper}
-    self:_Changed()
-    return self
+function IndexableClass:MapStructure(SubStructure, Mapper)
+    return self:Modify({
+        _MapStructure = function(_)
+            return {SubStructure, Mapper}
+        end;
+    })
 end
 
-function StructureClass:UnmapStructure(Mapper)
-    self = self:Copy()
-    self._UnmapStructure = Mapper
-    self:_Changed()
-    return self
+function IndexableClass:UnmapStructure(Mapper)
+    return self:Modify({
+        _UnmapStructure = Mapper;
+    })
 end
 
-function StructureClass:Similarity(Value)
+function IndexableClass:Similarity(Value)
     local Similarity = 0
     if (self:_Initial(Value)) then
         Similarity += 1
@@ -369,24 +349,43 @@ function StructureClass:Similarity(Value)
     return Similarity
 end
 
-function StructureClass:GroupKV()
+function IndexableClass:GroupKV()
     return self:_AddTag("GroupKV")
 end
 
-function StructureClass:_UpdateSerialize()
+function IndexableClass:_UpdateSerialize()
+    local HasFunctionalConstraints = self:_HasFunctionalConstraints()
+    if (HasFunctionalConstraints) then
+        local BaseAny = require(script.Parent.BaseAny) :: any
+        self._Serialize = BaseAny._Serialize
+        self._Deserialize = BaseAny._Deserialize
+        return
+    end
+
+    local OfClass = self:GetConstraint("OfClass")
+        local OfClassValue = OfClass and OfClass[1]
+
+    local function ApplyClass(Target)
+        if (not OfClassValue) then
+            return Target
+        end
+
+        return setmetatable(Target, OfClassValue)
+    end
+
     local MapStructure = self._MapStructure
     local OfStructure = self:GetConstraint("OfStructure")
 
     if (OfStructure or MapStructure) then
-        local Strict = self._Tags.Strict
+        local Strict = self._Strict
 
         if (Strict) then
-            local MapStructureFunction = MapStructure and MapStructure[2] or function(Value)
+            local MapStructureFunction = (MapStructure and MapStructure[2] or function(Value)
                 return Value
-            end
-            local UnmapStructureFunction = self._Unmap or self._UnmapStructure or function(Value)
+            end)
+            local UnmapStructureFunction = (self._Unmap or self._UnmapStructure or function(Value)
                 return Value
-            end
+            end)
             local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
             local HasSingleType = true
             local CommonType = typeof((next(StructureDefinition)))
@@ -399,6 +398,17 @@ function StructureClass:_UpdateSerialize()
                 end
             end
 
+            -- Bypass indexing ._Serialize and ._Deserialize during the process - faster at the cost of more memory.
+            local KeyToSerializeFunction = table.clone(StructureDefinition)
+            for Key, Value in StructureDefinition do
+                KeyToSerializeFunction[Key] = Value._Serialize
+            end
+
+            local KeyToDeserializeFunction = table.clone(StructureDefinition)
+            for Key, Value in StructureDefinition do
+                KeyToDeserializeFunction[Key] = Value._Deserialize
+            end
+
             if (HasSingleType and CommonType == "string") then
                 local IndexToKey = {}
                 for Key in StructureDefinition do
@@ -408,16 +418,16 @@ function StructureClass:_UpdateSerialize()
 
                 self._Serialize = function(Buffer, Value, Cache)
                     Value = MapStructureFunction(Value)
-                    for Index, Key in IndexToKey do
-                        StructureDefinition[Key]._Serialize(Buffer, Value[Key], Cache)
+                    for _, Key in IndexToKey do
+                        KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
                     end
                 end
                 self._Deserialize = function(Buffer, Cache)
                     local Result = {}
-                    for Index, Key in IndexToKey do
-                        Result[Key] = StructureDefinition[Key]._Deserialize(Buffer, Cache)
+                    for _, Key in IndexToKey do
+                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
                     end
-                    return UnmapStructureFunction(Result)
+                    return ApplyClass(UnmapStructureFunction(Result))
                 end
 
                 return
@@ -449,9 +459,9 @@ function StructureClass:_UpdateSerialize()
         local KeySerialize = OfKeyTypeChecker._Serialize
 
     local MaxSize = self:GetConstraint("MaxSize")
-        local MaxSizeValue = MaxSize and math.ceil(math.log(MaxSize[1] + 1, 2)) or 32
+        local MaxSizeValue = MaxSize and math.ceil(math.log(MaxSize[1] + 1, 2)) or 16
 
-    local GroupKV = self._Tags.GroupKV
+    local GroupKV = self._GroupKV
     if (GroupKV) then
         self._Serialize = function(Buffer, Value, Cache)
             local Length = 0
@@ -478,7 +488,7 @@ function StructureClass:_UpdateSerialize()
             for Index = 1, Size do
                 Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
             end
-            return Result
+            return ApplyClass(Result)
         end
         return
     end
@@ -490,6 +500,7 @@ function StructureClass:_UpdateSerialize()
             Length += 1
         end
         Buffer.WriteUInt(MaxSizeValue, Length)
+
         for Key, Value in Value do
             KeySerialize(Buffer, Key, Cache)
             ValueSerialize(Buffer, Value, Cache)
@@ -498,13 +509,16 @@ function StructureClass:_UpdateSerialize()
     self._Deserialize = function(Buffer, Cache)
         -- First, read length of table. Then, read each key and value pair 'length' times.
         local Result = {}
-        for Index = 1, Buffer.ReadUInt(MaxSizeValue) do
+        local Length = Buffer.ReadUInt(MaxSizeValue)
+
+        for Index = 1, Length do
             Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)
         end
-        return Result
+
+        return ApplyClass(Result)
     end
 end
 
-StructureClass.InitialConstraint = StructureClass.OfStructure
+IndexableClass.InitialConstraint = IndexableClass.OfStructure
 
-return Structure
+return Indexable
