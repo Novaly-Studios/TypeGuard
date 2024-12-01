@@ -15,6 +15,7 @@
   - The library should ideally automatically pull in all releases of TypeGuard as they are released (some github CI stuff?).
   - All serialization and deserialization should go through the versioned library.
   - If we pull from player data and see version 2, but the user requests version 4, it will deserialize using version 2 to load it and reserialize using version 4 when the data is saved later.
+- Rename library to make it presentable for open source release. It's no longer just a type checker, but a serializer.
 
 ## Longer Term Work
 
