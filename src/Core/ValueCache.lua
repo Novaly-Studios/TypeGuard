@@ -24,6 +24,9 @@ type ValueCacheTypeChecker = TypeChecker<ValueCacheTypeChecker, nil> & {
     Using: ((self: ValueCacheTypeChecker, Serializer: FunctionalArg<SignatureTypeChecker>) -> (ValueCacheTypeChecker));
 };
 
+--- This is used to quickly cache hashable values which might occur more than one time during serialization and deserialization
+--- like commonly re-used strings for field names.
+--- This doesn't work for BitSerializer yet & need to find out why.
 local ValueCache: (() -> (ValueCacheTypeChecker)), ValueCacheCheckerClass = Template.Create("ValueCache")
 ValueCacheCheckerClass._Initial = CreateStandardInitial("ValueCache")
 ValueCacheCheckerClass.InitialConstraint = ValueCacheCheckerClass.Using
@@ -73,6 +76,7 @@ function ValueCacheCheckerClass:_UpdateSerialize()
         UIntSerialize(Buffer, Length)
         Buffer.WriteString(SubBuffer, Length * 8)
         CacheSerializerSerialize(Buffer, Items)
+
         --[[ local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true))
         Buffer.WriteString(SubBuffer, Length * 8) ]]
     end
