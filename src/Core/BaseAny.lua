@@ -178,7 +178,7 @@ end
 -- Avoid recursive tostring weirdness.
 local NewMT = table.clone(getmetatable(Any))
 NewMT.__tostring = function()
-    return "Any()"
+    return "BaseAny()"
 end
 setmetatable(Any, NewMT)
 
