@@ -137,31 +137,53 @@ local Any = Or(unpack(Types)):DefineGetType(function(Value)
 end)
 
 -- Self-reference / recursive (object or array of type Any). Can't copy the root table.
-local DefaultArray = Array(Any)
-local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
-local _, Index = Any:GetConstraint("IsATypeIn")
-Any._ActiveConstraints = MergeDeep(Any._ActiveConstraints, {
-    [Index] = {
-        Args = {
-            [1] = function(ExistingArgs)
-                return ArrayMerge(ExistingArgs, {DefaultArray, DefaultObject})
-            end;
-        };
-    };
-})
-local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
-DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
-DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
-Any:_UpdateSerializeFunctionCache()
+local function Setup()
+    if (Any._Setup) then
+        return
+    end
 
+    local DefaultArray = Array(Any)
+    local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
+    local _, Index = Any:GetConstraint("IsATypeIn")
+    Any._ActiveConstraints = MergeDeep(Any._ActiveConstraints, {
+        [Index] = {
+            Args = {
+                [1] = function(ExistingArgs)
+                    return ArrayMerge(ExistingArgs, {DefaultArray, DefaultObject})
+                end;
+            };
+        };
+    })
+    local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
+    DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
+    DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
+    Any:_UpdateSerializeFunctionCache()
+end
+
+-- We wrap Serialize and Deserialize to avoid immediate cyclic requires. Some other modules
+-- require BaseAny while BaseAny also requires them, we can instead run the require setup when
+-- these functions are called.
+local OriginalSerialize = Any.Serialize
+Any.Serialize = function(...)
+    Setup()
+    return OriginalSerialize(...)
+end
+
+local OriginalDeserialize = Any.Deserialize
+Any.Deserialize = function(...)
+    Setup()
+    return OriginalDeserialize(...)
+end
+
+-- Avoid recursive tostring weirdness.
 local NewMT = table.clone(getmetatable(Any))
 NewMT.__tostring = function()
     return "Any()"
 end
 setmetatable(Any, NewMT)
 
--- Disallow all constraints or functions which copy the root, as that will break the self-reference to Any.
-local AllowFunctions = {"Check", "Assert", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "_Serialize", "_Deserialize", "_Check", "_Initial"}
+-- Disallow all constraints or functions which would copy the root, as that will break the self-reference to Any.
+local AllowFunctions = {"Check", "Assert", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "GetConstraint", "_Serialize", "_Deserialize", "_Check", "_Initial", "_UpdateSerializeFunctionCache"}
 for Key, Value in Any do
     if (type(Value) ~= "function") then
         continue

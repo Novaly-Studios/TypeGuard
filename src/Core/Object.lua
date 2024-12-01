@@ -21,6 +21,8 @@ local Util = require(script.Parent.Parent.Util)
 local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
     local MergeDeep = TableUtil.Map.MergeDeep
 
+local Number = require(script.Parent.Number)
+
 type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
     ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     ContainsKeyOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
@@ -294,7 +296,9 @@ end
 
 function IndexableClass:UnmapStructure(Mapper)
     return self:Modify({
-        _UnmapStructure = Mapper;
+        _UnmapStructure = function(_)
+            return Mapper
+        end;
     })
 end
 
@@ -349,8 +353,14 @@ function IndexableClass:Similarity(Value)
     return Similarity
 end
 
+--- Serializes keys first, then values second. Not utilized
+--- currently, but when Disjunction / Or supports leading
+--- serialization via NoLeads tag, this will help save space
+--- because the types will be less fragmented.
 function IndexableClass:GroupKV()
-    return self:_AddTag("GroupKV")
+    return self:Modify({
+        _GroupKV = true;
+    })
 end
 
 function IndexableClass:_UpdateSerialize()
@@ -439,14 +449,11 @@ function IndexableClass:_UpdateSerialize()
     local OfValueType = self:GetConstraint("OfValueType")
     local OfKeyType = self:GetConstraint("OfKeyType")
 
-    if (not (OfValueType and OfKeyType)) then
-        -- TODO: find a way to default to Any type without cyclic module requires.
-        self._Serialize = function(_, _, _)
-            error("No OfValueType or OfKeyType constraint: cannot serialize")
-        end
-        self._Deserialize = function(_, _)
-            error("No OfValueType or OfKeyType constraint: cannot deserialize")
-        end
+    if (not (OfValueType and OfKeyType)) then        
+        local BaseAny = require(script.Parent.BaseAny) :: any
+        self._Serialize = BaseAny._Serialize
+        self._Deserialize = BaseAny._Deserialize
+
         return
     end
 
@@ -459,7 +466,9 @@ function IndexableClass:_UpdateSerialize()
         local KeySerialize = OfKeyTypeChecker._Serialize
 
     local MaxSize = self:GetConstraint("MaxSize")
-        local MaxSizeValue = MaxSize and math.ceil(math.log(MaxSize[1] + 1, 2)) or 16
+    local SizeSerializer = (MaxSize and Number(0, MaxSize[1]):Integer() or Number():Integer():Positive():Dynamic())
+        local SizeSerialize = SizeSerializer._Serialize
+        local SizeDeserialize = SizeSerializer._Deserialize
 
     local GroupKV = self._GroupKV
     if (GroupKV) then
@@ -468,28 +477,34 @@ function IndexableClass:_UpdateSerialize()
             for _ in Value do
                 Length += 1
             end
-            Buffer.WriteUInt(MaxSizeValue, Length)
+            SizeSerialize(Buffer, Length, Cache)
+
             for Key in Value do
                 KeySerialize(Buffer, Key, Cache)
             end
+
             for _, Value in Value do
                 ValueSerialize(Buffer, Value, Cache)
             end
         end
         self._Deserialize = function(Buffer, Cache)
-            local Size = Buffer.ReadUInt(MaxSizeValue)
+            local Size = SizeDeserialize(Buffer, Cache)
             local IndexToKey = table.create(Size)
             local Result = {}
+
             for Index = 1, Size do
                 local Key = KeyDeserialize(Buffer, Cache)
                 IndexToKey[Index] = Key
                 Result[Key] = true
             end
+
             for Index = 1, Size do
                 Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
             end
+
             return ApplyClass(Result)
         end
+
         return
     end
 
@@ -499,7 +514,7 @@ function IndexableClass:_UpdateSerialize()
         for _ in Value do
             Length += 1
         end
-        Buffer.WriteUInt(MaxSizeValue, Length)
+        SizeSerialize(Buffer, Length, Cache)
 
         for Key, Value in Value do
             KeySerialize(Buffer, Key, Cache)
@@ -509,7 +524,7 @@ function IndexableClass:_UpdateSerialize()
     self._Deserialize = function(Buffer, Cache)
         -- First, read length of table. Then, read each key and value pair 'length' times.
         local Result = {}
-        local Length = Buffer.ReadUInt(MaxSizeValue)
+        local Length = SizeDeserialize(Buffer, Cache)
 
         for Index = 1, Length do
             Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)

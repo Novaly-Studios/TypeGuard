@@ -574,13 +574,17 @@ local function CreateTemplate(Name: string)
 
     function TemplateClass:Map(Processor)
         return self:Modify({
-            _Map = Processor;
+            _Map = function(_)
+                return Processor
+            end;
         })
     end
 
     function TemplateClass:Unmap(Processor)
         return self:Modify({
-            _Unmap = Processor;
+            _Unmap = function(_)
+                return Processor
+            end;
         })
     end
 

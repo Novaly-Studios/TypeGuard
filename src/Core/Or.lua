@@ -40,6 +40,7 @@ end
 
 function OrClass:DefineGetType(GetTypeIndexFromValue)
     ExpectType(GetTypeIndexFromValue, Expect.FUNCTION, 1)
+
     return self:Modify({
         _GetTypeIndexFromValue = function()
             return GetTypeIndexFromValue
@@ -49,6 +50,7 @@ end
 
 function OrClass:DefineDivide(Divider)
     ExpectType(Divider, Expect.FUNCTION, 1)
+
     return self:Modify({
         _Divider = Divider;
     })
@@ -65,6 +67,7 @@ local function _IsAValueIn(_self, TargetValue, Options)
 end
 function OrClass:IsAValueIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
+
     return self:_AddConstraint(false, "IsAValueIn", _IsAValueIn, Options)
 end
 
@@ -83,6 +86,7 @@ local function _IsAKeyIn(_self, Key, Options)
 end
 function OrClass:IsAKeyIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
+
     return self:_AddConstraint(false, "IsAKeyIn", _IsAKeyIn, Options)
 end
 
@@ -117,6 +121,7 @@ local function _IsATypeIn(_self, Value, Options)
 end
 function OrClass:IsATypeIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
+
     for _, Option in Options do
         AssertIsTypeBase(Option, 1)
     end
@@ -159,8 +164,11 @@ function OrClass:IsATypeIn(Options)
 end
 
 -- Disables leading serialization (record repeat number of that type before the sequence, instead of before each element).
+-- Todo.
 function OrClass:NoLeads()
-    self:_AddTag("NoLeads")
+    return self:Modify({
+        _NoLeads = true;
+    })
 end
 
 local function TestComparability(X, Y)

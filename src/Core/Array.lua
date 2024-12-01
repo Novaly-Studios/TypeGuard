@@ -201,7 +201,9 @@ end
 
 --- Tags this ArrayTypeChecker as strict i.e. no extra indexes allowed in OfStructure constraint.
 function ArrayClass:Strict()
-    return self:_AddTag("Strict")
+    return self:Modify({
+        _Strict = true;
+    })
 end
 
 --- Checks if an array is frozen.
@@ -286,7 +288,7 @@ end
 
 ArrayClass.InitialConstraint = ArrayClass.OfType
 
-local DynamicUInt = Number(0, 2^16-1):Integer()
+local DynamicUInt = Number():Integer():Positive():Dynamic() -- Number(0, 2^16-1):Integer()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
@@ -295,6 +297,7 @@ function ArrayClass:_UpdateSerialize()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
 
     if (HasFunctionalConstraints or not Type) then
+        -- Todo: use Roblox Any instead?
         local BaseAny = require(script.Parent.BaseAny) :: any
         self._Serialize = BaseAny._Serialize
         self._Deserialize = BaseAny._Deserialize

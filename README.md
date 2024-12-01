@@ -5,6 +5,7 @@ A runtime assertion, type-checking, and serialization library. This aims to repl
 ## Usage Examples
 
 ### 1: standard params, simple
+
 ```lua
 local AssertRandomParams = TypeGuard.Params(
     TypeGuard.String(),
@@ -19,6 +20,7 @@ end
 ```
 
 ### 2: each provided arg must be an integer
+
 ```lua
 local AssertSumInts = TypeGuard.Variadic(TypeGuard.Number():Integer())
 local function SumInts(...: number)
@@ -28,6 +30,7 @@ end
 ```
 
 ### 3: TypeChecker disjunction with a custom failure message
+
 ```lua
 local AssertStringOrNumberOrBoolean = TypeGuard.Params(
     TypeGuard.Or(
@@ -44,6 +47,7 @@ end
 ```
 
 ### 4: TypeChecker conjunction
+
 ```lua
 local AssertStructureCombined = TypeGuard.Params(
     TypeGuard.Object({
@@ -62,6 +66,7 @@ end
 ```
 
 ### 5: context passing (functional constraint): assert that the provided Model a descendant of Workspace
+
 ```lua
 local AssertTestContext = TypeGuard.ParamsWithContext(
     TypeGuard.Instance("Model"):IsDescendantOf(function(Context)
@@ -76,6 +81,7 @@ end
 ```
 
 ### 6: Optional params
+
 ```lua
 local AssertTestOptional = TypeGuard.Params(
     TypeGuard.String(),
@@ -89,6 +95,7 @@ end
 ```
 
 ### 7: validating tables passed to RemoteEvents recursively, with various principles combined
+
 ```lua
 local AssertValidTest = TypeGuard.Params(
     TypeGuard.Instance("Player"):IsDescendantOf(game:GetService("Players")),
@@ -114,6 +121,7 @@ end)
 ```
 
 ### 8: Instance filtering via wrapping check into predicate: find all alive Humanoids whose characters are not tagged with "Ignore"
+
 ```lua
 local IsHumanoidAlive = TypeGuard.Instance("Model", {
     Humanoid = TypeGuard.Instance("Humanoid", { -- Scans children recursively
@@ -125,6 +133,7 @@ local AliveHumanoids = SomeTableLibrary.Filter(Workspace:GetChildren(), IsHumano
 ```
 
 ### 9: constructing a checker from a template object
+
 ```lua
 local Instances = Instance.new("Model")
     local Part1 = Instance.new("Part")
@@ -182,6 +191,6 @@ local Serialize2 = TestObject:Serialize({
 print(TestObject:Deserialize(Serialize2))
 ```
 
-
 ## Best Practices
+
 Avoid construction or copying of TypeCheckers for performance reasons. TypeCheckers are copied with each added constraint or change, and are supposed to exist outside of frequently called functions. If you need to pass dynamic data down, use context & functional constraints.

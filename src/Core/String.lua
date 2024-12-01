@@ -125,10 +125,11 @@ end
 --- Signifies the string is null-terminated.
 function StringClass:NullTerminated()
     return self:_AddConstraint(true, "NullTerminated", function(_, Item)
-        if (Item:sub(-1) == "\0") then
+        if (Item:match("\0") == nil) then
             return true
         end
-        return false, "String is not null-terminated"
+
+        return false, "String contained a null-terminator and it should not for security, serialization will automatically add this"
     end)
 end
 
@@ -159,7 +160,7 @@ StringClass.InitialConstraintsDirectVariadic = function(self, ...)
     return IsAValueIn(self, {...})
 end
 
-local DynamicUInt = Number(0, 2^16-1):Integer()
+local DynamicUInt = Number():Positive():Integer():Dynamic() -- Number(0, 2^16-1):Integer()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
@@ -247,10 +248,12 @@ function StringClass:_UpdateSerialize()
         return
     end
 
+    -- This doesn't need to write dynamic UInts for the size, but it also prohibits the ability to use \0 in the string for security.
     local NullTerminated = self:GetConstraint("NullTerminated")
     if (NullTerminated) then
         self._Serialize = function(Buffer, Value, Cache)
             Buffer.WriteString(Value, #Value * 8)
+            Buffer.WriteUInt(1, 0)
         end
         self._Deserialize = function(Buffer, Cache)
             local Result = ByteSerializer()

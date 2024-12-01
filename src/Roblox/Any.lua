@@ -5,6 +5,10 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Any
 end
 
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+    local ArrayMerge = TableUtil.Array.Merge
+    local MergeDeep = TableUtil.Map.MergeDeep
+
 local Core = script.Parent.Parent.Core
     local Function = require(Core.Function)
     local Boolean = require(Core.Boolean)
@@ -12,24 +16,39 @@ local Core = script.Parent.Parent.Core
     local String = require(Core.String)
     local Object = require(Core.Object)
     local Thread = require(Core.Thread)
+    local Buffer = require(Core.Buffer)
     local Array = require(Core.Array)
-    local Nil = require(Core.Nil)
     local Or = require(Core.Or)
 
 local Roblox = script.Parent
-    local _CFrame = require(Roblox.CFrame)
-    local _Color3 = require(Roblox.Color3)
-    local _ColorSequence = require(Roblox.ColorSequence)
-    local _ColorSequenceKeypoint = require(Roblox.ColorSequenceKeypoint)
-    local _Enum = require(Roblox.Enum)
-    local _Instance = require(Roblox.Instance)
-    local _NumberSequence = require(Roblox.NumberSequence)
-    local _NumberSequenceKeypoint = require(Roblox.NumberSequenceKeypoint)
-    local _UDim = require(Roblox.UDim)
-    local _UDim2 = require(Roblox.UDim2)
-    local _Vector2 = require(Roblox.Vector2)
-    local _Vector3 = require(Roblox.Vector3)
-    local _TweenInfo = require(Roblox.TweenInfo)
+    local RbxCFrame = require(Roblox.CFrame)
+        local DefaultCFrame = RbxCFrame()
+    local RbxColor3 = require(Roblox.Color3)
+        local DefaultColor3 = RbxColor3()
+    local RbxColorSequence = require(Roblox.ColorSequence)
+        local DefaultColorSequence = RbxColorSequence()
+    local RbxColorSequenceKeypoint = require(Roblox.ColorSequenceKeypoint)
+        local DefaultColorSequenceKeypoint = RbxColorSequenceKeypoint()
+    local RbxEnum = require(Roblox.Enum)
+        local DefaultEnum = RbxEnum()
+    local RbxInstance = require(Roblox.Instance)
+        local DefaultInstance = RbxInstance()
+    local RbxNumberSequence = require(Roblox.NumberSequence)
+        local DefaultNumberSequence = RbxNumberSequence()
+    local RbxNumberSequenceKeypoint = require(Roblox.NumberSequenceKeypoint)
+        local DefaultNumberSequenceKeypoint = RbxNumberSequenceKeypoint()
+    local RbxRay = require(Roblox.Ray)
+        local DefaultRay = RbxRay()
+    local RbxTweenInfo = require(Roblox.TweenInfo)
+        local DefaultTweenInfo = RbxTweenInfo()
+    local RbxUDim = require(Roblox.UDim)
+        local DefaultUDim = RbxUDim()
+    local RbxUDim2 = require(Roblox.UDim2)
+        local DefaultUDim2 = RbxUDim2()
+    local RbxVector2 = require(Roblox.Vector2)
+        local DefaultVector2 = RbxVector2()
+    local RbxVector3 = require(Roblox.Vector3)
+        local DefaultVector3 = RbxVector3()
 
 local UInt8 = Number():Integer(8, true)
 local Int8 = Number():Integer(8, false)
@@ -38,27 +57,15 @@ local Int16 = Number():Integer(16, false)
 local UInt32 = Number():Integer(32, true)
 local Int32 = Number():Integer(32, false)
 local Float32 = Number():Float(32)
-local Float64 = Number():Float(64)
+local Float = Number()
 local DefaultFunction = Function()
 local DefaultBoolean = Boolean()
 local DefaultString = String()
 local DefaultThread = Thread()
-local DefaultNil = Nil()
-local DefaultCFrame = _CFrame()
-local DefaultColor3 = _Color3()
-local DefaultVector3 = _Vector3()
--- local DefaultInstance = _Instance()
-local DefaultVector2 = _Vector2()
-local DefaultUDim2 = _UDim2()
-local DefaultEnum = _Enum()
-local DefaultUDim = _UDim()
-local DefaultColorSequenceKeypoint = _ColorSequenceKeypoint()
-local DefaultColorSequence = _ColorSequence()
-local DefaultNumberSequenceKeypoint = _NumberSequenceKeypoint()
-local DefaultNumberSequence = _NumberSequence()
-local DefaultTweenInfo = _TweenInfo()
+local DefaultBuffer = Buffer()
 
 local Types = {
+    -- Numbers
     UInt8;
     Int8;
     UInt16;
@@ -66,25 +73,34 @@ local Types = {
     UInt32;
     Int32;
     Float32;
-    Float64;
-    DefaultFunction;
-    DefaultBoolean;
+    Float;
+
+    -- Common Strings
     DefaultString;
-    DefaultThread;
-    DefaultNil;
+
+    -- Misc
+    DefaultBoolean;
+    DefaultBuffer;
+
+    -- Roblox Types
     DefaultCFrame;
     DefaultColor3;
-    DefaultVector3;
-            -- DefaultInstance;
-    DefaultVector2;
-    DefaultUDim2;
-    DefaultEnum;
-    DefaultUDim;
-    DefaultColorSequenceKeypoint;
     DefaultColorSequence;
-    DefaultNumberSequenceKeypoint;
+    DefaultColorSequenceKeypoint;
+    DefaultEnum;
+    DefaultInstance;
     DefaultNumberSequence;
+    DefaultNumberSequenceKeypoint;
+    DefaultRay;
     DefaultTweenInfo;
+    DefaultUDim;
+    DefaultUDim2;
+    DefaultVector2;
+    DefaultVector3;
+
+    -- Unserializable
+    DefaultFunction;
+    DefaultThread;
 }
 
 local TypeToIndex = {}
@@ -103,26 +119,55 @@ local Int16Index = table.find(Types, Int16)
 local UInt32Index = table.find(Types, UInt32)
 local Int32Index = table.find(Types, Int32)
 local Float32Index = table.find(Types, Float32)
-local Float64Index = table.find(Types, Float64)
+local FloatIndex = table.find(Types, Float)
 
 local Any = Or(unpack(Types)):DefineGetType(function(Value)
     local ValueType = typeof(Value)
     if (ValueType == "number") then
-        return UInt8:Check(Value) and UInt8Index or
-                Int8:Check(Value) and Int8Index or
-                UInt16:Check(Value) and UInt16Index or
-                Int16:Check(Value) and Int16Index or
-                UInt32:Check(Value) and UInt32Index or
-                Int32:Check(Value) and Int32Index or
-                Float32:Check(Value) and Float32Index or
-                Float64:Check(Value) and Float64Index or
-                error(`Number cannot be represented: {Value}`)
+        if (Value % 1 == 0) then
+            if (Value >= 0) then
+                if (Value <= 0xFF) then
+                    return UInt8Index
+                end
+
+                if (Value <= 0xFFFF) then
+                    return UInt16Index
+                end
+
+                if (Value <= 0xFFFFFFFF) then
+                    return UInt32Index
+                end
+
+                error(`Unsigned integer cannot be represented: {Value}`)
+            end
+
+            if (Value >= -0x80) then
+                return Int8Index
+            end
+
+            if (Value >= -0x8000) then
+                return Int16Index
+            end
+
+            if (Value >= -0x80000000) then
+                return Int32Index
+            end
+
+            error(`Signed integer cannot be represented: {Value}`)
+        end
+
+        if (Value <= 3.402823466e+38) then
+            return Float32Index
+        end
+
+        return FloatIndex
     end
 
     if (ValueType == "table") then
         if (Value[1] == nil) then
             return DefaultObjectIndex
         end
+
         return DefaultArrayIndex
     end
 
@@ -130,29 +175,77 @@ local Any = Or(unpack(Types)):DefineGetType(function(Value)
     if (Index) then
         return Index
     end
+
     error(`Unhandled type: {ValueType}`)
 end)
 
-local Versions = {Any}
-return function(Version: number, Applier: ((typeof(Any)) -> (typeof(Any)))?)
-    local Copy = table.clone(Versions[Version])
-    if (not Copy) then
-        error(`Unknown RbxAny serialization version: {Version}`)
+-- Self-reference / recursive (object or array of type Any). Can't copy the root table.
+local function Setup()
+    if (Any._Setup) then
+        return
     end
 
-    -- Apply any changes here.
-    if (Applier) then
-        Copy = Applier(Copy)
-    end
-
-    -- Then self-reference that potentially modified copy.
-    local IsATypeIn = Copy:GetConstraint("IsATypeIn")[1]
-    local DefaultArray = Array(Copy)
-    table.insert(IsATypeIn, DefaultArray)
+    local DefaultArray = Array(Any)
+    local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
+    local _, Index = Any:GetConstraint("IsATypeIn")
+    Any._ActiveConstraints = MergeDeep(Any._ActiveConstraints, {
+        [Index] = {
+            Args = {
+                [1] = function(ExistingArgs)
+                    return ArrayMerge(ExistingArgs, {DefaultArray, DefaultObject})
+                end;
+            };
+        };
+    })
+    local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
     DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
-    local DefaultObject = Object():OfKeyType(Copy):OfValueType(Copy)
-    table.insert(IsATypeIn, DefaultObject)
     DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
-    Copy:_Changed()
-    return Copy
+    Any:_UpdateSerializeFunctionCache()
 end
+
+-- We wrap Serialize and Deserialize to avoid immediate cyclic requires. Some other modules
+-- require BaseAny while BaseAny also requires them, we can instead run the require setup when
+-- these functions are called.
+local OriginalSerialize = Any.Serialize
+Any.Serialize = function(...)
+    Setup()
+    return OriginalSerialize(...)
+end
+
+local OriginalDeserialize = Any.Deserialize
+Any.Deserialize = function(...)
+    Setup()
+    return OriginalDeserialize(...)
+end
+
+-- Avoid recursive tostring weirdness.
+local NewMT = table.clone(getmetatable(Any))
+NewMT.__tostring = function()
+    return "Any()"
+end
+setmetatable(Any, NewMT)
+
+-- Disallow all constraints or functions which would copy the root, as that will break the self-reference to Any.
+local AllowFunctions = {"Check", "Assert", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "GetConstraint", "_Serialize", "_Deserialize", "_Check", "_Initial", "_UpdateSerializeFunctionCache"}
+for Key, Value in Any do
+    if (type(Value) ~= "function") then
+        continue
+    end
+
+    if (table.find(AllowFunctions, Key)) then
+        continue
+    end
+
+    Any[Key] = nil
+end
+
+local Result = Any :: {
+    Deserialize: ((Buffer: buffer, Cache: any?) -> (any));
+    AsPredicate: (() -> ((Value: any) -> (boolean)));
+    Serialize: ((Value: any, Atom: string?, BypassCheck: boolean?, Cache: any?) -> (buffer));
+    AsAssert: (() -> ((Value: any) -> ()));
+    Assert: ((Value: any) -> ());
+    Check: ((Value: any) -> (boolean));
+}
+
+return Result

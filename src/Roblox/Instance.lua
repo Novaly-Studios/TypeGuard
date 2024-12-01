@@ -183,7 +183,9 @@ end
 
 --- Activates strict tag for OfStructure.
 function InstanceCheckerClass:Strict()
-    return self:_AddTag("Strict")
+    return self:Modify({
+        _Strict = true;
+    })
 end
 
 --- Checks if an Instance has a particular tag.
