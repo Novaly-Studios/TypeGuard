@@ -22,12 +22,14 @@ BooleanClass._Initial = CreateStandardInitial("boolean")
 BooleanClass._TypeOf = {"boolean"}
 
 function BooleanClass:_UpdateSerialize()
-    self._Serialize = function(Buffer, Value, _Cache)
-        Buffer.WriteUInt(1, Value and 1 or 0)
-    end
-    self._Deserialize = function(Buffer, _Cache)
-        return (Buffer.ReadUInt(1) == 1)
-    end
+    return {
+        _Serialize = function(Buffer, Value, _Cache)
+            Buffer.WriteUInt(1, Value and 1 or 0)
+        end;
+        _Deserialize = function(Buffer, _Cache)
+            return (Buffer.ReadUInt(1) == 1)
+        end;
+    }
 end
 
 BooleanClass.InitialConstraint = BooleanClass.Equals

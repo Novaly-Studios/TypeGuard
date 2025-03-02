@@ -28,12 +28,14 @@ function BufferClass:_UpdateSerialize()
         local Deserialize = Serializer._Deserialize
         local Serialize = Serializer._Serialize
 
-    self._Serialize = function(Buffer, Value, Cache)
-        Serialize(Buffer, buffer.tostring(Value), Cache)
-    end
-    self._Deserialize = function(Buffer, Cache)
-        return buffer.fromstring(Deserialize(Buffer, Cache))
-    end
+    return {
+        _Serialize = function(Buffer, Value, Cache)
+            Serialize(Buffer, buffer.tostring(Value), Cache)
+        end;
+        _Deserialize = function(Buffer, Cache)
+            return buffer.fromstring(Deserialize(Buffer, Cache))
+        end;
+    }
 end
 
 return Buffer

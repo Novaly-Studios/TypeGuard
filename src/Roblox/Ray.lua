@@ -25,6 +25,7 @@ local Vector3Serializer = require(script.Parent.Vector3)
 
 local function RayFloat(self, Precision)
     local Float = Number():Float(Precision)
+
     return self:_MapCheckers("Vector3", function(Checker)
         return Float
     end)
@@ -32,6 +33,7 @@ end
 
 local function RayInt(self, Bits, Unsigned)
     local Int = Number():Integer(Bits, Unsigned)
+
     return self:_MapCheckers("Vector3", function(Checker)
         return Int
     end)

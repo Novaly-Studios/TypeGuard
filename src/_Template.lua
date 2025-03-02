@@ -12,9 +12,10 @@ local Util = require(script.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local TableUtil = require(script.Parent.Parent.TableUtil)
+local TableUtil = require(script.Parent.Parent.TableUtil).WithFeatures()
     local MergeDeep = TableUtil.Map.MergeDeep
     local Insert = TableUtil.Array.Insert
+    local Merge = TableUtil.Map.Merge
 
 export type AnyMethod = (...any) -> (...any)
 export type SignatureTypeChecker = {
@@ -23,9 +24,6 @@ export type SignatureTypeChecker = {
 export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Luau from complaining in the main script.
     GreaterThanOrEqualTo: AnyMethod;
     LessThanOrEqualTo: AnyMethod;
-    DefineDeserialize: AnyMethod;
-    DefineSerialize: AnyMethod;
-    NonSerialized: AnyMethod;
     NoConstraints: AnyMethod;
     GreaterThan: AnyMethod;
     FailMessage: AnyMethod;
@@ -52,9 +50,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     _P: SampleType;
 
     -- Methods available in all TypeCheckers.
-    DefineDeserialize: ((self: ExtensionClass, Serializer: ((Serializer: ByteSerializer, Value: SampleType) -> ())) -> (ExtensionClass));
-    DefineSerialize: ((self: ExtensionClass, Deserializer: ((Serializer: ByteSerializer) -> (SampleType))) -> (ExtensionClass));
-    NonSerialized: ((self: ExtensionClass) -> (ExtensionClass));
     NoConstraints: ((self: ExtensionClass) -> (ExtensionClass));
     FailMessage: ((self: ExtensionClass, Message: FunctionalArg<string>) -> (ExtensionClass));
     AsAssertion: ((self: ExtensionClass) -> ((Input: SampleType) -> ()));
@@ -206,8 +201,9 @@ local function CreateTemplate(Name: string)
             setmetatable(self, {__tostring = TemplateClass.__tostring})
         end
 
-        self:_Changed()
-        
+        -- Make sure we generate initial serialization & deserialization functions.
+        self = MergeDeep(self, self:_Changed(), false)
+
         -- Support for a single constraint passed as the constructor, with an arbitrary number of args.
         local InitialConstraint = self.InitialConstraint
         local NumArgs = select("#", ...)
@@ -295,19 +291,25 @@ local function CreateTemplate(Name: string)
 
     function TemplateClass:Modify(Modifications: {[any]: any})
         local Previous = self
-        self = MergeDeep(self, Modifications)
+        self = MergeDeep(self, Modifications, true)
 
         -- Top level will be the same if no changes were made deep in the object.
         if (self == Previous) then
             return self
         end
 
-        self:_Changed()
-        return self
+        local ToMerge = self:_Changed()
+
+        if (ToMerge == nil) then
+            return self
+        end
+
+        return MergeDeep(self, ToMerge, false)
     end
 
     function TemplateClass:ModifyConstraints(ID, Modifier)
         local ActiveConstraints = self._ActiveConstraints
+
         for ConstraintIndex, Constraint in ActiveConstraints do
             if (Constraint.Name == ID) then
                 self = self:Modify({
@@ -319,6 +321,7 @@ local function CreateTemplate(Name: string)
                 })
             end
         end
+
         return self
     end
 
@@ -383,7 +386,8 @@ local function CreateTemplate(Name: string)
                                             [Index] = function(Arg)
                                                 return Mapper(Arg:_MapCheckers(Mapper, Recursive))
                                             end;
-                                        })
+                                        }, true)
+
                                         continue
                                     end
 
@@ -391,12 +395,15 @@ local function CreateTemplate(Name: string)
                                     local _, FirstItem = next(Arg)
                                     if (type(FirstItem) == "table" and FirstItem._MapCheckers) then
                                         local Changes = {}
+
                                         for Index, Checker in Arg do
                                             Changes[Index] = Mapper(Checker:_MapCheckers(Mapper, Recursive))
                                         end
+
                                         NewArgs = MergeDeep(NewArgs, {
                                             [Index] = Changes;
-                                        })
+                                        }, true)
+
                                         continue
                                     end
                                 end
@@ -404,7 +411,7 @@ local function CreateTemplate(Name: string)
                                 return NewArgs
                             end;
                         };
-                    })
+                    }, true)
                 end
 
                 return ActiveConstraints
@@ -492,7 +499,7 @@ local function CreateTemplate(Name: string)
 
         return self:Modify({
             _ActiveConstraints = function(ActiveConstraints)
-                return Insert(ActiveConstraints, {
+                return Insert(ActiveConstraints or {}, {
                     HasFunctions = HasFunctions;
                     ShouldNegate = false;
                     Function = Constraint;
@@ -514,13 +521,15 @@ local function CreateTemplate(Name: string)
             if (self._NonSerialized) then
                 return
             end
+
             local Value = Equals[1]
-            self._Serialize = function(_, _, _) end
-            self._Deserialize = function(_, _)
-                return Value
-            end
-            self._NonSerialized = true
-            return
+            return {
+                _Serialize = function(_, _, _) end;
+                _Deserialize = function(_, _)
+                    return Value
+                end;
+                _NonSerialized = true;
+            }
         end
 
         -- If it's a selection of possible values, we can use Or.
@@ -533,14 +542,14 @@ local function CreateTemplate(Name: string)
                 local DoDeserialize = Serializer._Deserialize
                 local DoSerialize = Serializer._Serialize
 
-            self._Serialize = function(Buffer, Value, Cache)
-                DoSerialize(Buffer, Value, Cache)
-            end
-            self._Deserialize = function(Buffer, Cache)
-                return DoDeserialize(Buffer, Cache)
-            end
-
-            return
+            return {
+                _Serialize = function(Buffer, Value, Cache)
+                    DoSerialize(Buffer, Value, Cache)
+                end;
+                _Deserialize = function(Buffer, Cache)
+                    return DoDeserialize(Buffer, Cache)
+                end;
+            }
         end
 
         local IsAKeyIn = self:GetConstraint("IsAKeyIn")
@@ -551,25 +560,29 @@ local function CreateTemplate(Name: string)
                 local DoDeserialize = Serializer._Deserialize
                 local DoSerialize = Serializer._Serialize
 
-            self._Serialize = function(Buffer, Value, Cache)
-                DoSerialize(Buffer, Value, Cache)
-            end
-            self._Deserialize = function(Buffer, Cache)
-                return DoDeserialize(Buffer, Cache)
-            end
-
-            return
+            return {
+                _Serialize = function(Buffer, Value, Cache)
+                    DoSerialize(Buffer, Value, Cache)
+                end;
+                _Deserialize = function(Buffer, Cache)
+                    return DoDeserialize(Buffer, Cache)
+                end;
+            }
         end
 
         -- Let the implementation update its _Serialize and _Deserialize functions.
         local UpdateSerialize = self._UpdateSerialize
-        if (UpdateSerialize and not self._NonSerialized) then
-            UpdateSerialize(self)
+        local ToMerge
+
+        if (UpdateSerialize) then
+            ToMerge = UpdateSerialize(self)
         end
 
         -- Allow manual definition to overwrite.
-        self._Serialize = self._DefineSerialize or self._Serialize
-        self._Deserialize = self._DefineDeserialize or self._Deserialize
+        return Merge({
+            _Serialize = self._Serialize;
+            _Deserialize = self._Deserialize;
+        }, ToMerge or {})
     end
 
     function TemplateClass:Map(Processor)
@@ -594,6 +607,7 @@ local function CreateTemplate(Name: string)
                 return true
             end
         end
+
         return false
     end
 
@@ -613,11 +627,13 @@ local function CreateTemplate(Name: string)
         ExpectType(ID, Expect.STRING, 1)
 
         local Result = {}
+
         for Index, ConstraintData in self._ActiveConstraints do
             if (ConstraintData.Name == ID) then
                 table.insert(Result, ConstraintData.Args)
             end
         end
+
         return Result
     end
 
@@ -675,6 +691,7 @@ local function CreateTemplate(Name: string)
             -- Functional params -> transform into values when type checking.
             if (HasFunctionalParams) then
                 Args = table.clone(Args)
+
                 for Index, Arg in Args do
                     if (type(Arg) == "function") then
                         Args[Index] = Arg(RootContext)
@@ -694,9 +711,11 @@ local function CreateTemplate(Name: string)
 
             if (not SubSuccess) then
                 SubMessage = self._FailMessage or SubMessage
+
                 if (CacheTag) then
                     Cache[Value or NegativeCacheValue] = {false, SubMessage}
                 end
+
                 return false, SubMessage
             end
         end
@@ -704,21 +723,8 @@ local function CreateTemplate(Name: string)
         if (CacheTag) then
             Cache[Value or NegativeCacheValue] = {true}
         end
+
         return true
-    end
-
-    function TemplateClass:DefineDeserialize(Deserializer)
-        return self:Modify({
-            _DefineDeserialize = Deserializer;
-            _Deserialize = Deserializer;
-        })
-    end
-
-    function TemplateClass:DefineSerialize(Serializer)
-        return self:Modify({
-            _DefineSerialize = Serializer;
-            _Serialize = Serializer;
-        })
     end
 
     function TemplateClass._Serialize(Buffer, Value)
@@ -755,21 +761,15 @@ local function CreateTemplate(Name: string)
         end
 
         Value = Value or self._Deserialize(Deserializer, Cache)
+
         if (not BypassCheck) then
             self:Assert(Value)
         end
+
         return Value
     end
 
-    function TemplateClass:NonSerialized()
-        return self:Modify({
-            _NonSerialized = true;
-            _Deserialize = EmptyFunction;
-            _Serialize = EmptyFunction;
-        })
-    end
-
-    function TemplateClass:__tostring()
+    --[[ function TemplateClass:__tostring()
         -- User can create a unique alias to help simplify "where did it fail?".
         local Alias = self._Alias
         if (Alias) then
@@ -782,9 +782,11 @@ local function CreateTemplate(Name: string)
         local ActiveConstraints = self._ActiveConstraints
         if (next(ActiveConstraints) ~= nil) then
             local InnerConstraints = {}
+
             for _, Constraint in ActiveConstraints do
                 table.insert(InnerConstraints, Constraint.Name .. "(" .. ConcatWithToString(Constraint.Args, ", ") .. ")")
             end
+
             table.insert(Fields, "Constraints = {" .. ConcatWithToString(InnerConstraints, ", ") .. "}")
         end
 
@@ -794,7 +796,7 @@ local function CreateTemplate(Name: string)
         end
 
         return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
-    end
+    end ]]
 
     TemplateClass.GreaterThanOrEqualTo = GreaterThanOrEqualTo
     TemplateClass.LessThanOrEqualTo = LessThanOrEqualTo

@@ -18,7 +18,7 @@ local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
     local MergeDeep = TableUtil.Map.MergeDeep
 
 local Number = require(script.Parent.Number)
@@ -128,6 +128,7 @@ function IndexableClass:OfKeyType(SubType)
 
         for Key in TargetArray do
             local Success, SubMessage = Check(SubType, Key)
+
             if (not Success) then
                 return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
             end
@@ -140,23 +141,28 @@ end
 --- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
 function IndexableClass:And(Other)
     AssertIsTypeBase(Other, 1)
-    assert(IndexableClass.And, "Conjunction is not a structural checker.")
+    assert(IndexableClass.And, "Conjunction is not a structural checker")
+    assert(IndexableClass.And == self.And, "Conjunction is not an Indexable")
 
     local SelfOfStructure, Index = self:GetConstraint("OfStructure")
-    assert(SelfOfStructure, "OfStructure constraint not present on self.")
+    assert(SelfOfStructure, "OfStructure constraint not present on self")
 
     local OtherOfStructure = Other:GetConstraint("OfStructure")
-    assert(OtherOfStructure, "OfStructure constraint not present on conjunction.")
+    assert(OtherOfStructure, "OfStructure constraint not present on conjunction")
 
-    return self:Modify({
+    self = self:Modify({
         _ActiveConstraints = {
             [Index] = {
-                Args = function(ExistingOfStructureArgs)
-                    return MergeDeep(ExistingOfStructureArgs, SelfOfStructure[1])
-                end;
+                Args = {
+                    [1] = function(ExistingOfStructureArgs)
+                        return MergeDeep(ExistingOfStructureArgs, OtherOfStructure[1], true)
+                    end;
+                };
             };
         };
     })
+
+    return self
 end
 
 --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure.
@@ -304,6 +310,7 @@ end
 
 function IndexableClass:Similarity(Value)
     local Similarity = 0
+
     if (self:_Initial(Value)) then
         Similarity += 1
     else
@@ -365,11 +372,35 @@ end
 
 function IndexableClass:_UpdateSerialize()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
-    if (HasFunctionalConstraints) then
-        local BaseAny = require(script.Parent.BaseAny) :: any
-        self._Serialize = BaseAny._Serialize
-        self._Deserialize = BaseAny._Deserialize
-        return
+    local MapStructure = self._MapStructure
+    local OfStructure = self:GetConstraint("OfStructure")
+    local OfValueType = self:GetConstraint("OfValueType")
+    local OfKeyType = self:GetConstraint("OfKeyType")
+
+    if (HasFunctionalConstraints or not (MapStructure or OfStructure or (OfValueType and OfKeyType))) then
+        local AnySerialize, AnyDeserialize
+
+        return {
+            _Serialize = function(Buffer, Array, Cache)
+                if (not AnySerialize) then
+                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                    AnySerialize = Any._Serialize
+                    Any:Serialize(1) -- Initialize Any.
+                end
+
+                AnySerialize(Buffer, Array, Cache)
+            end;
+
+            _Deserialize = function(Buffer, Array, Cache)
+                if (not AnyDeserialize) then
+                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                    AnyDeserialize = Any._Deserialize
+                    Any:Serialize(1) -- Initialize Any.
+                end
+
+                return AnyDeserialize(Buffer, Array, Cache)
+            end;
+        }
     end
 
     local OfClass = self:GetConstraint("OfClass")
@@ -382,9 +413,6 @@ function IndexableClass:_UpdateSerialize()
 
         return setmetatable(Target, OfClassValue)
     end
-
-    local MapStructure = self._MapStructure
-    local OfStructure = self:GetConstraint("OfStructure")
 
     if (OfStructure or MapStructure) then
         local Strict = self._Strict
@@ -408,7 +436,6 @@ function IndexableClass:_UpdateSerialize()
                 end
             end
 
-            -- Bypass indexing ._Serialize and ._Deserialize during the process - faster at the cost of more memory.
             local KeyToSerializeFunction = table.clone(StructureDefinition)
             for Key, Value in StructureDefinition do
                 KeyToSerializeFunction[Key] = Value._Serialize
@@ -421,42 +448,39 @@ function IndexableClass:_UpdateSerialize()
 
             if (HasSingleType and CommonType == "string") then
                 local IndexToKey = {}
+
                 for Key in StructureDefinition do
                     table.insert(IndexToKey, Key)
                 end
+
                 table.sort(IndexToKey)
 
-                self._Serialize = function(Buffer, Value, Cache)
-                    Value = MapStructureFunction(Value)
-                    for _, Key in IndexToKey do
-                        KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
-                    end
-                end
-                self._Deserialize = function(Buffer, Cache)
-                    local Result = {}
-                    for _, Key in IndexToKey do
-                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
-                    end
-                    return ApplyClass(UnmapStructureFunction(Result))
-                end
+                return {
+                    _Serialize = function(Buffer, Value, Cache)
+                        Value = MapStructureFunction(Value)
 
-                return
+                        for _, Key in IndexToKey do
+                            KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
+                        end
+                    end;
+                    _Deserialize = function(Buffer, Cache)
+                        local Result = {}
+
+                        for _, Key in IndexToKey do
+                            Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
+                        end
+
+                        return ApplyClass(UnmapStructureFunction(Result))
+                    end;
+                }
             end
         end
     end
 
-    -- Last resort: the defined key and value types, or Any type.
-    local OfValueType = self:GetConstraint("OfValueType")
-    local OfKeyType = self:GetConstraint("OfKeyType")
-
-    if (not (OfValueType and OfKeyType)) then        
-        local BaseAny = require(script.Parent.BaseAny) :: any
-        self._Serialize = BaseAny._Serialize
-        self._Deserialize = BaseAny._Deserialize
-
-        return
+    if (not (OfValueType and OfKeyType)) then
+        return {}
     end
-
+    
     local OfValueTypeChecker = OfValueType[1]
         local ValueDeserialize = OfValueTypeChecker._Deserialize
         local ValueSerialize = OfValueTypeChecker._Serialize
@@ -471,67 +495,72 @@ function IndexableClass:_UpdateSerialize()
         local SizeDeserialize = SizeSerializer._Deserialize
 
     local GroupKV = self._GroupKV
+
     if (GroupKV) then
-        self._Serialize = function(Buffer, Value, Cache)
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                local Length = 0
+
+                for _ in Value do
+                    Length += 1
+                end
+
+                SizeSerialize(Buffer, Length, Cache)
+
+                for Key in Value do
+                    KeySerialize(Buffer, Key, Cache)
+                end
+
+                for _, Value in Value do
+                    ValueSerialize(Buffer, Value, Cache)
+                end
+            end;
+            _Deserialize = function(Buffer, Cache)
+                local Size = SizeDeserialize(Buffer, Cache)
+                local IndexToKey = table.create(Size)
+                local Result = {}
+
+                for Index = 1, Size do
+                    local Key = KeyDeserialize(Buffer, Cache)
+                    IndexToKey[Index] = Key
+                    Result[Key] = true
+                end
+
+                for Index = 1, Size do
+                    Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
+                end
+
+                return ApplyClass(Result)
+            end;
+        }
+    end
+
+    return {
+        _Serialize = function(Buffer, Value, Cache)
             local Length = 0
+
             for _ in Value do
                 Length += 1
             end
+
             SizeSerialize(Buffer, Length, Cache)
 
-            for Key in Value do
+            for Key, Value in Value do
                 KeySerialize(Buffer, Key, Cache)
-            end
-
-            for _, Value in Value do
                 ValueSerialize(Buffer, Value, Cache)
             end
-        end
-        self._Deserialize = function(Buffer, Cache)
-            local Size = SizeDeserialize(Buffer, Cache)
-            local IndexToKey = table.create(Size)
+        end;
+        _Deserialize = function(Buffer, Cache)
             local Result = {}
+            local Length = SizeDeserialize(Buffer, Cache)
 
-            for Index = 1, Size do
-                local Key = KeyDeserialize(Buffer, Cache)
-                IndexToKey[Index] = Key
-                Result[Key] = true
-            end
-
-            for Index = 1, Size do
-                Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
+            for Index = 1, Length do
+                Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)
             end
 
             return ApplyClass(Result)
-        end
-
-        return
-    end
-
-    self._Serialize = function(Buffer, Value, Cache)
-        -- First, write length of table. Then, write each key and value.
-        local Length = 0
-        for _ in Value do
-            Length += 1
-        end
-        SizeSerialize(Buffer, Length, Cache)
-
-        for Key, Value in Value do
-            KeySerialize(Buffer, Key, Cache)
-            ValueSerialize(Buffer, Value, Cache)
-        end
-    end
-    self._Deserialize = function(Buffer, Cache)
-        -- First, read length of table. Then, read each key and value pair 'length' times.
-        local Result = {}
-        local Length = SizeDeserialize(Buffer, Cache)
-
-        for Index = 1, Length do
-            Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)
-        end
-
-        return ApplyClass(Result)
-    end
+        end;
+    }
 end
 
 IndexableClass.InitialConstraint = IndexableClass.OfStructure

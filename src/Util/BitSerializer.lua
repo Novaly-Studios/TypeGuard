@@ -5,6 +5,8 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Util.BitSerializer
 end
 
+local bwritebits = buffer.writebits
+local breadbits = buffer.readbits
 local btostring = buffer.tostring
 local bwriteu32 = buffer.writeu32
 local bwritef32 = buffer.writef32
@@ -47,51 +49,24 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
     --- Only works for up to 32 bits at a time. No assertion for performance.
     --- Same as ReadBits.
     local function WriteBits(Amount: number, Value: number)
-        local Accumulation = 0
-        while (Accumulation < Amount) do
-            -- Resize buffer to next power of 2 if limit is hit.
-            local BufferBytePosition = Position // 8
-            if (BufferBytePosition == Size) then
-                Size = 2 ^ mceil(mlog(BufferBytePosition + 1, 2))
-                local NewBuffer = bcreate(Size)
-                bcopy(NewBuffer, 0, Buffer :: buffer)
-                Buffer = NewBuffer
-            end
+        local NewPosition = Position + Amount
+        local NewPositionBytes = mceil(NewPosition / 8)
 
-            -- Inject bits.
-            local BitsOccupied = b32band(Position, 7)
-            local BitsOffset = mmin(8 - BitsOccupied, Amount - Accumulation)
-            bwriteu8(Buffer, BufferBytePosition, b32replace(
-                breadu8(Buffer, BufferBytePosition),
-                b32extract(Value, Accumulation, BitsOffset),
-                BitsOccupied,
-                BitsOffset
-            ))
-            Accumulation += BitsOffset
-            Position += BitsOffset
+        if (NewPositionBytes >= Size) then
+            Size = 2 ^ mceil(mlog(NewPositionBytes, 2))
+            local NewBuffer = bcreate(Size)
+            bcopy(NewBuffer, 0, Buffer :: buffer)
+            Buffer = NewBuffer
         end
+
+        bwritebits(Buffer :: buffer, Position, Amount, Value)
+        Position = NewPosition
     end
 
     local function ReadBits(Amount: number): number
-        local Accumulation = 0
-        local Result = 0
-
-        while (Accumulation < Amount) do
-            local BitsOffset = b32band(Position, 7)
-            local BitsToRead = mmin(8 - BitsOffset, Amount - Accumulation)
-            Result += b32lshift(
-                b32extract(
-                    breadu8(Buffer, Position // 8),
-                    BitsOffset,
-                    BitsToRead
-                ),
-                Accumulation
-            )
-            Accumulation += BitsToRead
-            Position += BitsToRead
-        end
-
-        return Result
+        local Bits = breadbits(Buffer :: buffer, Position, Amount)
+        Position += Amount
+        return Bits
     end
 
     local function GetClippedBuffer(): buffer
@@ -130,10 +105,12 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
         end;
         ReadInt = function(Bits: number): number
             local Value = ReadBits(Bits)
+
             if (b32extract(Value, Bits - 1) == 1) then
                 -- print("RI", Bits, "=", Value - b32lshift(1, Bits))
                 return Value - b32lshift(1, Bits)
             end
+
             -- print("RI", Bits, "=", Value)
             return Value
         end;

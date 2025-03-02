@@ -1,3 +1,6 @@
+--!optimize 2
+--!native
+
 local Test = {
     Clock = os.clock();
     Time = os.time();
@@ -14,7 +17,10 @@ local Test = {
 }
 
 --[[ local BaseAny = require(game.ReplicatedFirst.TypeGuard.Core.BaseAny)
-print(BaseAny:Deserialize(BaseAny:Serialize(Test, "Byte", false), "Byte", false)) ]]
+print(BaseAny:Deserialize(BaseAny:Serialize(Test, "Bit", false), "Bit", false)) ]]
 
-local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
-print(Any:Deserialize(Any:Serialize(Test, "Byte", false), "Byte", false))
+--[[ local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
+print(Any:Deserialize(Any:Serialize(Test, "Byte", false), "Byte", false)) ]]
+
+--[[ local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
+print(Any:Check({false, buffer.create(10)})) ]]

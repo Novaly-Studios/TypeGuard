@@ -17,7 +17,7 @@ local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 
 local Number = require(script.Parent.Number)
 
@@ -169,6 +169,7 @@ local function TryCache(Buffer, Value, Cache)
         DynamicUIntSerialize(Buffer, Cache(Value))
         return true
     end
+
     return false
 end
 
@@ -176,6 +177,7 @@ local function TryDecache(Buffer, Cache)
     if (Cache) then
         return Cache[DynamicUIntDeserialize(Buffer)]
     end
+
     return nil
 end
 
@@ -192,24 +194,25 @@ function StringClass:_UpdateSerialize()
             end
             return GUID
         end
-        self._Serialize = function(Buffer, Value, Cache)
-            Value = Value:lower():gsub("%-", ""):gsub("%x%x", function(Pair)
-                return string.char(tonumber(Pair, 16) :: number)
-            end)
-            if (TryCache(Buffer, Value, Cache)) then
-                return
-            end
-            Buffer.WriteString(Value, #Value * 8)
-        end
-        self._Deserialize = function(Buffer, Cache)
-            return Dashify(TryDecache(Buffer, Cache) or Buffer.ReadString(16)):gsub(".", function(Char)
-                return string.format("%02x", Char:byte())
-            end)
-        end
-        return
+
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                Value = Value:lower():gsub("%-", ""):gsub("%x%x", function(Pair)
+                    return string.char(tonumber(Pair, 16) :: number)
+                end)
+                if (TryCache(Buffer, Value, Cache)) then
+                    return
+                end
+                Buffer.WriteString(Value, #Value * 8)
+            end;
+            _Deserialize = function(Buffer, Cache)
+                return Dashify(TryDecache(Buffer, Cache) or Buffer.ReadString(16)):gsub(".", function(Char)
+                    return string.format("%02x", Char:byte())
+                end)
+            end;
+        }
     end ]]
 
-    -- TODO: MaxLength, MinLength, OfLength (factor in).
     local UsingCharacters = self:GetConstraint("UsingCharacters")
     if (UsingCharacters) then
         local CharacterSet = UsingCharacters[1]
@@ -225,49 +228,50 @@ function StringClass:_UpdateSerialize()
             local SizeDeserialize = Serializer._Deserialize
             local SizeSerialize = Serializer._Serialize
 
-        self._Serialize = function(Buffer, Value, Cache)
-            SizeSerialize(Buffer, #Value, Cache)
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                SizeSerialize(Buffer, #Value, Cache)
 
-            local WriteUInt = Buffer.WriteUInt
-            for Character in Value:gmatch(".") do
-                WriteUInt(Bits, CharacterToIndex[Character])
-            end
-        end
-        self._Deserialize = function(Buffer, Cache)
-            local Size = SizeDeserialize(Buffer, Cache)
-            local Result = buffer.create(Size)
-            local ReadUInt = Buffer.ReadUInt
+                local WriteUInt = Buffer.WriteUInt
+                for Character in Value:gmatch(".") do
+                    WriteUInt(Bits, CharacterToIndex[Character])
+                end
+            end;
+            _Deserialize = function(Buffer, Cache)
+                local Size = SizeDeserialize(Buffer, Cache)
+                local Result = buffer.create(Size)
+                local ReadUInt = Buffer.ReadUInt
 
-            for Index = 0, Size - 1 do
-                buffer.writeu8(Result, Index, IndexToCharacterByte[ReadUInt(Bits)])
-            end
+                for Index = 0, Size - 1 do
+                    buffer.writeu8(Result, Index, IndexToCharacterByte[ReadUInt(Bits)])
+                end
 
-            return buffer.tostring(Result)
-        end
-
-        return
+                return buffer.tostring(Result)
+            end;
+        }
     end
 
-    -- This doesn't need to write dynamic UInts for the size, but it also prohibits the ability to use \0 in the string for security.
     local NullTerminated = self:GetConstraint("NullTerminated")
     if (NullTerminated) then
-        self._Serialize = function(Buffer, Value, Cache)
-            Buffer.WriteString(Value, #Value * 8)
-            Buffer.WriteUInt(1, 0)
-        end
-        self._Deserialize = function(Buffer, Cache)
-            local Result = ByteSerializer()
-            local LastChar
-            local ReadUInt = Buffer.ReadUInt
-            local WriteUInt = Result.WriteUInt
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                Buffer.WriteString(Value, #Value * 8)
+                Buffer.WriteUInt(1, 0)
+            end;
+            _Deserialize = function(Buffer, Cache)
+                local Result = ByteSerializer()
+                local LastChar
+                local ReadUInt = Buffer.ReadUInt
+                local WriteUInt = Result.WriteUInt
 
-            while (LastChar ~= 0) do
-                LastChar = ReadUInt(8)
-                WriteUInt(8, LastChar)
-            end
+                while (LastChar ~= 0) do
+                    LastChar = ReadUInt(8)
+                    WriteUInt(8, LastChar)
+                end
 
-            return buffer.tostring(Result.GetClippedBuffer())
-        end
+                return buffer.tostring(Result.GetClippedBuffer())
+            end;
+        }
     end
 
     local MaxLength = self:GetConstraint("MaxLength")
@@ -279,16 +283,17 @@ function StringClass:_UpdateSerialize()
 
         -- Length equals a certain value.
         if (MaxLengthValue == MinLengthValue) then
-            self._Serialize = function(Buffer, Value, Cache)
-                if (TryCache(Buffer, Value, Cache)) then
-                    return
-                end
-                Buffer.WriteString(Value, #Value * 8)
-            end
-            self._Deserialize = function(Buffer, Cache)
-                return (TryDecache(Buffer, Cache) or Buffer.ReadString(MaxLengthValue * 8))
-            end
-            return
+            return {
+                _Serialize = function(Buffer, Value, Cache)
+                    if (TryCache(Buffer, Value, Cache)) then
+                        return
+                    end
+                    Buffer.WriteString(Value, #Value * 8)
+                end;
+                _Deserialize = function(Buffer, Cache)
+                    return (TryDecache(Buffer, Cache) or Buffer.ReadString(MaxLengthValue * 8))
+                end;
+            }
         end
 
         -- Length is between a certain range.
@@ -296,35 +301,37 @@ function StringClass:_UpdateSerialize()
             local NumberDeserialize = Serializer._Deserialize
             local NumberSerialize = Serializer._Serialize
 
-        self._Serialize = function(Buffer, Value, Cache)
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                if (TryCache(Buffer, Value, Cache)) then
+                    return
+                end
+
+                local Length = #Value
+                NumberSerialize(Buffer, Length, Cache)
+                Buffer.WriteString(Value, Length * 8)
+            end;
+            _Deserialize = function(Buffer, Cache)
+                return (TryDecache(Buffer, Cache) or Buffer.ReadString(NumberDeserialize(Buffer, Cache) * 8))
+            end;
+        }
+    end
+
+    -- Last resort: dynamic length string.
+    return {
+        _Serialize = function(Buffer, Value, Cache)
             if (TryCache(Buffer, Value, Cache)) then
                 return
             end
 
             local Length = #Value
-            NumberSerialize(Buffer, Length, Cache)
+            DynamicUIntSerialize(Buffer, Length)
             Buffer.WriteString(Value, Length * 8)
-        end
-        self._Deserialize = function(Buffer, Cache)
-            return (TryDecache(Buffer, Cache) or Buffer.ReadString(NumberDeserialize(Buffer, Cache) * 8))
-        end
-
-        return
-    end
-
-    -- Last resort: dynamic length string.
-    self._Serialize = function(Buffer, Value, Cache)
-        if (TryCache(Buffer, Value, Cache)) then
-            return
-        end
-
-        local Length = #Value
-        DynamicUIntSerialize(Buffer, Length)
-        Buffer.WriteString(Value, Length * 8)
-    end
-    self._Deserialize = function(Buffer, Cache)
-        return TryDecache(Buffer, Cache) or Buffer.ReadString(DynamicUIntDeserialize(Buffer) * 8)
-    end
+        end;
+        _Deserialize = function(Buffer, Cache)
+            return TryDecache(Buffer, Cache) or Buffer.ReadString(DynamicUIntDeserialize(Buffer) * 8)
+        end;
+    }
 end
 
 return String

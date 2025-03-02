@@ -22,10 +22,12 @@ NilCheckerClass._Initial = CreateStandardInitial("nil")
 NilCheckerClass._TypeOf = {"nil"}
 
 function NilCheckerClass:_UpdateSerialize()
-    self._Serialize = function(_, _, _) end
-    self._Deserialize = function(_, _)
-        return nil
-    end
+    return {
+        _Serialize = function(_, _, _) end;
+        _Deserialize = function(_, _)
+            return nil
+        end;
+    }
 end
 
 return NilChecker

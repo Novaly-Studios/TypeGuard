@@ -30,7 +30,7 @@ function FunctionCheckerClass:CheckParamCount(Checker)
     AssertIsTypeBase(Checker, 1)
 
     return self:_AddConstraint(true, "CheckParamCount", function(_, Function, Checker)
-        local ParamCount, Variadic = debug.info(Function, "n")
+        local ParamCount, Variadic = debug.info(Function, "a")
         ParamCount = Variadic and math.huge or ParamCount
         local Success = Checker:_Check(ParamCount)
 

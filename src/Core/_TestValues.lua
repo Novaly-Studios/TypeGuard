@@ -2,7 +2,8 @@ local Types = {
     Function = function() end;
     Boolean = false;
     Buffer = buffer.create(10);
-    Number = 3007.24253;
+    Number = 100;
+    Float = 100.5;
     String = "Test";
     Thread = task.spawn(function() end);
     ["Rbx-CFrame"] = CFrame.new(1, 1, 1);
@@ -24,13 +25,38 @@ local Types = {
 local FullTypes = table.clone(Types)
 for TypeName1, Value1 in Types do
     for TypeName2, Value2 in Types do
-        FullTypes[`Object-{TypeName1}-{TypeName2}`] = {{[Value1] = Value2, [Value2] = Value1}, {[Value1] = Value2}, {[Value2] = Value1}}
-        FullTypes[`Array-{TypeName1}-{TypeName2}`] = {{Value1, Value2}, {Value2, Value1}}
+        FullTypes[`Object-{TypeName1}-{TypeName2}`] = {[Value1] = Value2, [Value2] = Value1}
+        FullTypes[`Array-{TypeName1}-{TypeName2}`] = {Value1, Value2}
     end
+end
+
+local function IncludeGet(...: string)
+    local Final = table.clone(FullTypes)
+
+    for Index = 1, select("#", ...) do
+        local Pattern = (select(Index, ...))
+        local Remove = {}
+
+        for Key in Final do
+            if (not string.match(Key, Pattern)) then
+                table.insert(Remove, Key)
+            end
+        end
+
+        for _, Key in Remove do
+            Final[Key] = nil
+        end
+    end
+
+    return Final
 end
 
 local function Get(...: string)
     local Final = table.clone(FullTypes)
+
+    if ((select(1, ...)) == "INCLUDE") then
+        return IncludeGet(select(2, ...))
+    end
 
     for Index = 1, select("#", ...) do
         local Pattern = (select(Index, ...))

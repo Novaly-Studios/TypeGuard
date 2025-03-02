@@ -44,6 +44,7 @@ function NumberClass:Integer(Bits, Signed)
 
     if (Bits) then
         assert(Bits >= 1, "Integers must have at least 1 bit")
+        assert(Bits <= 53, "Integers must have at most 53 bits")
     end
 
     self = self:_AddConstraint(true, "Integer", function(_, Item)
@@ -69,9 +70,9 @@ function NumberClass:Decimal()
 end
 
 --- Makes an int dynamically sized during serialization.
-function NumberClass:Dynamic()
+function NumberClass:Dynamic(Resolution: number?)
     return self:Modify({
-        _Dynamic = true;
+        _Dynamic = Resolution or 1;
     })
 end
 
@@ -168,31 +169,34 @@ NumberClass.InitialConstraint = NumberClass.RangeInclusive
 local NaN = 0 / 0
 function NumberClass:_UpdateSerialize()
     if (self:_HasFunctionalConstraints()) then
-        self._Serialize = function(Buffer, Value, _Cache)
-            Buffer.WriteFloat(64, Value)
-        end
-        self._Deserialize = function(Buffer, _Cache)
-            return Buffer.ReadFloat(64)
-        end
-        return
+        return {
+            _Serialize = function(Buffer, Value, _Cache)
+                Buffer.WriteFloat(64, Value)
+            end;
+            _Deserialize = function(Buffer, _Cache)
+                return Buffer.ReadFloat(64)
+            end;
+        }
     end
 
     if (self:GetConstraint("IsInfinite")) then
-        self._Serialize = function(Buffer, Value, _Cache)
-            Buffer.WriteUInt(1, Value == math.huge and 1 or 0)
-        end
-        self._Deserialize = function(Buffer, _Cache)
-            return (Buffer.ReadUInt(1) == 1 and math.huge or -math.huge)
-        end
-        return
+        return {
+            _Serialize = function(Buffer, Value, _Cache)
+                Buffer.WriteUInt(1, Value == math.huge and 1 or 0)
+            end;
+            _Deserialize = function(Buffer, _Cache)
+                return (Buffer.ReadUInt(1) == 1 and math.huge or -math.huge)
+            end;
+        }
     end
 
     if (self:GetConstraint("IsNaN")) then
-        self._Serialize = function(_, _, _) end
-        self._Deserialize = function(_, _)
-            return NaN
-        end
-        return
+        return {
+            _Serialize = function(_, _, _) end;
+            _Deserialize = function(_, _)
+                return NaN
+            end;
+        }
     end
 
     -- Multiple range constraints can exist, so find the boundaries here.
@@ -210,120 +214,129 @@ function NumberClass:_UpdateSerialize()
     end
 
     local Integer = self:GetConstraint("Integer")
-    if (Integer and Integer[1] <= 32) then -- No support for >32 bit ints yet, they will be serialized as floats.
-        -- The number of bits required to store the integer can be reduced if the range
-        -- is known to be between two concrete values.
-        if (Min and Max) then
-            local Bits = math.log(math.abs(Max - Min), 2) // 1 + 1
-            self._Serialize = function(Buffer, Value, _Cache)
-                Buffer.WriteUInt(Bits, Value - Min)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                return Buffer.ReadUInt(Bits) + Min
-            end
-            return
-        end
+    if (Integer) then
+        if (Integer[1] <= 32) then -- No support for >32 bit ints yet, they will be serialized as floats.
+            local Positive = self:GetConstraint("Positive")
+            local Negative = self:GetConstraint("Negative")
 
-        local Positive = self:GetConstraint("Positive")
-        local Negative = self:GetConstraint("Negative")
-
-        -- Dynamic-sized integer:
-            -- Positive or Negative undefined -> 6 bits for size of the number (up to 64 bits), 1 bit for sign, and the rest for the unsigned value.
-            -- Positive or Negative defined -> 6 bits for size of the number, and the rest for the unsigned value.
-        if (self._Dynamic) then
-            if (Positive or Negative) then
-                self._Serialize = function(Buffer, Value, _Cache)
-                    Value = (Negative and -Value or Value)
-                    local Bits = 32 - bit32.countlz(Value)
-                    Buffer.WriteUInt(6, Bits)
-                    Buffer.WriteUInt(Bits, Value)
+            if (self._Dynamic) then
+                if (Positive or Negative) then
+                    return {
+                        _Serialize = function(Buffer, Value, _Cache)
+                            Value = (Negative and -Value or Value)
+                            local Bits = 32 - bit32.countlz(Value)
+                            local WriteUInt = Buffer.WriteUInt
+                            WriteUInt(6, Bits)
+                            WriteUInt(Bits, Value)
+                        end;
+                        _Deserialize = function(Buffer, _Cache)
+                            local ReadUInt = Buffer.ReadUInt
+                            local Value = ReadUInt(ReadUInt(6))
+                            return (Negative and -Value or Value)
+                        end;
+                    }
                 end
-                self._Deserialize = function(Buffer, _Cache)
-                    local ReadUInt = Buffer.ReadUInt
-                    local Value = ReadUInt(ReadUInt(6))
-                    return (Negative and -Value or Value)
-                end
+
+                return {
+                    _Serialize = function(Buffer, Value, _Cache)
+                        local Sign = (Value < 0)
+                        Value = (Sign and -Value or Value)
+                        local Bits = 32 - bit32.countlz(Value)
+                        local Metadata = bit32.bor(Bits, Sign and 0b1000000 or 0)
+
+                        local WriteUInt = Buffer.WriteUInt
+                        WriteUInt(7, Metadata)
+                        WriteUInt(Bits, Value)
+                    end;
+                    _Deserialize = function(Buffer, _Cache)
+                        local ReadUInt = Buffer.ReadUInt
+                        local Metadata = ReadUInt(6)
+                        local Sign = (bit32.band(Metadata, 0b1000000) == 0)
+                        local Bits = bit32.extract(Metadata, 0, 6)
+                        local Value = ReadUInt(Bits)
+                        return (Sign and Value or -Value)
+                    end;
+                }
             end
 
-            self._Serialize = function(Buffer, Value, _Cache)
-                local Sign = (Value < 0)
-                Value = (Sign and -Value or Value)
-                local Bits = 32 - bit32.countlz(Value)
-                local Metadata = bit32.bor(Bits, Sign and 0b1000000 or 0)
+            -- The number of bits required to store the integer can be reduced if the range
+            -- is known to be between two concrete values.
+            if (Min and Max) then
+                local Bits = math.log(math.abs(Max - Min), 2) // 1 + 1
 
-                local WriteUInt = Buffer.WriteUInt
-                WriteUInt(7, Metadata)
-                WriteUInt(Bits, Value)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                local ReadUInt = Buffer.ReadUInt
-                local Metadata = ReadUInt(6)
-                local Sign = (bit32.band(Metadata, 0b1000000) == 0)
-                local Bits = bit32.extract(Metadata, 0, 6)
-                local Value = ReadUInt(Bits)
-                return (Sign and Value or -Value)
+                return {
+                    _Serialize = function(Buffer, Value, _Cache)
+                        Buffer.WriteUInt(Bits, Value - Min)
+                    end;
+                    _Deserialize = function(Buffer, _Cache)
+                        return Buffer.ReadUInt(Bits) + Min
+                    end;
+                }
             end
 
-            return
+            if (Positive or Integer[2]) then
+                return {
+                    _Serialize = function(Buffer, Value, _Cache)
+                        Buffer.WriteUInt(32, Value)
+                    end;
+                    _Deserialize = function(Buffer, _Cache)
+                        return Buffer.ReadUInt(32)
+                    end;
+                }
+            end
+
+            if (Negative) then
+                return {
+                    _Serialize = function(Buffer, Value, _Cache)
+                        Buffer.WriteUInt(32, -Value)
+                    end;
+                    _Deserialize = function(Buffer, _Cache)
+                        return -Buffer.ReadUInt(32)
+                    end;
+                }
+            end
+
+            return {
+                _Serialize = function(Buffer, Value, _Cache)
+                    Buffer.WriteInt(32, Value)
+                end;
+                _Deserialize = function(Buffer, _Cache)
+                    return Buffer.ReadInt(32)
+                end;
+            }
+        else
+            return {
+                _Serialize = function(Buffer, Value, _Cache)
+                    Buffer.WriteFloat(64, Value)
+                end;
+                _Deserialize = function(Buffer, _Cache)
+                    return Buffer.ReadFloat(64)
+                end;
+            }
         end
-
-        -- Positive / UInt.
-        if (Positive or Integer[2]) then
-            self._Serialize = function(Buffer, Value, _Cache)
-                Buffer.WriteUInt(32, Value)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                return Buffer.ReadUInt(32)
-            end
-
-            return
-        end
-
-        -- If it's known the integer is negative, we don't need to store the sign.
-        if (Negative) then
-            self._Serialize = function(Buffer, Value, _Cache)
-                Buffer.WriteUInt(32, -Value)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                return -Buffer.ReadUInt(32)
-            end
-
-            return
-        end
-
-        -- Last resort: 32-bit signed integer.
-        self._Serialize = function(Buffer, Value, _Cache)
-            Buffer.WriteInt(32, Value)
-        end
-        self._Deserialize = function(Buffer, _Cache)
-            return Buffer.ReadInt(32)
-        end
-
-        return
     end
 
-    -- Remaining case: assume decimal / float.
-    -- If a range is defined, decide if 32-bit.
     if (Min and Max) then
         if (Min >= -FLOAT_MAX_32 and Max <= FLOAT_MAX_32) then
-            self._Serialize = function(Buffer, Value, _Cache)
-                Buffer.WriteFloat(32, Value)
-            end
-            self._Deserialize = function(Buffer, _Cache)
-                return Buffer.ReadFloat(32)
-            end
-
-            return
+            return {
+                _Serialize = function(Buffer, Value, _Cache)
+                    Buffer.WriteFloat(32, Value)
+                end;
+                _Deserialize = function(Buffer, _Cache)
+                    return Buffer.ReadFloat(32)
+                end;
+            }
         end
     end
 
-    -- Last resort: 64-bit float.
-    self._Serialize = function(Buffer, Value, _Cache)
-        Buffer.WriteFloat(64, Value)
-    end
-    self._Deserialize = function(Buffer, _Cache)
-        return Buffer.ReadFloat(64)
-    end
+    return {
+        _Serialize = function(Buffer, Value, _Cache)
+            Buffer.WriteFloat(64, Value)
+        end;
+        _Deserialize = function(Buffer, _Cache)
+            return Buffer.ReadFloat(64)
+        end;
+    }
 end
 
 return Number

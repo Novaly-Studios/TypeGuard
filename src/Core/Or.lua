@@ -223,13 +223,14 @@ end
 
 function OrClass:_UpdateSerialize()
     if (self:_HasFunctionalConstraints()) then
-        self._Serialize = function(_, _, _)
-            error("Functional constraints currently not supported")
-        end
-        self._Deserialize = function(_, _)
-            error("Functional constraints currently not supported")
-        end
-        return
+        return {
+            _Serialize = function(_, _, _)
+                error("Functional constraints currently not supported")
+            end;
+            _Deserialize = function(_, _)
+                error("Functional constraints currently not supported")
+            end;
+        }
     end
 
     -- Serializes one of multiple values.
@@ -240,14 +241,14 @@ function OrClass:_UpdateSerialize()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
-        self._Serialize = function(Buffer, Value, Cache)
-            NumberSerialize(Buffer, table.find(Values, Value), Cache)
-        end
-        self._Deserialize = function(Buffer, Cache)
-            return Values[NumberDeserialize(Buffer, Cache)]
-        end
-
-        return
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                NumberSerialize(Buffer, table.find(Values, Value), Cache)
+            end;
+            _Deserialize = function(Buffer, Cache)
+                return Values[NumberDeserialize(Buffer, Cache)]
+            end;
+        }
     end
 
     -- Serializes one of multiple keys.
@@ -263,14 +264,14 @@ function OrClass:_UpdateSerialize()
                 continue
             end
 
-            self._Serialize = function(_Buffer, _Value, _Cache)
-                error("Cannot serialize with non-string key as Or")
-            end
-            self._Deserialize = function(_Buffer, _Cache)
-                error("Cannot deserialize with non-string key as Or")
-            end
-
-            return
+            return {
+                _Serialize = function(_Buffer, _Value, _Cache)
+                    error("Cannot serialize with non-string key as Or")
+                end;
+                _Deserialize = function(_Buffer, _Cache)
+                    error("Cannot deserialize with non-string key as Or")
+                end;
+            }
         end
 
         -- Sort string keys & use them as the array indexes.
@@ -280,14 +281,14 @@ function OrClass:_UpdateSerialize()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
-        self._Serialize = function(Buffer, Value, Cache)
-            NumberSerialize(Buffer, table.find(AsArray, Value), Cache)
-        end
-        self._Deserialize = function(Buffer, Cache)
-            return AsArray[NumberDeserialize(Buffer, Cache)]
-        end
-
-        return
+        return {
+            _Serialize = function(Buffer, Value, Cache)
+                NumberSerialize(Buffer, table.find(AsArray, Value), Cache)
+            end;
+            _Deserialize = function(Buffer, Cache)
+                return AsArray[NumberDeserialize(Buffer, Cache)]
+            end;
+        }
     end
 
     -- Serializes one of multiple types.
@@ -307,29 +308,43 @@ function OrClass:_UpdateSerialize()
         local Divider = self._Divider
 
         if (GetTypeIndexFromValue) then
-            self._Serialize = Divider and function(Buffer, Value, Cache)
-                local Index = GetTypeIndexFromValue(Value)
-                local Serializer = KeyToSerializeFunction[Index]
-                if (Serializer) then
-                    NumberSerialize(Buffer, Index, Cache)
-                    Serializer(Buffer, Value, Cache)
-                    Divider()
-                    return
-                end
-                error(`Value {Value} did not satisfy any type definition`)
-            end or function(Buffer, Value, Cache)
-                local Index = GetTypeIndexFromValue(Value)
-                local Serializer = KeyToSerializeFunction[Index]
+            return {
+                _Serialize = Divider and function(Buffer, Value, Cache)
+                    local Index = GetTypeIndexFromValue(Value)
+                    local Serializer = KeyToSerializeFunction[Index]
 
-                if (Serializer) then
-                    NumberSerialize(Buffer, Index, Cache)
-                    Serializer(Buffer, Value, Cache)
-                    return
-                end
-                error(`Value {Value} did not satisfy any type definition`)
-            end
-        else -- Run through an array of types, calling _Check on each until something satisfies.
-            self._Serialize = Divider and function(Buffer, Value, Cache)
+                    if (Serializer) then
+                        NumberSerialize(Buffer, Index, Cache)
+                        Serializer(Buffer, Value, Cache)
+                        Divider()
+                        return
+                    end
+
+                    error(`Value {Value} did not satisfy any type definition`)
+                end or function(Buffer, Value, Cache)
+                    local Index = GetTypeIndexFromValue(Value)
+                    local Serializer = KeyToSerializeFunction[Index]
+
+                    if (Serializer) then
+                        NumberSerialize(Buffer, Index, Cache)
+                        Serializer(Buffer, Value, Cache)
+                        return
+                    end
+
+                    error(`Value {Value} did not satisfy any type definition`)
+                end;
+                _Deserialize = Divider and function(Buffer, Cache)
+                    local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
+                    Divider()
+                    return Result
+                end or function(Buffer, Cache)
+                    return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
+                end;
+            }
+        end
+
+        return {
+            _Serialize = Divider and function(Buffer, Value, Cache)
                 for Index, SubType in Types do
                     if (SubType:_Check(Value)) then
                         local Serializer = KeyToSerializeFunction[Index]
@@ -339,6 +354,7 @@ function OrClass:_UpdateSerialize()
                         return
                     end
                 end
+
                 error(`Value {Value} did not satisfy any type definition`)
             end or function(Buffer, Value, Cache)
                 for Index, SubType in Types do
@@ -349,25 +365,27 @@ function OrClass:_UpdateSerialize()
                         return
                     end
                 end
+
                 error(`Value {Value} did not satisfy any type definition`)
-            end
-        end
-        self._Deserialize = Divider and function(Buffer, Cache)
-            local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
-            Divider()
-            return Result
-        end or function(Buffer, Cache)
-            return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
-        end
-        return
+            end;
+            _Deserialize = Divider and function(Buffer, Cache)
+                local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
+                Divider()
+                return Result
+            end or function(Buffer, Cache)
+                return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
+            end;
+        }
     end
 
-    self._Serialize = function(_Buffer, _Value, _Cache)
-        error("No constraints: cannot serialize")
-    end
-    self._Deserialize = function(_Buffer, _Cache)
-        error("No constraints: cannot deserialize")
-    end
+    return {
+        _Serialize = function(_Buffer, _Value, _Cache)
+            error("No constraints: cannot serialize")
+        end;
+        _Deserialize = function(_Buffer, _Cache)
+            error("No constraints: cannot deserialize")
+        end;
+    }
 end
 
 --[[ local Test = Or(

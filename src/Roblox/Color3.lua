@@ -23,10 +23,12 @@ local Core = script.Parent.Parent.Core
 
 local function Color3Float(self, Precision)
     local Float = Number():Float(Precision)
+
     return self:_MapCheckers(function(Checker)
         if (Checker.Type ~= "Number") then
             return nil
         end
+
         return Float
     end)
 end

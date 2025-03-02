@@ -5,7 +5,7 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.BaseAny
 end
 
-local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
     local ArrayMerge = TableUtil.Array.Merge
     local MergeDeep = TableUtil.Map.MergeDeep
 
@@ -78,8 +78,9 @@ local Int32Index = table.find(Types, Int32)
 local Float32Index = table.find(Types, Float32)
 local FloatIndex = table.find(Types, Float)
 
-local Any = Or(unpack(Types)):DefineGetType(function(Value)
+local Any = table.clone(Or(unpack(Types)):DefineGetType(function(Value)
     local ValueType = typeof(Value)
+
     if (ValueType == "number") then
         if (Value % 1 == 0) then
             if (Value >= 0) then
@@ -95,7 +96,8 @@ local Any = Or(unpack(Types)):DefineGetType(function(Value)
                     return UInt32Index
                 end
 
-                error(`Unsigned integer cannot be represented: {Value}`)
+                -- Resort to greatest known float.
+                return FloatIndex
             end
 
             if (Value >= -0x80) then
@@ -110,7 +112,8 @@ local Any = Or(unpack(Types)):DefineGetType(function(Value)
                 return Int32Index
             end
 
-            error(`Signed integer cannot be represented: {Value}`)
+            -- Resort to greatest known float.
+            return FloatIndex
         end
 
         if (Value <= 3.402823466e+38) then
@@ -134,13 +137,14 @@ local Any = Or(unpack(Types)):DefineGetType(function(Value)
     end
 
     error(`Unhandled type: {ValueType}`)
-end)
+end))
 
 -- Self-reference / recursive (object or array of type Any). Can't copy the root table.
 local function Setup()
     if (Any._Setup) then
         return
     end
+    Any._Setup = true
 
     local DefaultArray = Array(Any)
     local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
@@ -153,11 +157,13 @@ local function Setup()
                 end;
             };
         };
-    })
+    }, true)
+
     local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
     DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
     DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
     Any:_UpdateSerializeFunctionCache()
+    table.freeze(Any)
 end
 
 -- We wrap Serialize and Deserialize to avoid immediate cyclic requires. Some other modules
@@ -173,6 +179,12 @@ local OriginalDeserialize = Any.Deserialize
 Any.Deserialize = function(...)
     Setup()
     return OriginalDeserialize(...)
+end
+
+local OriginalCheck = Any.Check
+Any.Check = function(...)
+    Setup()
+    return OriginalCheck(...)
 end
 
 -- Avoid recursive tostring weirdness.

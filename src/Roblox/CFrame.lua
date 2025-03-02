@@ -23,6 +23,7 @@ local Core = script.Parent.Parent.Core
 
 local function CFrameFloat(self, Precision)
     local Float = Number():Float(Precision)
+
     return self:_MapCheckers("Number", function(Checker)
         return Float
     end, true)

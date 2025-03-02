@@ -220,7 +220,7 @@ function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: Signatu
     AssertIsTypeBase(Checker, 2)
 
     return self:_AddConstraint(false, "CheckAttribute", function(_, InstanceRoot, Attribute)
-        local Success, SubMessage = (Checker :: SignatureTypeCheckerInternal):_Check(InstanceRoot:GetAttribute(Attribute))
+        local Success, SubMessage = (Checker :: any):_Check(InstanceRoot:GetAttribute(Attribute))
 
         if (not Success) then
             return false, `Attribute '{Attribute}' not satisfied on Instance {InstanceRoot:GetFullName()}: {SubMessage}`
@@ -338,12 +338,14 @@ function InstanceCheckerClass:_UpdateSerialize()
         return
     end
 
-    self._Serialize = function(Buffer, Value, _Cache)
-        Buffer.WriteUInt(32, GetInstanceID(Value))
-    end
-    self._Deserialize = function(Buffer, _Cache)
-        return GetInstanceFromID(Buffer.ReadUInt(32))
-    end
+    return {
+        _Serialize = function(Buffer, Value, _Cache)
+            Buffer.WriteUInt(32, GetInstanceID(Value))
+        end;
+        _Deserialize = function(Buffer, _Cache)
+            return GetInstanceFromID(Buffer.ReadUInt(32))
+        end;
+    }
 end
 
 InstanceCheckerClass.InitialConstraints = {InstanceCheckerClass.IsA, InstanceCheckerClass.OfStructure}

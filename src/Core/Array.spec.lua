@@ -11,7 +11,8 @@ return function()
     describe("Init", function()
         it("should reject non-arrays", function()
             for _, Value in GetValues("Array") do
-                expect(Base:Check(Value)).to.equal(false)
+                local Test = Base:Check(Value)
+                expect(Test).to.equal(false)
             end
         end)
 
@@ -25,11 +26,20 @@ return function()
             local Serializer = Base
             local Serialized = Serializer:Serialize({1, 2, 3, "XYZ"})
             local Deserialized = Serializer:Deserialize(Serialized)
-            expect(#Deserialized).to.equal(3)
+            expect(#Deserialized).to.equal(4)
             expect(Deserialized[1]).to.equal(1)
             expect(Deserialized[2]).to.equal(2)
             expect(Deserialized[3]).to.equal(3)
+            expect(Deserialized[4]).to.equal("XYZ")
         end)
+
+        --[[ it("should serialize and deserialize all combinations", function()
+            for ID, Value in GetValues("INCLUDE", "Array") do
+                local Serialized = Base:Serialize(Value)
+                local Deserialized = Base:Deserialize(Serialized)
+                expect(Deserialized).to.equal(Value)
+            end
+        end) ]]
     end)
 
     describe("OfLength", function()
@@ -333,7 +343,7 @@ return function()
         end)
 
         it("should serialize and deserialize", function()
-            local Serializer = Base:OfType(TypeGuard.Number()):OfStructure({TypeGuard.Number(), TypeGuard.Number()}):Strict()
+            local Serializer = Base:OfStructure({TypeGuard.Number(), TypeGuard.Number(), TypeGuard.Number()}):Strict()
             local Serialized = Serializer:Serialize({1, 2, 3})
             local Deserialized = Serializer:Deserialize(Serialized)
             expect(#Deserialized).to.equal(3)

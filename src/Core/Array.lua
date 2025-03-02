@@ -293,15 +293,40 @@ local DynamicUInt = Number():Integer():Positive():Dynamic() -- Number(0, 2^16-1)
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
 function ArrayClass:_UpdateSerialize()
+    local IsFrozen = self:GetConstraint("IsFrozen")
     local Type = self:GetConstraint("OfType")
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
 
     if (HasFunctionalConstraints or not Type) then
-        -- Todo: use Roblox Any instead?
-        local BaseAny = require(script.Parent.BaseAny) :: any
-        self._Serialize = BaseAny._Serialize
-        self._Deserialize = BaseAny._Deserialize
-        return
+        local AnySerialize, AnyDeserialize
+
+        return {
+            _Serialize = function(Buffer, Array, Cache)
+                if (not AnySerialize) then
+                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                    AnySerialize = Any._Serialize
+                    Any:Serialize(1) -- Initialize Any.
+                end
+
+                AnySerialize(Buffer, Array, Cache)
+            end;
+
+            _Deserialize = function(Buffer, Array, Cache)
+                if (not AnyDeserialize) then
+                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                    AnyDeserialize = Any._Deserialize
+                    Any:Serialize(1) -- Initialize Any.
+                end
+
+                local Value = AnyDeserialize(Buffer, Array, Cache)
+
+                if (IsFrozen) then
+                    table.freeze(Value)
+                end
+
+                return Value
+            end;
+        }
     end
 
     local Checker = Type[1]
@@ -316,55 +341,81 @@ function ArrayClass:_UpdateSerialize()
         local MaxLengthValue = MaxLength[1]
 
         if (MinLengthValue == MaxLengthValue) then
-            self._Serialize = function(Buffer, Array, Cache)
-                for _, Value in Array do
-                    Serializer(Buffer, Value, Cache)
-                end
-            end
-            self._Deserialize = function(Buffer, Cache)
-                local Array = table.create(MaxLengthValue)
-                for Index = 1, MaxLengthValue do
-                    Array[Index] = Deserializer(Buffer, Cache)
-                end
-                return Array
-            end
-            return
+            return {
+                _Serialize = function(Buffer, Array, Cache)
+                    for _, Value in Array do
+                        Serializer(Buffer, Value, Cache)
+                    end
+                end;
+
+                _Deserialize = function(Buffer, Cache)
+                    local Array = table.create(MaxLengthValue)
+
+                    for Index = 1, MaxLengthValue do
+                        Array[Index] = Deserializer(Buffer, Cache)
+                    end
+
+                    if (IsFrozen) then
+                        table.freeze(Array)
+                    end
+
+                    return Array
+                end;
+            }
         end
 
         local NumberSerializer = Number(MinLengthValue, MaxLengthValue):Integer()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
-        self._Serialize = function(Buffer, Array, Cache)
-            NumberSerialize(Buffer, #Array, Cache)
+        return {
+            _Serialize = function(Buffer, Array, Cache)
+                NumberSerialize(Buffer, #Array, Cache)
+
+                for _, Value in Array do
+                    Serializer(Buffer, Value, Cache)
+                end
+            end;
+            _Deserialize = function(Buffer, Cache)
+                local Size = NumberDeserialize(Buffer, Cache)
+                local Array = table.create(Size)
+
+                for Index = 1, Size do
+                    Array[Index] = Deserializer(Buffer, Cache)
+                end
+
+                if (IsFrozen) then
+                    table.freeze(Array)
+                end
+
+                return Array
+            end;
+        }
+    end
+
+    return {
+        _Serialize = function(Buffer, Array, Cache)
+            DynamicUIntSerialize(Buffer, #Array, Cache)
+
             for _, Value in Array do
                 Serializer(Buffer, Value, Cache)
             end
-        end
-        self._Deserialize = function(Buffer, Cache)
-            local Size = NumberDeserialize(Buffer, Cache)
+        end;
+        _Deserialize = function(Buffer, Cache)
+            local Size = DynamicUIntDeserialize(Buffer, Cache)
             local Array = table.create(Size)
+
             for Index = 1, Size do
                 Array[Index] = Deserializer(Buffer, Cache)
             end
-            return Array
-        end
-    end
 
-    self._Serialize = function(Buffer, Array, Cache)
-        DynamicUIntSerialize(Buffer, #Array, Cache)
-        for _, Value in Array do
-            Serializer(Buffer, Value, Cache)
-        end
-    end
-    self._Deserialize = function(Buffer, Cache)
-        local Size = DynamicUIntDeserialize(Buffer, Cache)
-        local Array = table.create(Size)
-        for Index = 1, Size do
-            Array[Index] = Deserializer(Buffer, Cache)
-        end
-        return Array
-    end
+            if (IsFrozen) then
+                table.freeze(Array)
+            end
+
+            return Array
+        end;
+    }
 end
 
 return Array

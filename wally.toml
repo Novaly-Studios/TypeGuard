@@ -7,4 +7,4 @@ license = "MIT"
 authors = ["tpc9000"]
 
 [dependencies]
-TableUtil = "tpc9000/tableutil@0.7.4"
+TableUtil = "tpc9000/tableutil@0.8.0"

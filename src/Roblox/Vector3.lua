@@ -23,6 +23,7 @@ local Core = script.Parent.Parent.Core
 
 local function Vector3Float(self, Precision)
     local Float = Number():Float(Precision)
+
     return self:_MapCheckers("Number", function(Checker)
         return Float
     end)
@@ -30,6 +31,7 @@ end
 
 local function Vector3Int(self, Bits, Unsigned)
     local Int = Number():Integer(Bits, Unsigned)
+
     return self:_MapCheckers("Number", function(Checker)
         return Int
     end)

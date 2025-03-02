@@ -24,6 +24,7 @@ local Core = script.Parent.Parent.Core
 
 local function NumberSequenceKeypointFloat(self, Precision)
     local Float = Number():Float(Precision)
+
     return self:_MapCheckers("Number", function(Checker)
         return Float
     end)
@@ -31,6 +32,7 @@ end
 
 local function NumberSequenceKeypointInt(self, Precision, Signed)
     local Int = Number():Integer(Precision, Signed)
+
     return self:_MapCheckers("Number", function(Checker)
         return Int
     end)

@@ -55,45 +55,47 @@ function ValueCacheCheckerClass:_UpdateSerialize()
         local CacheSerializerSerialize = CacheSerializer._Serialize
     local SerializerDeserialize = Serializer._Deserialize
 
-    self._Serialize = function(Buffer, Value, _Cache)
-        local Items = {}
-        local Count = 0
+    return {
+        _Serialize = function(Buffer, Value, _Cache)
+            local Items = {}
+            local Count = 0
 
-        local function Cache(Value)
-            local Index = Items[Value]
-            if (Index) then
+            local function Cache(Value)
+                local Index = Items[Value]
+                if (Index) then
+                    return Index
+                end
+
+                Index = Count + 1
+                Count = Index
+                Items[Value] = Index
                 return Index
             end
 
-            Index = Count + 1
-            Count = Index
-            Items[Value] = Index
-            return Index
-        end
+            local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true, Cache))
+            local Length = #SubBuffer
+            UIntSerialize(Buffer, Length)
+            Buffer.WriteString(SubBuffer, Length * 8)
+            CacheSerializerSerialize(Buffer, Items)
 
-        local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true, Cache))
-        local Length = #SubBuffer
-        UIntSerialize(Buffer, Length)
-        Buffer.WriteString(SubBuffer, Length * 8)
-        CacheSerializerSerialize(Buffer, Items)
+            --[[ local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true))
+            Buffer.WriteString(SubBuffer, Length * 8) ]]
+        end;
+        _Deserialize = function(Buffer, Cache)
+            local CacheSize = UIntDeserialize(Buffer)
+            Buffer.SetPosition(32 + CacheSize * 8)
 
-        --[[ local SubBuffer = buffer.tostring(Serializer:Serialize(Value, nil, true))
-        Buffer.WriteString(SubBuffer, Length * 8) ]]
-    end
-    self._Deserialize = function(Buffer, Cache)
-        local CacheSize = UIntDeserialize(Buffer)
-        Buffer.SetPosition(32 + CacheSize * 8)
+            local ReversedCache = {}
+            for Cached, Index in CacheSerializerDeserialize(Buffer) do
+                ReversedCache[Index] = Cached
+            end
+            Buffer.SetPosition(32)
 
-        local ReversedCache = {}
-        for Cached, Index in CacheSerializerDeserialize(Buffer) do
-            ReversedCache[Index] = Cached
-        end
-        Buffer.SetPosition(32)
+            return SerializerDeserialize(Buffer, ReversedCache)
 
-        return SerializerDeserialize(Buffer, ReversedCache)
-
-        --[[ return SerializerDeserialize(Buffer) ]]
-    end
+            --[[ return SerializerDeserialize(Buffer) ]]
+        end;
+    }
 end
 
 return ValueCache
