@@ -175,7 +175,7 @@ print(Any:Deserialize(Serialize1))
 local TestObject = TypeGuard.Object({
     X = TypeGuard.Number(0, 100);
     Y = TypeGuard.Number(0, 10):Integer();
-    Z = TypeGuard.String():MaxLenght(1000);
+    Z = TypeGuard.String():MaxLength(1000);
 
     W = TypeGuard.Optional(TypeGuard.Object():OfKeyType(TypeGuard.Boolean()):OfValueType(TypeGuard.String()));
 })
