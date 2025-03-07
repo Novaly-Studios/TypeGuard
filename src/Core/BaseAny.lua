@@ -11,6 +11,7 @@ local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 
 local Core = script.Parent.Parent.Core
     local Function = require(Core.Function)
+    local Userdata = require(Core.Userdata)
     local Boolean = require(Core.Boolean)
     local Number = require(Core.Number)
     local String = require(Core.String)
@@ -30,6 +31,7 @@ local Int32 = Number():Integer(32, false)
 local Float32 = Number():Float(32)
 local Float = Number()
 local DefaultFunction = Function()
+local DefaultUserdata = Userdata()
 local DefaultBoolean = Boolean()
 local DefaultString = String()
 local DefaultThread = Thread()
@@ -57,6 +59,7 @@ local Types = {
 
     -- Unserializable
     DefaultFunction;
+    DefaultUserdata;
     DefaultThread;
 }
 
@@ -208,7 +211,7 @@ for Key, Value in Any do
     Any[Key] = nil
 end
 
-local Result = Any :: {
+return Any :: {
     Deserialize: ((Buffer: buffer, Cache: any?) -> (any));
     AsPredicate: (() -> ((Value: any) -> (boolean)));
     Serialize: ((Value: any, Atom: string?, BypassCheck: boolean?, Cache: any?) -> (buffer));
@@ -216,5 +219,3 @@ local Result = Any :: {
     Assert: ((Value: any) -> ());
     Check: ((Value: any) -> (boolean));
 }
-
-return Result

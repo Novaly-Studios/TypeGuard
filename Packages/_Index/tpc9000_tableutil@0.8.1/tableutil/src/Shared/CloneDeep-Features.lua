@@ -11,7 +11,7 @@ local function FreezeDeep(Structure)
         end
     end
 
-    return table.freeze(Structure)
+    return (table.isfrozen(Structure) and Structure or table.freeze(Structure))
 end
 
 return table.freeze({

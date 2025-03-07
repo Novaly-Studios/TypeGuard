@@ -19,8 +19,10 @@ local Test = {
 --[[ local BaseAny = require(game.ReplicatedFirst.TypeGuard.Core.BaseAny)
 print(BaseAny:Deserialize(BaseAny:Serialize(Test, "Bit", false), "Bit", false)) ]]
 
---[[ local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
-print(Any:Deserialize(Any:Serialize(Test, "Byte", false), "Byte", false)) ]]
+local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
+print(Any:Deserialize(Any:Serialize(Test, "Byte", false), "Byte", false))
 
 --[[ local Any = require(game.ReplicatedFirst.TypeGuard.Roblox.Any)
-print(Any:Check({false, buffer.create(10)})) ]]
+local ValueCache = require(game.ReplicatedFirst.TypeGuard.Core.ValueCache)
+local AnyValueCache = ValueCache():Using(Any)
+print(AnyValueCache:Deserialize(AnyValueCache:Serialize(Test, "Bit"), "Bit")) ]]

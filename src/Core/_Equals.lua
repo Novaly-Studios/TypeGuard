@@ -2,16 +2,35 @@
 --!native
 
 local RobloxTypes = {
+    Axes = true;
+    BrickColor = true;
+    CatalogSearchParams = true;
     CFrame = true;
     Color3 = true;
     ColorSequence = true;
     ColorSequenceKeypoint = true;
-    EnumItem = true;
+    Content = true;
+    DateTime = true;
+    DockWidgetPluginGuiInfo = true;
     Enum = true;
-    Instance = true;
+    EnumItem = true;
+    Faces = true;
+    FloatCurveKey = true;
+    Font = true;
+    NumberRange = true;
     NumberSequence = true;
     NumberSequenceKeypoint = true;
+    OverlapParams = true;
+    Path2DControlPoint = true;
+    PathWaypoint = true;
+    PhysicalProperties = true;
     Ray = true;
+    RaycastParams = true;
+    RaycastResult = true;
+    Rect = true;
+    Region3 = true;
+    RotationCurveKey = true;
+    Secret = true;
     TweenInfo = true;
     UDim = true;
     UDim2 = true;

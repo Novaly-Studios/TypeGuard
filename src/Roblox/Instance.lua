@@ -27,6 +27,7 @@ local Util = require(script.Parent.Parent.Util)
 
 type InstanceTypeChecker = TypeChecker<InstanceTypeChecker, Instance> & {
     CheckAttributes: SelfReturn<InstanceTypeChecker, FunctionalArg<{[string]: SignatureTypeChecker}>>;
+    SerializeScheme: ((self: InstanceTypeChecker, Type: "NetSync" | "Reference" | "Full") -> (InstanceTypeChecker));
     IsDescendantOf: SelfReturn<InstanceTypeChecker, FunctionalArg<Instance>>;
     CheckAttribute: SelfReturn<InstanceTypeChecker, FunctionalArg<string>, FunctionalArg<SignatureTypeChecker>>;
     HasAttributes: SelfReturn<InstanceTypeChecker, FunctionalArg<{string}>>;
@@ -179,6 +180,13 @@ function InstanceCheckerClass:OfChildType(Checker)
 
         return true
     end, Checker)
+end
+
+--- Serializes an Instance reference instead of 
+function InstanceCheckerClass:SerializeScheme(Type)
+    return self:Modify({
+        _SerializeScheme = Type;
+    })
 end
 
 --- Activates strict tag for OfStructure.
@@ -334,16 +342,36 @@ function InstanceCheckerClass:HasChild(Name)
 end
 
 function InstanceCheckerClass:_UpdateSerialize()
-    if (self._Serialize) then
-        return
+    local SerializeScheme = self._SerializeScheme or "Full"
+
+    if (SerializeScheme == "NetSync") then
+        return {
+            _Serialize = function(Buffer, Value, _Cache)
+                Buffer.WriteUInt(32, GetInstanceID(Value))
+            end;
+            _Deserialize = function(Buffer, _Cache)
+                return GetInstanceFromID(Buffer.ReadUInt(32))
+            end;
+        }
+    end
+
+    if (SerializeScheme == "Reference") then
+        return {
+            _Serialize = function(_Buffer, _Value, _Cache)
+                error("Reference Instance serialization unimplemented")
+            end;
+            _Deserialize = function(_Buffer, _Cache)
+                error("Reference Instance deserialization unimplemented")
+            end;
+        }
     end
 
     return {
-        _Serialize = function(Buffer, Value, _Cache)
-            Buffer.WriteUInt(32, GetInstanceID(Value))
+        _Serialize = function(_Buffer, _Value, _Cache)
+            error("Full Instance serialization unimplemented")
         end;
-        _Deserialize = function(Buffer, _Cache)
-            return GetInstanceFromID(Buffer.ReadUInt(32))
+        _Deserialize = function(_Buffer, _Cache)
+            error("Full Instance deserialization unimplemented")
         end;
     }
 end

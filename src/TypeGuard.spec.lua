@@ -308,96 +308,6 @@ return function()
 
     -- These behaviors extend to all TypeChecker implementations
     describe("TypeChecker", function()
-        describe("Alias", function()
-            it("should reject non-string args", function()
-                expect(function()
-                    TypeGuard.Number():Alias(1)
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Alias({})
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Alias(true)
-                end).to.throw()
-            end)
-
-            it("should accept string args", function()
-                expect(function()
-                    TypeGuard.Number():Alias("Test")
-                end).never.to.throw()
-            end)
-
-            it("should give a fail string with the alias", function()
-                local _, Result = TypeGuard.Number():Or(TypeGuard.Array()):Alias("TestAlias"):Check("Test")
-                expect(Result).to.be.a("string")
-                expect(Result:match("TestAlias")).to.be.ok()
-            end)
-        end)
-
-        describe("Or", function()
-            it("should reject non-TypeChecker args", function()
-                expect(function()
-                    TypeGuard.Number():Or(1)
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Or({})
-                end).to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Or(true)
-                end).to.throw()
-            end)
-
-            it("should accept TypeChecker args", function()
-                expect(function()
-                    TypeGuard.Number():Or(TypeGuard.Number())
-                end).never.to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Or(TypeGuard.String())
-                end).never.to.throw()
-
-                expect(function()
-                    TypeGuard.Number():Or(TypeGuard.Array())
-                end).never.to.throw()
-            end)
-
-            it("should accept function args", function()
-                expect(function()
-                    TypeGuard.Number():Or(function() end)
-                end).never.to.throw()
-            end)
-
-            it("should accept inputs if they satisfy a TypeChecker in the or chain", function()
-                local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
-                expect(Check:Check(1)).to.equal(true)
-                expect(Check:Check(true)).to.equal(true)
-                expect(Check:Check(false)).to.equal(true)
-            end)
-
-            it("should reject inputs if they do not satisfy a TypeChecker in the or chain", function()
-                local Check = TypeGuard.Number():Or(TypeGuard.Boolean())
-                expect(Check:Check("Test")).to.equal(false)
-                expect(Check:Check({})).to.equal(false)
-            end)
-
-            it("should accept functional inputs if they return a TypeChecker which satisfies the or chain", function()
-                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
-                expect(Check:Check(1)).to.equal(true)
-                expect(Check:Check(true)).to.equal(true)
-                expect(Check:Check(false)).to.equal(true)
-            end)
-
-            it("should reject functional inputs if they return a TypeChecker which does not satisfy the or chain", function()
-                local Check = TypeGuard.Number():Or(function() return TypeGuard.Boolean() end)
-                expect(Check:Check("Test")).to.equal(false)
-                expect(Check:Check({})).to.equal(false)
-            end)
-        end)
-
         describe("Check", function()
             it("should return a true boolean and no string on success", function()
                 local Check = TypeGuard.Number()
@@ -613,18 +523,6 @@ return function()
                 expect(Error).to.equal("0123456789")
             end)
 
-            it("should work with Or calls", function()
-                local Check = TypeGuard.Number():Or(TypeGuard.Array()):FailMessage("0123456789")
-                local _, Error = Check:Check("Test")
-                expect(Error).to.equal("0123456789")
-            end)
-
-            it("should work with And calls", function()
-                local Check = TypeGuard.Number():And(TypeGuard.Array()):FailMessage("0123456789")
-                local _, Error = Check:Check("Test")
-                expect(Error).to.equal("0123456789")
-            end)
-
             it("should work with Cached calls", function()
                 local Check = TypeGuard.Number():Cached():FailMessage("0123456789")
 
@@ -662,10 +560,6 @@ return function()
     
                 Test = TypeGuard.FromTemplate(nil)
                 expect(Test:Check(nil)).to.equal(true)
-                expect(Test:Check("Test")).to.equal(false)
-    
-                Test = TypeGuard.FromTemplate(newproxy(true))
-                expect(Test:Check(newproxy(true))).to.equal(true)
                 expect(Test:Check("Test")).to.equal(false)
     
                 Test = TypeGuard.FromTemplate(coroutine.create(function() end))

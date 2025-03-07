@@ -18,13 +18,16 @@ local TableUtil = require(script.Parent.Parent.TableUtil).WithFeatures()
     local Merge = TableUtil.Map.Merge
 
 export type AnyMethod = (...any) -> (...any)
+
 export type SignatureTypeChecker = {
     _TC: true;
 }
+
 export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Luau from complaining in the main script.
     GreaterThanOrEqualTo: AnyMethod;
     LessThanOrEqualTo: AnyMethod;
     NoConstraints: AnyMethod;
+    NonSerialized: AnyMethod;
     GreaterThan: AnyMethod;
     FailMessage: AnyMethod;
     AsPredicate: AnyMethod;
@@ -37,7 +40,6 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
     Cached: AnyMethod;
     Negate: AnyMethod;
     Check: AnyMethod;
-    Alias: AnyMethod;
     Copy: AnyMethod;
 }
 
@@ -51,6 +53,7 @@ export type TypeChecker<ExtensionClass, SampleType> = {
 
     -- Methods available in all TypeCheckers.
     NoConstraints: ((self: ExtensionClass) -> (ExtensionClass));
+    NonSerialized: ((self: ExtensionClass) -> (ExtensionClass));
     FailMessage: ((self: ExtensionClass, Message: FunctionalArg<string>) -> (ExtensionClass));
     AsAssertion: ((self: ExtensionClass) -> ((Input: SampleType) -> ()));
     AsPredicate: ((self: ExtensionClass) -> ((Input: SampleType) -> (boolean, string?)));
@@ -62,7 +65,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     Negate: ((self: ExtensionClass) -> (ExtensionClass));
     Cached: ((self: ExtensionClass) -> (ExtensionClass));
     Check: ((self: ExtensionClass, Value: any) -> (boolean, string?));
-    Alias: ((self: ExtensionClass, Alias: string) -> (ExtensionClass));
     Unmap: ((self: ExtensionClass, Unmapper: ((any?) -> (SampleType))) -> (ExtensionClass));
     Copy: ((self: ExtensionClass) -> (ExtensionClass));
     Map: ((self: ExtensionClass, Mapper: ((SampleType) -> (any?))) -> (ExtensionClass));
@@ -150,8 +152,6 @@ local function IsAKeyIn(self, Table)
         return true
     end, Table)
 end
-
-local function EmptyFunction() end
 
 local WEAK_KEY_MT = {__mode = "ks"}
 local USE_INDEX = false
@@ -247,7 +247,7 @@ local function CreateTemplate(Name: string)
     --- Wraps & negates the last constraint (i.e. if it originally would fail, it passes, and vice versa).
     function TemplateClass:Negate()
         local LastConstraint = self._LastConstraint
-        assert(LastConstraint ~= "", "Nothing to negate (no constraints active)")
+        assert(LastConstraint ~= 0, "Nothing to negate (no constraints active)")
 
         return self:Modify({
             _ActiveConstraints = {
@@ -393,6 +393,7 @@ local function CreateTemplate(Name: string)
 
                                     -- Case 2: arg is a table of checkers.
                                     local _, FirstItem = next(Arg)
+
                                     if (type(FirstItem) == "table" and FirstItem._MapCheckers) then
                                         local Changes = {}
 
@@ -416,15 +417,6 @@ local function CreateTemplate(Name: string)
 
                 return ActiveConstraints
             end
-        })
-    end
-
-    --- Creates an Alias - useful for replacing large "Or" chains in big structures to identify where it is failing.
-    function TemplateClass:Alias(AliasName)
-        ExpectType(AliasName, Expect.STRING, 1)
-
-        return self:Modify({
-            _Alias = AliasName;
         })
     end
 
@@ -501,8 +493,8 @@ local function CreateTemplate(Name: string)
             _ActiveConstraints = function(ActiveConstraints)
                 return Insert(ActiveConstraints or {}, {
                     HasFunctions = HasFunctions;
-                    ShouldNegate = false;
                     Function = Constraint;
+                    Negated = false;
                     Name = Name;
                     Args = Args;
                 })
@@ -516,25 +508,30 @@ local function CreateTemplate(Name: string)
     function TemplateClass:_Changed()
         -- Equals - return the value itself when deserialized in every case.
         -- No bits written or read from buffer.
-        local Equals = self:GetConstraint("Equals")
-        if (Equals) then
-            if (self._NonSerialized) then
-                return
-            end
+        if (self._NonSerialized) then
+            return {
+                _Serialize = function(_, _, _) end;
+                _Deserialize = function(_, _) end;
+            }
+        end
 
+        local Equals = self:GetConstraint("Equals")
+
+        if (Equals) then
             local Value = Equals[1]
+
             return {
                 _Serialize = function(_, _, _) end;
                 _Deserialize = function(_, _)
                     return Value
                 end;
-                _NonSerialized = true;
             }
         end
 
         -- If it's a selection of possible values, we can use Or.
         -- Hacky cyclic dependency, but this is used because of String's ergonomic initial constraint & backwards compatibility.
         local IsAValueIn = self:GetConstraint("IsAValueIn")
+
         if (IsAValueIn and self.Type ~= "Or") then
             Or = Or or require(script.Parent.Core.Or) :: any
 
@@ -553,6 +550,7 @@ local function CreateTemplate(Name: string)
         end
 
         local IsAKeyIn = self:GetConstraint("IsAKeyIn")
+
         if (IsAKeyIn and self.Type ~= "Or") then
             Or = Or or require(script.Parent.Core.Or) :: any
 
@@ -683,7 +681,7 @@ local function CreateTemplate(Name: string)
         -- Handle active constraints.
         for _, Constraint in self._ActiveConstraints do
             local HasFunctionalParams = Constraint.HasFunctions
-            local ShouldNegate = Constraint.ShouldNegate
+            local Negated = Constraint.Negated
             local Call = Constraint.Function
             local Args = Constraint.Args
             local Name = Constraint.Name
@@ -701,7 +699,8 @@ local function CreateTemplate(Name: string)
 
             -- Call the constraint to verify it is satisfied.
             local SubSuccess, SubMessage = Call(self, Value, unpack(Args))
-            if (ShouldNegate) then
+
+            if (Negated) then
                 SubMessage = if (SubSuccess) then
                                 `Constraint '{Name}' succeeded but was expected to fail on value {Value}`
                                 else
@@ -769,13 +768,13 @@ local function CreateTemplate(Name: string)
         return Value
     end
 
-    --[[ function TemplateClass:__tostring()
-        -- User can create a unique alias to help simplify "where did it fail?".
-        local Alias = self._Alias
-        if (Alias) then
-            return Alias
-        end
+    function TemplateClass:NonSerialized()
+        return self:Modify({
+            _NonSerialized = true;
+        })
+    end
 
+    --[[ function TemplateClass:__tostring()
         local Fields = {}
 
         -- Constraints list (including arg, possibly other type defs).

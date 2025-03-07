@@ -23,12 +23,11 @@ local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 
 local Number = require(script.Parent.Number)
 
-type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
+export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
     ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     ContainsKeyOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     CheckMetatable: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     UnmapStructure: ((self: IndexableTypeChecker, Unmapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
-    OfStructureFC: ((self: IndexableTypeChecker, Structure: FunctionalArg<{{[any]: SignatureTypeChecker}}>) -> (IndexableTypeChecker));
     MapStructure: ((self: IndexableTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
     OfValueType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     OfStructure: ((self: IndexableTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (IndexableTypeChecker));
@@ -318,6 +317,7 @@ function IndexableClass:Similarity(Value)
     end
 
     local OfStructure = self:GetConstraint("OfStructure")
+
     if (OfStructure) then
         for Key, Checker in OfStructure[1] do
             local GotValue = Value[Key]
@@ -334,6 +334,7 @@ function IndexableClass:Similarity(Value)
     end
 
     local OfKeyType = self:GetConstraint("OfKeyType")
+
     if (OfKeyType) then
         local KeyType = OfKeyType[1]
         local KeySimilarity = KeyType.Similarity
@@ -346,6 +347,7 @@ function IndexableClass:Similarity(Value)
     end
 
     local OfValueType = self:GetConstraint("OfValueType")
+
     if (OfValueType) then
         local ValueType = OfValueType[1]
         local ValueSimilarity = ValueType.Similarity
@@ -372,35 +374,56 @@ end
 
 function IndexableClass:_UpdateSerialize()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
+
     local MapStructure = self._MapStructure
+    local Strict = self._Strict
+
     local OfStructure = self:GetConstraint("OfStructure")
     local OfValueType = self:GetConstraint("OfValueType")
     local OfKeyType = self:GetConstraint("OfKeyType")
 
-    if (HasFunctionalConstraints or not (MapStructure or OfStructure or (OfValueType and OfKeyType))) then
-        local AnySerialize, AnyDeserialize
+    local MapStructureFunction = (MapStructure and MapStructure[2] or function(Value)
+        return Value
+    end)
+    local UnmapStructureFunction = (self._Unmap or self._UnmapStructure or function(Value)
+        return Value
+    end)
 
-        return {
-            _Serialize = function(Buffer, Array, Cache)
-                if (not AnySerialize) then
-                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                    AnySerialize = Any._Serialize
-                    Any:Serialize(1) -- Initialize Any.
-                end
+    local AnySerialize, AnyDeserialize
+    local AnySerializeDeserialize = {
+        _Serialize = function(Buffer, Value, Cache)
+            if (MapStructureFunction) then
+                Value = MapStructureFunction(Value)
+            end
 
-                AnySerialize(Buffer, Array, Cache)
-            end;
+            if (not AnySerialize) then
+                local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                AnySerialize = Any._Serialize
+                Any:Serialize(1) -- Initialize Any.
+            end
 
-            _Deserialize = function(Buffer, Array, Cache)
-                if (not AnyDeserialize) then
-                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                    AnyDeserialize = Any._Deserialize
-                    Any:Serialize(1) -- Initialize Any.
-                end
+            AnySerialize(Buffer, Value, Cache)
+        end;
 
-                return AnyDeserialize(Buffer, Array, Cache)
-            end;
-        }
+        _Deserialize = function(Buffer, Value, Cache)
+            if (not AnyDeserialize) then
+                local Any = require(script.Parent.Parent.Roblox.Any) :: any
+                AnyDeserialize = Any._Deserialize
+                Any:Serialize(1) -- Initialize Any.
+            end
+
+            local Result = AnyDeserialize(Buffer, Value, Cache)
+
+            if (UnmapStructureFunction) then
+                Result = UnmapStructureFunction(Result)
+            end
+
+            return Result
+        end;
+    }
+
+    if (HasFunctionalConstraints or not (((MapStructure and MapStructure[1] and MapStructure[1]._Strict)) or (OfStructure and Strict) or (OfValueType and OfKeyType))) then
+        return AnySerializeDeserialize
     end
 
     local OfClass = self:GetConstraint("OfClass")
@@ -415,72 +438,67 @@ function IndexableClass:_UpdateSerialize()
     end
 
     if (OfStructure or MapStructure) then
-        local Strict = self._Strict
+        local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
+        local HasSingleType = true
+        local CommonType = typeof((next(StructureDefinition)))
 
-        if (Strict) then
-            local MapStructureFunction = (MapStructure and MapStructure[2] or function(Value)
-                return Value
-            end)
-            local UnmapStructureFunction = (self._Unmap or self._UnmapStructure or function(Value)
-                return Value
-            end)
-            local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
-            local HasSingleType = true
-            local CommonType = typeof((next(StructureDefinition)))
+        for Key in StructureDefinition do
+            HasSingleType = (CommonType == typeof(Key))
 
-            for Key in StructureDefinition do
-                HasSingleType = (CommonType == typeof(Key))
-
-                if (not HasSingleType) then
-                    break
-                end
-            end
-
-            local KeyToSerializeFunction = table.clone(StructureDefinition)
-            for Key, Value in StructureDefinition do
-                KeyToSerializeFunction[Key] = Value._Serialize
-            end
-
-            local KeyToDeserializeFunction = table.clone(StructureDefinition)
-            for Key, Value in StructureDefinition do
-                KeyToDeserializeFunction[Key] = Value._Deserialize
-            end
-
-            if (HasSingleType and CommonType == "string") then
-                local IndexToKey = {}
-
-                for Key in StructureDefinition do
-                    table.insert(IndexToKey, Key)
-                end
-
-                table.sort(IndexToKey)
-
-                return {
-                    _Serialize = function(Buffer, Value, Cache)
-                        Value = MapStructureFunction(Value)
-
-                        for _, Key in IndexToKey do
-                            KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
-                        end
-                    end;
-                    _Deserialize = function(Buffer, Cache)
-                        local Result = {}
-
-                        for _, Key in IndexToKey do
-                            Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
-                        end
-
-                        return ApplyClass(UnmapStructureFunction(Result))
-                    end;
-                }
+            if (not HasSingleType) then
+                break
             end
         end
+
+        local KeyToSerializeFunction = table.clone(StructureDefinition)
+        for Key, Value in StructureDefinition do
+            KeyToSerializeFunction[Key] = Value._Serialize
+        end
+
+        local KeyToDeserializeFunction = table.clone(StructureDefinition)
+        for Key, Value in StructureDefinition do
+            KeyToDeserializeFunction[Key] = Value._Deserialize
+        end
+
+        if (HasSingleType and CommonType == "string") then
+            local IndexToKey = {}
+
+            for Key in StructureDefinition do
+                table.insert(IndexToKey, Key)
+            end
+
+            table.sort(IndexToKey)
+
+            return {
+                _Serialize = function(Buffer, Value, Cache)
+                    if (MapStructureFunction) then
+                        Value = MapStructureFunction(Value)
+                    end
+
+                    for _, Key in IndexToKey do
+                        KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
+                    end
+                end;
+                _Deserialize = function(Buffer, Cache)
+                    local Result = {}
+
+                    for _, Key in IndexToKey do
+                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
+                    end
+
+                    if (UnmapStructureFunction) then
+                        Result = UnmapStructureFunction(Result)
+                    end
+
+                    return ApplyClass(Result)
+                end;
+            }
+        end
+
+        -- Todo: support for known keys part + any part.
+        return AnySerializeDeserialize
     end
 
-    if (not (OfValueType and OfKeyType)) then
-        return {}
-    end
-    
     local OfValueTypeChecker = OfValueType[1]
         local ValueDeserialize = OfValueTypeChecker._Deserialize
         local ValueSerialize = OfValueTypeChecker._Serialize
@@ -499,6 +517,10 @@ function IndexableClass:_UpdateSerialize()
     if (GroupKV) then
         return {
             _Serialize = function(Buffer, Value, Cache)
+                if (MapStructureFunction) then
+                    Value = MapStructureFunction(Value)
+                end
+
                 local Length = 0
 
                 for _ in Value do
@@ -530,6 +552,10 @@ function IndexableClass:_UpdateSerialize()
                     Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
                 end
 
+                if (UnmapStructureFunction) then
+                    Result = UnmapStructureFunction(Result)
+                end
+
                 return ApplyClass(Result)
             end;
         }
@@ -537,6 +563,10 @@ function IndexableClass:_UpdateSerialize()
 
     return {
         _Serialize = function(Buffer, Value, Cache)
+            if (MapStructureFunction) then
+                Value = MapStructureFunction(Value)
+            end
+
             local Length = 0
 
             for _ in Value do
@@ -556,6 +586,10 @@ function IndexableClass:_UpdateSerialize()
 
             for Index = 1, Length do
                 Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)
+            end
+
+            if (UnmapStructureFunction) then
+                Result = UnmapStructureFunction(Result)
             end
 
             return ApplyClass(Result)

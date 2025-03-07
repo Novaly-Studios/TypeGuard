@@ -147,7 +147,4 @@ function EnumCheckerClass:_UpdateSerialize()
     }
 end
 
---[[ local Test = EnumChecker()
-print(Test:Deserialize(Test:Serialize(Enum.KeyCode.A))) ]]
-
 return EnumChecker

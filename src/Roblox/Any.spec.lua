@@ -18,8 +18,8 @@ return function()
     end)
 
     describe("Serialize, Deserialize", function()
-        it("should serialize non-thread, non-function, non-Instance values", function()
-            for ID, Value in GetValues("Function", "Thread", "Instance") do
+        it("should serialize non-thread, non-function, non-Instance, non-userdata values", function()
+            for ID, Value in GetValues("Function", "Thread", "Instance", "Userdata") do
                 local Serialized = Base:Serialize(Value)
                 expect(Serialized).to.be.ok()
                 local Deserialized = Base:Deserialize(Serialized)

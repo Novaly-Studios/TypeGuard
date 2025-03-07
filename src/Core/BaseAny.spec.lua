@@ -10,7 +10,7 @@ return function()
     local Base = TypeGuard.BaseAny
 
     describe("Init", function()
-        it(`should accept all known Luau types`, function()
+        it("should accept all known Luau types", function()
             for ID, Value in GetValues("Rbx") do
                 expect(Base:Check(Value)).to.equal(true)
             end
@@ -18,8 +18,8 @@ return function()
     end)
 
     describe("Serialize, Deserialize", function()
-        it("should serialize non-thread, non-function values", function()
-            for ID, Value in GetValues("Rbx", "Function", "Thread") do
+        it("should serialize non-thread, non-function, non-userdata values", function()
+            for ID, Value in GetValues("Rbx", "Function", "Thread", "Userdata") do
                 local Serialized = Base:Serialize(Value)
                 expect(Serialized).to.be.ok()
                 local Deserialized = Base:Deserialize(Serialized)

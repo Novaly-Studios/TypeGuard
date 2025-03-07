@@ -11,6 +11,7 @@ local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 
 local Core = script.Parent.Parent.Core
     local Function = require(Core.Function)
+    local Userdata = require(Core.Userdata)
     local Boolean = require(Core.Boolean)
     local Number = require(Core.Number)
     local String = require(Core.String)
@@ -21,6 +22,8 @@ local Core = script.Parent.Parent.Core
     local Or = require(Core.Or)
 
 local Roblox = script.Parent
+    local RbxBrickColor = require(Roblox.BrickColor)
+        local DefaultBrickColor = RbxBrickColor()
     local RbxCFrame = require(Roblox.CFrame)
         local DefaultCFrame = RbxCFrame()
     local RbxColor3 = require(Roblox.Color3)
@@ -49,6 +52,38 @@ local Roblox = script.Parent
         local DefaultVector2 = RbxVector2()
     local RbxVector3 = require(Roblox.Vector3)
         local DefaultVector3 = RbxVector3()
+    local RbxNumberRange = require(Roblox.NumberRange)
+        local DefaultNumberRange = RbxNumberRange()
+    local RbxAxes = require(Roblox.Axes)
+        local DefaultAxes = RbxAxes()
+    local RbxCatalogSearchParams = require(Roblox.CatalogSearchParams)
+        local DefaultCatalogSearchParams = RbxCatalogSearchParams()
+    local RbxContent = require(Roblox.Content)
+        local DefaultContent = RbxContent()
+    local RbxDateTime = require(Roblox.DateTime)
+        local DefaultDateTime = RbxDateTime()
+    local RbxFaces = require(Roblox.Faces)
+        local DefaultFaces = RbxFaces()
+    local RbxFloatCurveKey = require(Roblox.FloatCurveKey)
+        local DefaultFloatCurveKey = RbxFloatCurveKey()
+    local RbxFont = require(Roblox.Font)
+        local DefaultFont = RbxFont()
+    local RbxOverlapParams = require(Roblox.OverlapParams)
+        local DefaultOverlapParams = RbxOverlapParams()
+    local RbxPath2DControlPoint = require(Roblox.Path2DControlPoint)
+        local DefaultPath2DControlPoint = RbxPath2DControlPoint()
+    local RbxPathWaypoint = require(Roblox.PathWaypoint)
+        local DefaultPathWaypoint = RbxPathWaypoint()
+    local RbxPhysicalProperties = require(Roblox.PhysicalProperties)
+        local DefaultPhysicalProperties = RbxPhysicalProperties()
+    local RbxRaycastParams = require(Roblox.RaycastParams)
+        local DefaultRaycastParams = RbxRaycastParams()
+    local RbxRect = require(Roblox.Rect)
+        local DefaultRect = RbxRect()
+    local RbxRegion3 = require(Roblox.Region3)
+        local DefaultRegion3 = RbxRegion3()
+    local RbxRotationCurveKey = require(Roblox.RotationCurveKey)
+        local DefaultRotationCurveKey = RbxRotationCurveKey()
 
 local UInt8 = Number():Integer(8, true)
 local Int8 = Number():Integer(8, false)
@@ -59,6 +94,7 @@ local Int32 = Number():Integer(32, false)
 local Float32 = Number():Float(32)
 local Float = Number()
 local DefaultFunction = Function()
+local DefaultUserdata = Userdata()
 local DefaultBoolean = Boolean()
 local DefaultString = String()
 local DefaultThread = Thread()
@@ -97,14 +133,40 @@ local Types = {
     DefaultUDim2;
     DefaultVector2;
     DefaultVector3;
+    DefaultBrickColor;
+    DefaultNumberRange;
+    DefaultAxes;
+    DefaultCatalogSearchParams;
+    DefaultContent;
+    DefaultDateTime;
+    DefaultFaces;
+    DefaultFloatCurveKey;
+    DefaultFont;
+    DefaultOverlapParams;
+    DefaultPath2DControlPoint;
+    DefaultPathWaypoint;
+    DefaultPhysicalProperties;
+    DefaultRaycastParams;
+    DefaultRect;
+    DefaultRegion3;
+    DefaultRotationCurveKey;
 
     -- Unserializable
     DefaultFunction;
+    DefaultUserdata;
     DefaultThread;
 }
 
 local TypeToIndex = {}
 for Index, Type in Types do
+    --[[ Types[Index] = Type:_MapCheckers(function(Checker)
+        if (Checker.Type ~= "Instance") then
+            return Checker
+        end
+
+        return Checker:Reference("NetSync")
+    end, true) ]]
+
     for _, TypeOf in Type._TypeOf do
         TypeToIndex[TypeOf] = Index
     end
@@ -123,6 +185,7 @@ local FloatIndex = table.find(Types, Float)
 
 local Any = table.clone(Or(unpack(Types)):DefineGetType(function(Value)
     local ValueType = typeof(Value)
+
     if (ValueType == "number") then
         if (Value % 1 == 0) then
             if (Value >= 0) then
@@ -163,7 +226,7 @@ local Any = table.clone(Or(unpack(Types)):DefineGetType(function(Value)
         return FloatIndex
     end
 
-    if (ValueType == "table") then
+    if (ValueType == "table" or ValueType == "SharedTable") then
         if (Value[1] == nil) then
             return DefaultObjectIndex
         end
@@ -172,6 +235,7 @@ local Any = table.clone(Or(unpack(Types)):DefineGetType(function(Value)
     end
 
     local Index = TypeToIndex[ValueType]
+
     if (Index) then
         return Index
     end
@@ -242,17 +306,7 @@ for Key, Value in Any do
     Any[Key] = nil
 end
 
-local TestColor = Color3.new(0, 0.5, 1)
-local TestTweenInfo = TweenInfo.new(5, Enum.EasingStyle.Linear)
-
-local Test = Any:Serialize({
-    -- [TestColor] = TestTweenInfo;
-    -- [TestTweenInfo] = TestColor;
-    AHHH = true;
-})
-Any:Deserialize(Test)
-
-local Result = Any :: {
+return Any :: {
     Deserialize: ((Buffer: buffer, Cache: any?) -> (any));
     AsPredicate: (() -> ((Value: any) -> (boolean)));
     Serialize: ((Value: any, Atom: string?, BypassCheck: boolean?, Cache: any?) -> (buffer));
@@ -260,5 +314,3 @@ local Result = Any :: {
     Assert: ((Value: any) -> ());
     Check: ((Value: any) -> (boolean));
 }
-
-return Result

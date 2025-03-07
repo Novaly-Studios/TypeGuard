@@ -12,6 +12,7 @@ local Template = require(script.Parent.Parent._Template)
     type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type CFrameTypeChecker = TypeChecker<CFrameTypeChecker, CFrame> & {
+    Compressed: SelfReturn<CFrameTypeChecker, number?>;
     Float: SelfReturn<CFrameTypeChecker, FunctionalArg<number>>;
 };
 
@@ -19,9 +20,51 @@ local Core = script.Parent.Parent.Core
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
     local Object = require(Core.Object)
-    local Array = require(Core.Array)
 
-local function CFrameFloat(self, Precision)
+local Intermediary = Object({
+    X = Float32;
+    Y = Float32;
+    Z = Float32;
+    R00 = Float32;
+    R01 = Float32;
+    R02 = Float32;
+    R10 = Float32;
+    R11 = Float32;
+    R12 = Float32;
+    R20 = Float32;
+    R21 = Float32;
+    R22 = Float32;
+}):Strict():NoCheck()
+
+local Checker = Object():MapStructure(Intermediary, function(Value)
+    local X, Y, Z, R00, R01, R02, R10, R11, R12, R20, R21, R22 = Value:GetComponents()
+
+    return {
+        X = X;
+        Y = Y;
+        Z = Z;
+        R00 = R00;
+        R01 = R01;
+        R02 = R02;
+        R10 = R10;
+        R11 = R11;
+        R12 = R12;
+        R20 = R20;
+        R21 = R21;
+        R22 = R22;
+    }
+end):UnmapStructure(function(Value)
+    return CFrame.new(
+        Value.X, Value.Y, Value.Z,
+        Value.R00, Value.R01, Value.R02,
+        Value.R10, Value.R11, Value.R12,
+        Value.R20, Value.R21, Value.R22
+    )
+end):Strict():NoConstraints()
+Checker.Type = "CFrame"
+Checker._TypeOf = {Checker.Type}
+
+function Checker:Float(Precision)
     local Float = Number():Float(Precision)
 
     return self:_MapCheckers("Number", function(Checker)
@@ -29,58 +72,47 @@ local function CFrameFloat(self, Precision)
     end, true)
 end
 
-local Intermediary = Object({
-    X = Float32;
-    Y = Float32;
-    Z = Float32;
-    AxisX = Float32;
-    AxisY = Float32;
-    AxisZ = Float32;
-    Angle = Float32;
-}):Strict():NoCheck()
---[[ local Intermediary = Array():OfStructure({
-    Float32;
-    Float32;
-    Float32;
-    Float32;
-    Float32;
-    Float32;
-    Float32;
-}):Strict():NoCheck() ]]
+function Checker:Compressed(Clicks)
+    Clicks = Clicks or 256
 
-local Checker = Object():MapStructure(Intermediary, function(Value)
-    local Position = Value.Position
-    local Axis, Angle = Value:ToAxisAngle()
+    local Bits = math.ceil(math.log(Clicks, 2))
+    assert(Bits <= 10, "Clicks must be at most 1024")
 
-    --[[ return {
-        Position.X;
-        Position.Y;
-        Position.Z;
-        Axis.X;
-        Axis.Y;
-        Axis.Z;
-        Angle;
-    } ]]
-    return {
-        X = Position.X;
-        Y = Position.Y;
-        Z = Position.Z;
-        AxisX = Axis.X;
-        AxisY = Axis.Y;
-        AxisZ = Axis.Z;
-        Angle = Angle;
-    }
-end):UnmapStructure(function(Value)
-    --[[ return CFrame.new(Value[1], Value[2], Value[3]) * CFrame.fromAxisAngle(
-        Vector3.new(Value[4], Value[5], Value[6]), Value[7]
-    ) ]]
-    return CFrame.new(Value.X, Value.Y, Value.Z) * CFrame.fromAxisAngle(
-        Vector3.new(Value.AxisX, Value.AxisY, Value.AxisZ), Value.Angle
-    )
-end):Strict():NoConstraints()
-Checker.Float = CFrameFloat
-Checker.Type = "CFrame"
-Checker._TypeOf = {Checker.Type}
+    local Bits2 = Bits * 2
+    local Fill = 2 ^ Bits - 1
+    local Tau = math.pi * 2
+
+    local CompressedIntermediary = Object({
+        X = Float32;
+        Y = Float32;
+        Z = Float32;
+        Angle = Number():Integer(Bits * 3, false);
+    }):Strict():NoCheck()
+
+    return self:MapStructure(CompressedIntermediary, function(Value)
+        local Position = Value.Position
+        local Y, P, R = Value:ToEulerAnglesYXZ()
+        Y = ((Y % Tau) / Tau * Clicks) // 1
+        P = ((P % Tau) / Tau * Clicks) // 1
+        R = ((R % Tau) / Tau * Clicks) // 1
+
+        local Angle = bit32.bor(Y, bit32.lshift(P, Bits), bit32.lshift(R, Bits2))
+
+        return {
+            Angle = Angle;
+            X = Position.X;
+            Y = Position.Y;
+            Z = Position.Z;
+        }
+    end):UnmapStructure(function(Value)
+        local Angle = Value.Angle
+        local Y = bit32.band(Angle, Fill) / Clicks * Tau
+        local P = bit32.band(bit32.rshift(Angle, Bits), Fill) / Clicks * Tau
+        local R = bit32.band(bit32.rshift(Angle, Bits2), Fill) / Clicks * Tau
+
+        return CFrame.new(Value.X, Value.Y, Value.Z) * CFrame.fromEulerAnglesYXZ(Y, P, R)
+    end)
+end
 
 return function()
     return Checker

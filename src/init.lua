@@ -58,6 +58,7 @@ TypeGuard.FromTypeSample = FromTypeSample
 do
     TypeGuard.ValueCache = require(Core.ValueCache)
     TypeGuard.Function = require(Core.Function)
+    TypeGuard.Userdata = require(Core.Userdata)
     TypeGuard.Boolean = require(Core.Boolean)
     TypeGuard.BaseAny = require(Core.BaseAny)
     TypeGuard.Number = require(Core.Number)
@@ -73,6 +74,7 @@ end
 -- Luau data types must be manually enumerated here because the LSP will not autosuggest them otherwise...
 do
     -- Roblox Luau data types.
+    TypeGuard.BrickColor = require(Roblox.BrickColor)
     TypeGuard.CFrame = require(Roblox.CFrame)
     TypeGuard.Color3 = require(Roblox.Color3)
     TypeGuard.ColorSequence = require(Roblox.ColorSequence)
@@ -89,6 +91,23 @@ do
     TypeGuard.Any = require(Roblox.Any)
     TypeGuard.NumberSequenceKeypoint = require(Roblox.NumberSequenceKeypoint)
     TypeGuard.NumberSequence = require(Roblox.NumberSequence)
+    TypeGuard.NumberRange = require(Roblox.NumberRange)
+    TypeGuard.SharedTable = require(Roblox.SharedTable)
+    TypeGuard.Axes = require(Roblox.Axes)
+    TypeGuard.CatalogSearchParams = require(Roblox.CatalogSearchParams)
+    TypeGuard.Content = require(Roblox.Content)
+    TypeGuard.DateTime = require(Roblox.DateTime)
+    TypeGuard.Faces = require(Roblox.Faces)
+    TypeGuard.FloatCurveKey = require(Roblox.FloatCurveKey)
+    TypeGuard.Font = require(Roblox.Font)
+    TypeGuard.OverlapParams = require(Roblox.OverlapParams)
+    TypeGuard.Path2DControlPoint = require(Roblox.Path2DControlPoint)
+    TypeGuard.PathWaypoint = require(Roblox.PathWaypoint)
+    TypeGuard.PhysicalProperties = require(Roblox.PhysicalProperties)
+    TypeGuard.RaycastParams = require(Roblox.RaycastParams)
+    TypeGuard.Rect = require(Roblox.Rect)
+    TypeGuard.Region3 = require(Roblox.Region3)
+    TypeGuard.RotationCurveKey = require(Roblox.RotationCurveKey)
 end
 
 -- Core functions...
@@ -219,7 +238,7 @@ do
                         continue
                     end
 
-                    Last = if (Last) then Temp:Or(Last) else Temp
+                    Last = if (Last) then TypeGuard.Or(Temp, Last) else Temp
                     LastType = Temp.Type
                 end
 
@@ -245,7 +264,7 @@ do
 
             local Base = TypeGuard.Instance(Subject.ClassName)
             Base = Strict and Base:Strict() or Base
-            return if (next(Structure)) then Base:OfStructure(Structure) else Base
+            return (next(Structure) ~= nil and Base:OfStructure(Structure) or Base)
         end
 
         if (Type == "EnumItem") then
@@ -255,7 +274,7 @@ do
         local Constructor = TypeGuard[Type]
 
         if (not Constructor) then
-            error("Unknown type: " .. Type)
+            error(`Unknown type: {Type}`)
         end
 
         return Constructor()

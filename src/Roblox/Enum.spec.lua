@@ -60,4 +60,26 @@ return function()
             end):Check(Enum.AccessoryType.Face)).to.equal(true)
         end)
     end)
+
+    describe("Serialize, Deserialize", function()
+        it("should serialize and deserialize EnumItems", function()
+            local Checker = TypeGuard.Enum()
+            expect(Checker:Deserialize(Checker:Serialize(Enum.Material.Rubber))).to.equal(Enum.Material.Rubber)
+        end)
+
+        it("should serialize and deserialize Enums", function()
+            local Checker = TypeGuard.Enum()
+            expect(Checker:Deserialize(Checker:Serialize(Enum.Material))).to.equal(Enum.Material)
+        end)
+
+        it("should serialize and deserialize EnumItems given an Enum class", function()
+            local Checker = TypeGuard.Enum(Enum.KeyCode)
+            expect(Checker:Deserialize(Checker:Serialize(Enum.KeyCode.A))).to.equal(Enum.KeyCode.A)
+        end)
+
+        it("should serialize and deserialize a direct EnumItem", function()
+            local Checker = TypeGuard.Enum(Enum.KeyCode.F)
+            expect(Checker:Deserialize(Checker:Serialize(Enum.KeyCode.F))).to.equal(Enum.KeyCode.F)
+        end)
+    end)
 end

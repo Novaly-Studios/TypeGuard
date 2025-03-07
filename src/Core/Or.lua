@@ -65,6 +65,7 @@ local function _IsAValueIn(_self, TargetValue, Options)
 
     return false, `Value {TargetValue} was not found in table {ConcatWithToString(Options, ", ")}`
 end
+
 function OrClass:IsAValueIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
 
@@ -84,6 +85,7 @@ local function _IsAKeyIn(_self, Key, Options)
 
     return true
 end
+
 function OrClass:IsAKeyIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
 
@@ -119,6 +121,7 @@ local function _IsATypeIn(_self, Value, Options)
     -- This can help with object & array disjunctions, where we show the closest structural match.
     return false, `Value '{Value}' did not satisfy best match: {BestMatch}`
 end
+
 function OrClass:IsATypeIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
 
