@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type RotationCurveKeyTypeChecker = TypeChecker<RotationCurveKeyTypeChecker, RotationCurveKey> & {
 
@@ -38,8 +37,13 @@ local Checker = Object({
     Result.LeftTangent = Value.LeftTangent
     return Result
 end):Strict():NoConstraints()
-Checker.Type = "RotationCurveKey"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "RotationCurveKey"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "RotationCurveKey";
+    _TypeOf = {"RotationCurveKey"};
+})
 
 return function()
     return Checker

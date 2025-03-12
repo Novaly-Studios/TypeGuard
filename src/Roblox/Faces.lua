@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type FacesTypeChecker = TypeChecker<FacesTypeChecker, Faces> & {
 
@@ -37,8 +36,13 @@ local Checker = Object({
         Value.Bottom and Enum.NormalId.Bottom or nil
     )
 end):Strict():NoConstraints()
-Checker.Type = "Faces"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "Faces"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "Faces";
+    _TypeOf = {"Faces"};
+})
 
 return function()
     return Checker

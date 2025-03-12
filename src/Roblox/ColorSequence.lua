@@ -8,7 +8,6 @@ end
 local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type ColorSequenceTypeChecker = TypeChecker<ColorSequenceTypeChecker, ColorSequence> & {
     
@@ -32,8 +31,13 @@ local Checker = Object({
 
     return ColorSequence.new(Result)
 end):Strict():NoConstraints()
-Checker.Type = "ColorSequence"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "ColorSequence"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "ColorSequence";
+    _TypeOf = {"ColorSequence"};
+})
 
 return function()
     return Checker

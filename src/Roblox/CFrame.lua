@@ -9,11 +9,9 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type CFrameTypeChecker = TypeChecker<CFrameTypeChecker, CFrame> & {
-    Compressed: SelfReturn<CFrameTypeChecker, number?>;
-    Float: SelfReturn<CFrameTypeChecker, FunctionalArg<number>>;
+    Compressed: ((self: CFrameTypeChecker, Clicks: number?) -> (CFrameTypeChecker));
 };
 
 local Core = script.Parent.Parent.Core
@@ -61,16 +59,8 @@ end):UnmapStructure(function(Value)
         Value.R20, Value.R21, Value.R22
     )
 end):Strict():NoConstraints()
-Checker.Type = "CFrame"
-Checker._TypeOf = {Checker.Type}
-
-function Checker:Float(Precision)
-    local Float = Number():Float(Precision)
-
-    return self:_MapCheckers("Number", function(Checker)
-        return Float
-    end, true)
-end
+--[[ Checker.Type = "CFrame"
+Checker._TypeOf = {Checker.Type} ]]
 
 function Checker:Compressed(Clicks)
     Clicks = Clicks or 256
@@ -113,6 +103,11 @@ function Checker:Compressed(Clicks)
         return CFrame.new(Value.X, Value.Y, Value.Z) * CFrame.fromEulerAnglesYXZ(Y, P, R)
     end)
 end
+
+Checker = Checker:Modify({
+    Type = "CFrame";
+    _TypeOf = {"CFrame"};
+})
 
 return function()
     return Checker

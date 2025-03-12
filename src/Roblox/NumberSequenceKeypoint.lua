@@ -8,7 +8,6 @@ end
 local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type NumberSequenceKeypointTypeChecker = TypeChecker<NumberSequenceKeypointTypeChecker, NumberSequenceKeypoint> & {
     
@@ -22,22 +21,6 @@ local Core = script.Parent.Parent.Core
         local DefaultNil = Nil()
     local Or = require(Core.Or)
 
-local function NumberSequenceKeypointFloat(self, Precision)
-    local Float = Number():Float(Precision)
-
-    return self:_MapCheckers("Number", function(Checker)
-        return Float
-    end)
-end
-
-local function NumberSequenceKeypointInt(self, Precision, Signed)
-    local Int = Number():Integer(Precision, Signed)
-
-    return self:_MapCheckers("Number", function(Checker)
-        return Int
-    end)
-end
-
 local Checker = Object({
     Envelope = Or(Float32, DefaultNil);
     Value = Float32;
@@ -45,10 +28,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return NumberSequenceKeypoint.new(Value.Time, Value.Value, Value.Envelope)
 end):Strict():NoConstraints()
-Checker.Float = NumberSequenceKeypointFloat
-Checker.Int = NumberSequenceKeypointInt
-Checker.Type = "NumberSequenceKeypoint"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "NumberSequenceKeypoint"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "NumberSequenceKeypoint";
+    _TypeOf = {"NumberSequenceKeypoint"};
+})
 
 return function()
     return Checker

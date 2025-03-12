@@ -59,6 +59,7 @@ do
     TypeGuard.ValueCache = require(Core.ValueCache)
     TypeGuard.Function = require(Core.Function)
     TypeGuard.Userdata = require(Core.Userdata)
+    TypeGuard.Optional = require(Core.Optional)
     TypeGuard.Boolean = require(Core.Boolean)
     TypeGuard.BaseAny = require(Core.BaseAny)
     TypeGuard.Number = require(Core.Number)
@@ -108,12 +109,15 @@ do
     TypeGuard.Rect = require(Roblox.Rect)
     TypeGuard.Region3 = require(Roblox.Region3)
     TypeGuard.RotationCurveKey = require(Roblox.RotationCurveKey)
+    TypeGuard.RBXScriptConnection = require(Roblox.RBXScriptConnection)
+    TypeGuard.RBXScriptSignal = require(Roblox.RBXScriptSignal)
 end
 
 -- Core functions...
 do
     local ValidTypeChecker = TypeGuard.Object({
-        _Check = TypeGuard.Function();
+        -- _Check = TypeGuard.Function();
+        _TC = TypeGuard.Boolean();
     })
 
     --- Creates a function which checks params as if they were a strict Array checker.

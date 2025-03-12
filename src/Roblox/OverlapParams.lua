@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type OverlapParamsTypeChecker = TypeChecker<OverlapParamsTypeChecker, OverlapParams> & {
 
@@ -46,8 +45,13 @@ local Checker = Object({
 
     return Result
 end):Strict():NoConstraints()
-Checker.Type = "OverlapParams"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "OverlapParams"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "OverlapParams";
+    _TypeOf = {"OverlapParams"};
+})
 
 return function()
     return Checker

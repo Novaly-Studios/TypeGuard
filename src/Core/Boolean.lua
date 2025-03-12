@@ -8,7 +8,6 @@ end
 local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
@@ -18,6 +17,7 @@ type BooleanTypeChecker = TypeChecker<BooleanTypeChecker, boolean> & {
 };
 
 local Boolean: ((Value: boolean?) -> (BooleanTypeChecker)), BooleanClass = Template.Create("Boolean")
+BooleanClass._CacheConstruction = true
 BooleanClass._Initial = CreateStandardInitial("boolean")
 BooleanClass._TypeOf = {"boolean"}
 

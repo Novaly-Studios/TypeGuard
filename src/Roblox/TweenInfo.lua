@@ -9,11 +9,9 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type TweenInfoTypeChecker = TypeChecker<TweenInfoTypeChecker, TweenInfo> & {
-    Float: SelfReturn<TweenInfoTypeChecker, FunctionalArg<number>>;
-    Int: SelfReturn<TweenInfoTypeChecker, FunctionalArg<number>, FunctionalArg<boolean>>;
+
 };
 
 local Core = script.Parent.Parent.Core
@@ -36,8 +34,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return TweenInfo.new(Value.Time, Value.EasingStyle, Value.EasingDirection, Value.RepeatCount, Value.Reverses, Value.DelayTime)
 end):Strict():NoConstraints()
-Checker.Type = "TweenInfo"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "TweenInfo"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "TweenInfo";
+    _TypeOf = {"TweenInfo"};
+})
 
 return function()
     return Checker

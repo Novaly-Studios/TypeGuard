@@ -2,7 +2,7 @@
 --!optimize 2
 
 if (not script) then
-    script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Rect
+    script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.RBXScriptConnection
 end
 
 local Template = require(script.Parent.Parent._Template)
@@ -10,30 +10,22 @@ local Template = require(script.Parent.Parent._Template)
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
 
-type RectTypeChecker = TypeChecker<RectTypeChecker, Rect> & {
+type RBXScriptConnectionTypeChecker = TypeChecker<RBXScriptConnectionTypeChecker, RBXScriptConnection> & {
 
 };
 
 local Core = script.Parent.Parent.Core
     local Object = require(Core.Object)
 
-local Vector2Serializer = require(script.Parent.Vector2)
-    local DefaultVector2 = Vector2Serializer()
-
-local Checker = Object({
-    Min = DefaultVector2;
-    Max = DefaultVector2;
-}):Unmap(function(Value)
-    return Rect.new(Value.Min, Value.Max)
-end):Strict():NoConstraints()
---[[ Checker.Type = "Rect"
+local Checker = Object()
+--[[ Checker.Type = "RBXScriptConnection"
 Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Rect";
-    _TypeOf = {"Rect"};
+    Type = "RBXScriptConnection";
+    _TypeOf = {"RBXScriptConnection"};
 })
 
 return function()
     return Checker
-end :: TypeCheckerConstructor<RectTypeChecker>
+end :: TypeCheckerConstructor<RBXScriptConnectionTypeChecker>

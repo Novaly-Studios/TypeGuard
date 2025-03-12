@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
@@ -19,7 +18,7 @@ local Number = require(script.Parent.Parent.Core.Number)
 local String = require(script.Parent.Parent.Core.String)
 
 type EnumTypeChecker = TypeChecker<EnumTypeChecker, Enum | EnumItem> & {
-    IsA: SelfReturn<EnumTypeChecker, FunctionalArg<Enum | EnumItem>>;
+    IsA: ((self: EnumTypeChecker, Type: FunctionalArg<Enum | EnumItem>) -> (EnumTypeChecker));
 };
 
 local EnumChecker: TypeCheckerConstructor<EnumTypeChecker, FunctionalArg<Enum? | EnumItem?>>, EnumCheckerClass = Template.Create("Enum")
@@ -35,29 +34,31 @@ function EnumCheckerClass:_Initial(Value)
     return false, `Expected EnumItem or Enum, got {GotType}`
 end
 
+local function _IsA(_, Value, TargetEnum)
+    local TargetType = typeof(TargetEnum)
+
+    -- Both are EnumItems.
+    if (TargetType == "EnumItem") then
+        if (Value == TargetEnum) then
+            return true
+        end
+
+        return false, `Expected {TargetEnum}, got {Value}`
+    end
+
+    -- TargetType is an Enum.
+    if (table.find(TargetEnum:GetEnumItems(), Value) == nil) then
+        return false, `Expected a {TargetEnum}, got {Value}`
+    end
+
+    return true
+end
+
 --- Ensures that a passed EnumItem is either equivalent to an EnumItem or a sub-item of an Enum class.
 function EnumCheckerClass:IsA(TargetEnum)
     ExpectType(TargetEnum, Expect.ENUM_OR_ENUM_ITEM_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "IsA", function(_, Value, TargetEnum)
-        local TargetType = typeof(TargetEnum)
-
-        -- Both are EnumItems.
-        if (TargetType == "EnumItem") then
-            if (Value == TargetEnum) then
-                return true
-            end
-
-            return false, `Expected {TargetEnum}, got {Value}`
-        end
-
-        -- TargetType is an Enum.
-        if (table.find(TargetEnum:GetEnumItems(), Value) == nil) then
-            return false, `Expected a {TargetEnum}, got {Value}`
-        end
-
-        return true
-    end, TargetEnum)
+    return self:_AddConstraint(true, "IsA", _IsA, TargetEnum)
 end
 
 EnumCheckerClass.InitialConstraint = EnumCheckerClass.IsA

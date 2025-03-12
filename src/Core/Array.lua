@@ -52,9 +52,11 @@ function ArrayClass:_Initial(TargetArray)
 
         -- This will catch the majority of cases.
         local FirstKey = next(TargetArray)
+
         if (FirstKey == nil or FirstKey == 1) then
             return true
         end
+
         return false, "Array is empty"
     end
 
@@ -67,30 +69,42 @@ function ArrayClass:OfLength(Length)
     return self:MinLength(Length):MaxLength(Length)
 end
 
+local function _MinLength(_, TargetArray, MinLength)
+    if (#TargetArray < MinLength) then
+        return false, `Length must be at least {MinLength}, got {#TargetArray}`
+    end
+
+    return true
+end
+
 --- Ensures an array is at least a certain length.
 function ArrayClass:MinLength(MinLength)
     ExpectType(MinLength, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MinLength", function(_, TargetArray, MinLength)
-        if (#TargetArray < MinLength) then
-            return false, `Length must be at least {MinLength}, got {#TargetArray}`
-        end
+    return self:_AddConstraint(true, "MinLength", _MinLength, MinLength)
+end
 
-        return true
-    end, MinLength)
+local function _MaxLength(_, TargetArray, MaxLength)
+    if (#TargetArray > MaxLength) then
+        return false, `Length must be at most {MaxLength}, got {#TargetArray}`
+    end
+
+    return true
 end
 
 --- Ensures an array is at most a certain length.
 function ArrayClass:MaxLength(MaxLength)
     ExpectType(MaxLength, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MaxLength", function(_, TargetArray, MaxLength)
-        if (#TargetArray > MaxLength) then
-            return false, `Length must be at most {MaxLength}, got {#TargetArray}`
-        end
+    return self:_AddConstraint(true, "MaxLength", _MaxLength, MaxLength)
+end
 
-        return true
-    end, MaxLength)
+local function _Contains(_, TargetArray, Value, StartPoint)
+    if (table.find(TargetArray, Value, StartPoint) == nil) then
+        return false, `Value not found in array: {Value}`
+    end
+
+    return true
 end
 
 --- Ensures an array contains some given value.
@@ -103,13 +117,27 @@ function ArrayClass:Contains(Value, StartPoint)
         ExpectType(StartPoint, Expect.NUMBER_OR_FUNCTION, 2)
     end
 
-    return self:_AddConstraint(false, "Contains", function(_, TargetArray, Value, StartPoint)
-        if (table.find(TargetArray, Value, StartPoint) == nil) then
-            return false, `Value not found in array: {Value}`
-        end
+    return self:_AddConstraint(false, "Contains", _Contains, Value, StartPoint)
+end
 
-        return true
-    end, Value, StartPoint)
+local function _ContainsValueOfType(_, TargetArray, Checker, StartPoint)
+    if (StartPoint) then
+        for Index = StartPoint, #TargetArray do
+            local Value = TargetArray[Index]
+
+            if (Checker:_Check(Value)) then
+                return true
+            end
+        end
+    else
+        for Index, Value in TargetArray do
+            if (Checker:_Check(Value)) then
+                return true
+            end
+        end
+    end
+
+    return false, `No value in array satisfied the checker`
 end
 
 --- Ensures an array contains a value satisfying the provided TypeChecker.
@@ -120,25 +148,19 @@ function ArrayClass:ContainsValueOfType(Checker, StartPoint)
         ExpectType(StartPoint, Expect.NUMBER_OR_FUNCTION, 2)
     end
 
-    return self:_AddConstraint(false, "ContainsValueOfType", function(_, TargetArray, Checker, StartPoint)
-        if (StartPoint) then
-            for Index = StartPoint, #TargetArray do
-                local Value = TargetArray[Index]
+    return self:_AddConstraint(false, "ContainsValueOfType", _ContainsValueOfType, Checker, StartPoint)
+end
 
-                if (Checker:_Check(Value)) then
-                    return true
-                end
-            end
-        else
-            for Index, Value in TargetArray do
-                if (Checker:_Check(Value)) then
-                    return true
-                end
-            end
+local function _OfType(SelfRef, TargetArray, SubType)
+    for Index, Value in TargetArray do
+        local Success, SubMessage = SubType:_Check(Value)
+
+        if (not Success) then
+            return false, `[Index #{Index}] {SubMessage}`
         end
+    end
 
-        return false, `No value in array satisfied the checker`
-    end, Checker, StartPoint)
+    return true
 end
 
 --- Ensures each value in the template array satisfies the passed TypeChecker.
@@ -147,17 +169,31 @@ function ArrayClass:OfType(SubType)
         AssertIsTypeBase(SubType, 1)
     end
 
-    return self:_AddConstraint(true, "OfType", function(SelfRef, TargetArray, SubType)
-        for Index, Value in TargetArray do
-            local Success, SubMessage = SubType:_Check(Value)
+    return self:_AddConstraint(true, "OfType", _OfType, SubType)
+end
 
-            if (not Success) then
-                return false, `[Index #{Index}] {SubMessage}`
+local function _OfStructure(SelfRef, TargetArray, SubTypesAtPositions)
+    -- Check all fields which should be in the object exist and the type check for each passes.
+    for Index, Checker in SubTypesAtPositions do
+        local Success, SubMessage = Checker:_Check(TargetArray[Index])
+
+        if (not Success) then
+            return false, `[Index #{Index}] {SubMessage}`
+        end
+    end
+
+    -- Check there are no extra indexes which shouldn't be in the object.
+    if (SelfRef._Strict) then
+        for Index in TargetArray do
+            local Checker = SubTypesAtPositions[Index]
+
+            if (not Checker) then
+                return false, `[Index #{Index}] Unexpected value (strict tag is present)`
             end
         end
+    end
 
-        return true
-    end, SubType)
+    return true
 end
 
 -- Takes an array of types and checks it against the passed array.
@@ -174,29 +210,7 @@ function ArrayClass:OfStructure(SubTypesAtPositions)
 
     setmetatable(SubTypesCopy, StructureStringMT)
 
-    return self:_AddConstraint(true, "OfStructure", function(SelfRef, TargetArray, SubTypesAtPositions)
-        -- Check all fields which should be in the object exist and the type check for each passes.
-        for Index, Checker in SubTypesAtPositions do
-            local Success, SubMessage = Checker:_Check(TargetArray[Index])
-
-            if (not Success) then
-                return false, `[Index #{Index}] {SubMessage}`
-            end
-        end
-
-        -- Check there are no extra indexes which shouldn't be in the object.
-        if (SelfRef._Strict) then
-            for Index in TargetArray do
-                local Checker = SubTypesAtPositions[Index]
-
-                if (not Checker) then
-                    return false, `[Index #{Index}] Unexpected value (strict tag is present)`
-                end
-            end
-        end
-
-        return true
-    end, SubTypesCopy, SubTypesAtPositions)
+    return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypesCopy, SubTypesAtPositions)
 end
 
 --- Tags this ArrayTypeChecker as strict i.e. no extra indexes allowed in OfStructure constraint.
@@ -206,15 +220,42 @@ function ArrayClass:Strict()
     })
 end
 
+local function _IsFrozen(_, TargetArray)
+    if (table.isfrozen(TargetArray)) then
+        return true
+    end
+
+    return false, "Table was not frozen"
+end
+
 --- Checks if an array is frozen.
 function ArrayClass:IsFrozen()
-    return self:_AddConstraint(true, "IsFrozen", function(_, TargetArray)
-        if (table.isfrozen(TargetArray)) then
-            return true
+    return self:_AddConstraint(true, "IsFrozen", _IsFrozen)
+end
+
+local function _IsOrdered(_, TargetArray, Descending)
+    local Ascending = not Descending
+    local Size = #TargetArray
+
+    if (Size == 1) then
+        return true
+    end
+
+    local Last = TargetArray[1]
+
+    for Index = 2, Size do
+        local Current = TargetArray[Index]
+
+        if (Descending and Last < Current) then
+            return false, `Array is not ordered descending at index {Index}`
+        elseif (Ascending and Last > Current) then
+            return false, `Array is not ordered ascending at index {Index}`
         end
 
-        return false, "Table was not frozen"
-    end)
+        Last = Current
+    end
+
+    return true
 end
 
 --- Checks if an array is ordered.
@@ -223,34 +264,12 @@ function ArrayClass:IsOrdered(Descending)
         ExpectType(Descending, Expect.BOOLEAN_OR_FUNCTION, 1)
     end
 
-    return self:_AddConstraint(true, "IsOrdered", function(_, TargetArray, Descending)
-        local Ascending = not Descending
-        local Size = #TargetArray
-
-        if (Size == 1) then
-            return true
-        end
-
-        local Last = TargetArray[1]
-
-        for Index = 2, Size do
-            local Current = TargetArray[Index]
-
-            if (Descending and Last < Current) then
-                return false, `Array is not ordered descending at index {Index}`
-            elseif (Ascending and Last > Current) then
-                return false, `Array is not ordered ascending at index {Index}`
-            end
-
-            Last = Current
-        end
-
-        return true
-    end, Descending)
+    return self:_AddConstraint(true, "IsOrdered", _IsOrdered, Descending)
 end
 
 function ArrayClass:Similarity(Value)
     local Similarity = 0
+
     if (self:_Initial(Value)) then
         Similarity += 1
     else
@@ -258,6 +277,7 @@ function ArrayClass:Similarity(Value)
     end
 
     local OfStructure = self:GetConstraint("OfStructure")
+
     if (OfStructure) then
         for Key, Checker in OfStructure[1] do
             local GotValue = Value[Key]
@@ -274,6 +294,7 @@ function ArrayClass:Similarity(Value)
     end
 
     local OfType = self:GetConstraint("OfType")
+
     if (OfType) then
         local ValueType = OfType[1]
         local ValueSimilarity = ValueType.Similarity

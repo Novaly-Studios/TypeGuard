@@ -10,7 +10,6 @@ local Template = require(script.Parent.Parent._Template)
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
     type FunctionalArg<T> = Template.FunctionalArg<T>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial

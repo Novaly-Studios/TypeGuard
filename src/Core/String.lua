@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
@@ -22,80 +21,98 @@ local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 local Number = require(script.Parent.Number)
 
 type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
-    UsingCharacters: ((StringTypeChecker, CharacterSet: FunctionalArg<string?>) -> (StringTypeChecker));
+    UsingCharacters: ((self: StringTypeChecker, CharacterSet: FunctionalArg<string?>) -> (StringTypeChecker));
     NullTerminated: ((self: StringTypeChecker) -> (StringTypeChecker));
-    MinLength: ((StringTypeChecker, MinLength: FunctionalArg<number>) -> (StringTypeChecker));
-    MaxLength: ((StringTypeChecker, MaxLength: FunctionalArg<number>) -> (StringTypeChecker));
-    Contains: ((StringTypeChecker, Search: FunctionalArg<string>) -> (StringTypeChecker));
-    Pattern: ((StringTypeChecker, Pattern: FunctionalArg<string>) -> (StringTypeChecker));
-    IsUTF8: SelfReturn<StringTypeChecker, string | (any?) -> boolean>;
+    MinLength: ((self: StringTypeChecker, MinLength: FunctionalArg<number>) -> (StringTypeChecker));
+    MaxLength: ((self: StringTypeChecker, MaxLength: FunctionalArg<number>) -> (StringTypeChecker));
+    Contains: ((self: StringTypeChecker, Search: FunctionalArg<string>) -> (StringTypeChecker));
+    Pattern: ((self: StringTypeChecker, Pattern: FunctionalArg<string>) -> (StringTypeChecker));
+    IsUTF8: ((self: StringTypeChecker) -> (StringTypeChecker));
 };
 
 local String: ((PossibleValue: FunctionalArg<string?>, ...FunctionalArg<string?>) -> (StringTypeChecker)), StringClass = Template.Create("String")
 StringClass._Initial = CreateStandardInitial("string")
 StringClass._TypeOf = {"string"}
 
+local function _MinLength(_, Item, MinLength)
+    if (#Item < MinLength) then
+        return false, `Length must be at least {MinLength}, got {#Item}`
+    end
+
+    return true
+end
+
 --- Ensures a string is at least a certain length.
 function StringClass:MinLength(MinLength)
     ExpectType(MinLength, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MinLength", function(_, Item, MinLength)
-        if (#Item < MinLength) then
-            return false, `Length must be at least {MinLength}, got {#Item}`
-        end
+    return self:_AddConstraint(true, "MinLength", _MinLength, MinLength)
+end
 
-        return true
-    end, MinLength)
+local function _MaxLength(_, Item, MaxLength)
+    if (#Item > MaxLength) then
+        return false, `Length must be at most {MaxLength}, got {#Item}`
+    end
+
+    return true
 end
 
 --- Ensures a string is at most a certain length.
 function StringClass:MaxLength(MaxLength)
     ExpectType(MaxLength, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MaxLength", function(_, Item, MaxLength)
-        if (#Item > MaxLength) then
-            return false, `Length must be at most {MaxLength}, got {#Item}`
-        end
+    return self:_AddConstraint(true, "MaxLength", _MaxLength, MaxLength)
+end
 
+local function _Pattern(_, Item, Pattern)
+    if (string.match(Item, Pattern) == Item) then
         return true
-    end, MaxLength)
+    end
+
+    return false, `String does not match pattern {Pattern}`
 end
 
 --- Ensures a string matches a pattern.
 function StringClass:Pattern(PatternString)
     ExpectType(PatternString, Expect.STRING_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(false, "Pattern", function(_, Item, Pattern)
-        if (string.match(Item, Pattern) == Item) then
-            return true
-        end
+    return self:_AddConstraint(false, "Pattern", _Pattern, PatternString)
+end
 
-        return false, `String does not match pattern {Pattern}`
-    end, PatternString)
+local function _IsUTF8(_, Item)
+    if (utf8.len(Item) ~= nil) then
+        return true
+    end
+
+    return false, "String is not valid UTF-8"
 end
 
 --- Ensures a string is valid UTF-8.
 function StringClass:IsUTF8()
-    return self:_AddConstraint(true, "IsUTF8", function(_, Item)
-        if (utf8.len(Item) ~= nil) then
-            return true
-        end
+    return self:_AddConstraint(true, "IsUTF8", _IsUTF8)
+end
 
-        return false, "String is not valid UTF-8"
-    end)
+local function _Contains(_, Item, Substring)
+    if (string.match(Item, Substring)) then
+        return true
+    end
+
+    return false, `String does not contain substring {Substring}`
 end
 
 --- Ensures a string contains a certain substring.
 function StringClass:Contains(SubstringValue)
     ExpectType(SubstringValue, Expect.STRING_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(false, "Contains", function(_, Item, Substring)
-        if (string.match(Item, Substring)) then
-            return true
-        end
+    return self:_AddConstraint(false, "Contains", _Contains, SubstringValue)
+end
 
-        return false, `String does not contain substring {Substring}`
-    end, SubstringValue)
+local function _UsingCharacters(_, Item, CharacterSet, Match)
+    if (string.match(Item, Match)) then
+        return true
+    end
+
+    return false, `String does not match possible character set ({CharacterSet})`
 end
 
 --- Narrows down the possible set of characters which can be used in a string.
@@ -113,45 +130,44 @@ function StringClass:UsingCharacters(CharacterSet: string?)
         return `%{Char}`
     end)}]+`
 
-    return self:_AddConstraint(true, "UsingCharacters", function(_, Item, CharacterSet, Match)
-        if (string.match(Item, Match)) then
-            return true
-        end
+    return self:_AddConstraint(true, "UsingCharacters", _UsingCharacters, CharacterSet, Match)
+end
 
-        return false, `String does not match possible character set ({CharacterSet})`
-    end, CharacterSet, Match)
+local function _NullTerminated(_, Item)
+    if (Item:match("\0") == nil) then
+        return true
+    end
+
+    return false, "String contained a null-terminator and it should not for security, serialization will automatically add this"
 end
 
 --- Signifies the string is null-terminated.
 function StringClass:NullTerminated()
-    return self:_AddConstraint(true, "NullTerminated", function(_, Item)
-        if (Item:match("\0") == nil) then
-            return true
-        end
-
-        return false, "String contained a null-terminator and it should not for security, serialization will automatically add this"
-    end)
+    return self:_AddConstraint(true, "NullTerminated", _NullTerminated)
 end
 
---[[ local GUIDDashPattern = "%x%x%x%x%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x%x%x%x%x%x%x%x%x"
+--[[ local function _GUID(_, Item, Dashes)
+    local Length = #Item
+    if (Length ~= 32 and Length ~= 36) then
+        return false, "String is not a valid GUID"
+    end
+
+    if (Item:lower():match(Dashes and GUIDDashPattern or GUIDNoDashPattern)) then
+        return true
+    end
+
+    return false, "String is not a valid GUID"
+end
+
+local GUIDDashPattern = "%x%x%x%x%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x%x%x%x%x%x%x%x%x"
 local GUIDNoDashPattern = "%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x"
+
 function StringClass:GUID(Dashes: boolean?)
     if (Dashes ~= nil) then
         ExpectType(Dashes, Expect.BOOLEAN, 1)
     end
 
-    return self:_AddConstraint(true, "GUID", function(_, Item, Dashes)
-        local Length = #Item
-        if (Length ~= 32 and Length ~= 36) then
-            return false, "String is not a valid GUID"
-        end
-
-        if (Item:lower():match(Dashes and GUIDDashPattern or GUIDNoDashPattern)) then
-            return true
-        end
-
-        return false, "String is not a valid GUID"
-    end, Dashes)
+    return self:_AddConstraint(true, "GUID", _GUID, Dashes)
 end ]]
 
 -- This can be optimized with custom implementation using arg select.
@@ -252,6 +268,7 @@ function StringClass:_UpdateSerialize()
     end
 
     local NullTerminated = self:GetConstraint("NullTerminated")
+
     if (NullTerminated) then
         return {
             _Serialize = function(Buffer, Value, Cache)

@@ -8,7 +8,6 @@ end
 local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type UDimTypeChecker = TypeChecker<UDimTypeChecker, UDim> & {
 
@@ -26,8 +25,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return UDim.new(Value.Scale, Value.Offset)
 end):Strict():NoConstraints()
-Checker.Type = "UDim"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "UDim"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "UDim";
+    _TypeOf = {"UDim"};
+})
 
 return function()
     return Checker

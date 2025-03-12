@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type Region3TypeChecker = TypeChecker<Region3TypeChecker, Region3> & {
 
@@ -32,8 +31,13 @@ local Checker = Object({
     local Half = Value.Size / 2
     return Region3.new(Center - Half, Center + Half)
 end):Strict():NoConstraints()
-Checker.Type = "Region3"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "Region3"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "Region3";
+    _TypeOf = {"Region3"};
+})
 
 return function()
     return Checker

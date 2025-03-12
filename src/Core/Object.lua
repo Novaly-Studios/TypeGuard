@@ -11,7 +11,6 @@ local Template = require(script.Parent.Parent._Template)
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local AssertIsTypeBase = Util.AssertIsTypeBase
@@ -54,11 +53,34 @@ function IndexableClass:_Initial(TargetStructure)
 
     -- Some structures are userdata & typeof will report their name directly. Serializers will overwrite 'Type' with the name.
     local ExpectedType = self.Type
+
     if (Type == ExpectedType) then
         return true
     end
 
     return false, `Expected {ExpectedType}, got {Type}`
+end
+
+local function _OfStructure(SelfRef, StructureToCheck, SubTypes)
+    -- Check all fields which should be in the structure exist and the type check for each passes.
+    for Key, SubType in SubTypes do
+        local Success, SubMessage = SubType:_Check(StructureToCheck[Key])
+
+        if (not Success) then
+            return false, `[Key '{Key}'] {SubMessage}`
+        end
+    end
+
+    -- Check there are no extra fields which shouldn't be in the structure.
+    if (SelfRef._Strict and type(StructureToCheck) == "table") then
+        for Key in StructureToCheck do
+            if (not SubTypes[Key]) then
+                return false, `[Key '{Key}'] unexpected (strict)`
+            end
+        end
+    end
+
+    return true
 end
 
 --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. extra keys which don't exist in the spec are rejected.
@@ -73,27 +95,20 @@ function IndexableClass:OfStructure(SubTypes)
         table.freeze(SubTypes)
     end
 
-    return self:_AddConstraint(true, "OfStructure", function(SelfRef, StructureToCheck, SubTypes)
-        -- Check all fields which should be in the structure exist and the type check for each passes.
-        for Key, SubType in SubTypes do
-            local Success, SubMessage = SubType:_Check(StructureToCheck[Key])
+    return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypes)
+end
 
-            if (not Success) then
-                return false, `[Key '{Key}'] {SubMessage}`
-            end
+local function _OfValueType(_, TargetArray, SubType)
+    local Check = SubType._Check
+
+    for Index, Value in TargetArray do
+        local Success, SubMessage = Check(SubType, Value)
+        if (not Success) then
+            return false, `[OfValueType: Key '{Index}'] {SubMessage}`
         end
+    end
 
-        -- Check there are no extra fields which shouldn't be in the structure.
-        if (SelfRef._Strict and type(StructureToCheck) == "table") then
-            for Key in StructureToCheck do
-                if (not SubTypes[Key]) then
-                    return false, `[Key '{Key}'] unexpected (strict)`
-                end
-            end
-        end
-
-        return true
-    end, SubTypes)
+    return true
 end
 
 --- For all values in the passed table, they must satisfy the TypeChecker passed to this constraint.
@@ -102,18 +117,21 @@ function IndexableClass:OfValueType(SubType)
         AssertIsTypeBase(SubType, 1)
     end
 
-    return self:_AddConstraint(true, "OfValueType", function(_, TargetArray, SubType)
-        local Check = SubType._Check
+    return self:_AddConstraint(true, "OfValueType", _OfValueType, SubType)
+end
 
-        for Index, Value in TargetArray do
-            local Success, SubMessage = Check(SubType, Value)
-            if (not Success) then
-                return false, `[OfValueType: Key '{Index}'] {SubMessage}`
-            end
+local function _OfKeyType(_, TargetArray, SubType)
+    local Check = SubType._Check
+
+    for Key in TargetArray do
+        local Success, SubMessage = Check(SubType, Key)
+
+        if (not Success) then
+            return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
         end
+    end
 
-        return true
-    end, SubType)
+    return true
 end
 
 --- For all keys in the passed table, they must satisfy the TypeChecker passed to this constraint.
@@ -122,19 +140,7 @@ function IndexableClass:OfKeyType(SubType)
         AssertIsTypeBase(SubType, 1)
     end
 
-    return self:_AddConstraint(true, "OfKeyType", function(_, TargetArray, SubType)
-        local Check = SubType._Check
-
-        for Key in TargetArray do
-            local Success, SubMessage = Check(SubType, Key)
-
-            if (not Success) then
-                return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
-            end
-        end
-
-        return true
-    end, SubType)
+    return self:_AddConstraint(true, "OfKeyType", _OfKeyType, SubType)
 end
 
 --- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
@@ -171,30 +177,34 @@ function IndexableClass:Strict()
     })
 end
 
+local function _IsFrozen(_, Target)
+    if (table.isfrozen(Target)) then
+        return true
+    end
+
+    return false, "Table was not frozen"
+end
+
 --- Checks if an object is frozen.
 function IndexableClass:IsFrozen()
-    return self:_AddConstraint(true, "IsFrozen", function(_, Target)
-        if (table.isfrozen(Target)) then
-            return true
-        end
+    return self:_AddConstraint(true, "IsFrozen", _IsFrozen)
+end
 
-        return false, "Table was not frozen"
-    end)
+local function _CheckMetatable(_, Target, Checker)
+    local Success, Message = Checker:_Check(getmetatable(Target))
+
+    if (Success) then
+        return true
+    end
+
+    return false, `[Metatable] {Message}`
 end
 
 --- Checks an object's metatable.
 function IndexableClass:CheckMetatable(Checker)
     AssertIsTypeBase(Checker, 1)
 
-    return self:_AddConstraint(false, "CheckMetatable", function(_, Target, Checker)
-        local Success, Message = Checker:_Check(getmetatable(Target))
-
-        if (Success) then
-            return true
-        end
-
-        return false, `[Metatable] {Message}`
-    end, Checker)
+    return self:_AddConstraint(false, "CheckMetatable", _CheckMetatable, Checker)
 end
 
 --- Checks if an object's __index points to the specified class.
@@ -205,78 +215,86 @@ function IndexableClass:OfClass(Class)
     return self:CheckMetatable(Indexable():Equals(Class))
 end
 
+local function _ContainsValueOfType(_, Target, Checker)
+    local Check = Checker._Check
+
+    for _, Value in Target do
+        local Success = Check(Checker, Value)
+
+        if (Success) then
+            return true
+        end
+    end
+
+    return false, `[ContainsValueOfType] did not contain any values which satisfied {Checker}`
+end
+
 --- Checks if an object contains a value which satisfies the given TypeChecker.
 function IndexableClass:ContainsValueOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
-    return self:_AddConstraint(false, "ContainsValueOfType", function(_, Target, Checker)
-        local Check = Checker._Check
+    return self:_AddConstraint(false, "ContainsValueOfType", _ContainsValueOfType, Checker)
+end
 
-        for _, Value in Target do
-            local Success = Check(Checker, Value)
+local function _ContainsKeyOfType(_, Target, Checker)
+    local Check = Checker._Check
 
-            if (Success) then
-                return true
-            end
+    for Key in Target do
+        local Success = Check(Checker, Key)
+
+        if (Success) then
+            return true
         end
+    end
 
-        return false, `[ContainsValueOfType] did not contain any values which satisfied {Checker}`
-    end, Checker)
+    return false, `[ContainsKeyOfType] did not contain any values which satisfied {Checker}`
 end
 
 --- Checks if an object contains a value which satisfies the given TypeChecker.
 function IndexableClass:ContainsKeyOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
-    return self:_AddConstraint(false, "ContainsKeyOfType", function(_, Target, Checker)
-        local Check = Checker._Check
+    return self:_AddConstraint(false, "ContainsKeyOfType", _ContainsKeyOfType, Checker)
+end
 
-        for Key in Target do
-            local Success = Check(Checker, Key)
+local function _MinSize(_, Target, MinSize)
+    local Count = 0
 
-            if (Success) then
-                return true
-            end
-        end
+    for _ in Target do
+        Count += 1
+    end
 
-        return false, `[ContainsKeyOfType] did not contain any values which satisfied {Checker}`
-    end, Checker)
+    if (Count < MinSize) then
+        return false, `[MinSize] expected at least {MinSize} elements, got {Count}`
+    end
+
+    return true
 end
 
 function IndexableClass:MinSize(MinSize)
     ExpectType(MinSize, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MinSize", function(_, Target, MinSize)
-        local Count = 0
+    return self:_AddConstraint(true, "MinSize", _MinSize, MinSize)
+end
 
-        for _ in Target do
-            Count += 1
-        end
+local function _MaxSize(_, Target, MaxSize)
+    local Count = 0
 
-        if (Count < MinSize) then
-            return false, `[MinSize] expected at least {MinSize} elements, got {Count}`
-        end
+    for _ in Target do
+        Count += 1
+    end
 
-        return true
-    end, MinSize)
+    if (Count > MaxSize) then
+        return false, `[MaxSize] expected at most {MaxSize} elements, got {Count}`
+    end
+
+    return true
 end
 
 function IndexableClass:MaxSize(MaxSize)
     ExpectType(MaxSize, Expect.NUMBER_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(true, "MaxSize", function(_, Target, MaxSize)
-        local Count = 0
-
-        for _ in Target do
-            Count += 1
-        end
-
-        if (Count > MaxSize) then
-            return false, `[MaxSize] expected at most {MaxSize} elements, got {Count}`
-        end
-
-        return true
-    end, MaxSize)
+    return self:_AddConstraint(true, "MaxSize", _MaxSize, MaxSize)
 end
 
 local Original = IndexableClass._MapCheckers

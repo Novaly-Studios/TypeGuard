@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type NumberRangeTypeChecker = TypeChecker<NumberRangeTypeChecker, NumberRange> & {};
 
@@ -24,8 +23,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return NumberRange.new(Value.Min, Value.Max)
 end):Strict():NoConstraints()
-Checker.Type = "NumberRange"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "NumberRange"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "NumberRange";
+    _TypeOf = {"NumberRange"};
+})
 
 return function()
     return Checker

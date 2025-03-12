@@ -6,7 +6,7 @@ expect = expect or anyfn
 describe = describe or anyfn
 
 return function()
-    local TypeGuard = require(script.Parent.Parent)
+    local TypeGuard = require(script.Parent.Parent.Parent)
     local Base = TypeGuard.Instance()
 
     describe("Init", function()

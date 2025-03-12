@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
@@ -34,8 +33,17 @@ local FLOAT_MAX_32 = 3.402823466e+38
 local FLOAT_MAX_64 = 1.7976931348623157e+308
 
 local Number: ((Min: FunctionalArg<number?>, Max: FunctionalArg<number?>) -> (NumberTypeChecker)), NumberClass = Template.Create("Number")
+NumberClass._CacheConstruction = true
 NumberClass._Initial = CreateStandardInitial("number")
 NumberClass._TypeOf = {"number"}
+
+local function _Integer(_, Item)
+    if (Item % 1 == 0) then
+        return true
+    end
+
+    return false, `Expected integer form, got {Item}`
+end
 
 --- Checks if the value is whole.
 function NumberClass:Integer(Bits, Signed)
@@ -47,26 +55,21 @@ function NumberClass:Integer(Bits, Signed)
         assert(Bits <= 53, "Integers must have at most 53 bits")
     end
 
-    self = self:_AddConstraint(true, "Integer", function(_, Item)
-        if (Item % 1 == 0) then
-            return true
-        end
-
-        return false, `Expected integer form, got {Item}`
-    end, Bits)
-
+    self = self:_AddConstraint(true, "Integer", _Integer, Bits)
     return (Signed and self:RangeInclusive(-2 ^ (Bits - 1), 2 ^ (Bits - 1) - 1) or self:RangeInclusive(0, 2 ^ Bits - 1))
+end
+
+local function _Decimal(_, Item)
+    if (Item % 1 ~= 0) then
+        return true
+    end
+
+    return false, `Expected decimal form, got {Item}`
 end
 
 --- Checks if the number is not whole.
 function NumberClass:Decimal()
-    return self:_AddConstraint(true, "Decimal", function(_, Item)
-        if (Item % 1 ~= 0) then
-            return true
-        end
-
-        return false, `Expected decimal form, got {Item}`
-    end)
+    return self:_AddConstraint(true, "Decimal", _Decimal)
 end
 
 --- Makes an int dynamically sized during serialization.
@@ -98,48 +101,56 @@ function NumberClass:RangeExclusive(Min, Max)
     return self:GreaterThan(Min):LessThan(Max)
 end
 
+local function _Positive(_, Item)
+    if (Item < 0) then
+        return false, `Expected positive number, got {Item}`
+    end
+
+    return true
+end
+
 --- Checks the number is positive.
 function NumberClass:Positive()
-    return self:_AddConstraint(true, "Positive", function(_, Item)
-        if (Item < 0) then
-            return false, `Expected positive number, got {Item}`
-        end
+    return self:_AddConstraint(true, "Positive", _Positive)
+end
 
-        return true
-    end)
+local function _Negative(_, Item)
+    if (Item >= 0) then
+        return false, `Expected negative number, got {Item}`
+    end
+
+    return true
 end
 
 --- Checks the number is negative.
 function NumberClass:Negative()
-    return self:_AddConstraint(true, "Negative", function(_, Item)
-        if (Item >= 0) then
-            return false, `Expected negative number, got {Item}`
-        end
+    return self:_AddConstraint(true, "Negative", _Negative)
+end
 
+local function _IsNaN(_, Item)
+    if (Item ~= Item) then
         return true
-    end)
+    end
+
+    return false, `Expected NaN, got {Item}`
 end
 
 --- Checks if the number is NaN.
 function NumberClass:IsNaN()
-    return self:_AddConstraint(true, "IsNaN", function(_, Item)
-        if (Item ~= Item) then
-            return true
-        end
+    return self:_AddConstraint(true, "IsNaN", _IsNaN)
+end
 
-        return false, `Expected NaN, got {Item}`
-    end)
+local function _IsInfinite(_, Item)
+    if (Item == math.huge or Item == -math.huge) then
+        return true
+    end
+
+    return false, `Expected infinite, got {Item}`
 end
 
 --- Checks if the number is infinite.
 function NumberClass:IsInfinite()
-    return self:_AddConstraint(true, "IsInfinite", function(_, Item)
-        if (Item == math.huge or Item == -math.huge) then
-            return true
-        end
-
-        return false, `Expected infinite, got {Item}`
-    end)
+    return self:_AddConstraint(true, "IsInfinite", _IsInfinite)
 end
 
 --- Checks if the number has a range fit for floats of the precision given.
@@ -150,18 +161,20 @@ function NumberClass:Float(Precision)
     return self:RangeInclusive(-MaxValue, MaxValue)
 end
 
+local function _IsCloseTo(_, NumberValue, CloseTo, Tolerance)
+    if (math.abs(NumberValue - CloseTo) < Tolerance) then
+        return true
+    end
+
+    return false, `Expected {CloseTo} +/- {Tolerance}, got {NumberValue}`
+end
+
 --- Checks if the number is close to another.
 function NumberClass:IsClose(CloseTo, Tolerance)
     ExpectType(CloseTo, Expect.NUMBER_OR_FUNCTION, 1)
     Tolerance = Tolerance or 0.00001
 
-    return self:_AddConstraint(true, "IsClose", function(_, NumberValue, CloseTo, Tolerance)
-        if (math.abs(NumberValue - CloseTo) < Tolerance) then
-            return true
-        end
-
-        return false, `Expected {CloseTo} +/- {Tolerance}, got {NumberValue}`
-    end, CloseTo, Tolerance)
+    return self:_AddConstraint(true, "IsClose", _IsCloseTo, CloseTo, Tolerance)
 end
 
 NumberClass.InitialConstraint = NumberClass.RangeInclusive

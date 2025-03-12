@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type PathWaypointTypeChecker = TypeChecker<PathWaypointTypeChecker, PathWaypoint> & {
 
@@ -33,8 +32,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return PathWaypoint.new(Value.Position, Value.Action, Value.Label)
 end):Strict():NoConstraints()
-Checker.Type = "PathWaypoint"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "PathWaypoint"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "PathWaypoint";
+    _TypeOf = {"PathWaypoint"};
+})
 
 return function()
     return Checker

@@ -8,7 +8,6 @@ end
 local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
@@ -20,6 +19,7 @@ type BufferTypeChecker = TypeChecker<BufferTypeChecker, buffer> & {
 };
 
 local Buffer: (() -> (BufferTypeChecker)), BufferClass = Template.Create("Buffer")
+BufferClass._CacheConstruction = true
 BufferClass._Initial = CreateStandardInitial("buffer")
 BufferClass._TypeOf = {"buffer"}
 

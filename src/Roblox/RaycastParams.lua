@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type RaycastParamsTypeChecker = TypeChecker<RaycastParamsTypeChecker, RaycastParams> & {
 
@@ -44,8 +43,13 @@ local Checker = Object({
 
     return Result
 end):Strict():NoConstraints()
-Checker.Type = "RaycastParams"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "RaycastParams"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "RaycastParams";
+    _TypeOf = {"RaycastParams"};
+})
 
 return function()
     return Checker

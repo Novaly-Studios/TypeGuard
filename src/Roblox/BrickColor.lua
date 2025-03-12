@@ -9,7 +9,6 @@ local Template = require(script.Parent.Parent._Template)
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 type BrickColorTypeChecker = TypeChecker<BrickColorTypeChecker, BrickColor> & {
 
@@ -32,8 +31,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return BrickColor.new(Value.Number)
 end):Strict():NoConstraints()
-Checker.Type = "BrickColor"
-Checker._TypeOf = {Checker.Type}
+--[[ Checker.Type = "BrickColor"
+Checker._TypeOf = {Checker.Type} ]]
+
+Checker = Checker:Modify({
+    Type = "BrickColor";
+    _TypeOf = {"BrickColor"};
+})
 
 return function()
     return Checker

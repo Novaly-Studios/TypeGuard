@@ -1,6 +1,11 @@
 --!native
 --!optimize 2
 
+-- Allows easy command bar paste.
+if (not script and Instance) then
+    script = game:GetService("ReplicatedFirst").TypeGuard._Template
+end
+
 local Or
 
 local Util = require(script.Parent.Util)
@@ -45,7 +50,6 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
 
 export type TypeCheckerConstructor<T, P...> = ((P...) -> T)
 export type FunctionalArg<T> = (T | ((any?) -> T))
-export type SelfReturn<T, P...> = ((self: T, P...) -> T)
 
 export type TypeChecker<ExtensionClass, SampleType> = {
     _TC: true;
@@ -75,82 +79,146 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     GreaterThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
-};
+}
 
-local function Equals(self, ExpectedValue)
-    return self:_AddConstraint(true, "Equals", function(_, Value, ExpectedValue)
-        if (Value == ExpectedValue) then
-            return true
+local InitForbiddenKeys = false
+local TemplateCache = {}
+local ForbiddenKeys = { -- For repeated functions with essentially the same bytecode with different upvalues which would ruin the caching.
+    _Serialize = true;
+    _Deserialize = true;
+}
+
+local function _MemorizeSerialize(Target, Buffer, Level)
+    local Type = typeof(Target)
+    local LevelTabs = string.rep("\t", Level)
+    local WriteString = Buffer.WriteString
+    WriteString(LevelTabs, #LevelTabs * 8)
+    WriteString(Type, #Type * 8)
+
+    if (Type == "table" and (Level == 0 or Target._TC == nil)) then
+        local NextLevel = Level + 1
+        local Keys = {}
+
+        for Key, Value in Target do
+            if (ForbiddenKeys[Key]) then
+                continue
+            end
+
+            table.insert(Keys, Key)
         end
 
-        return false, `Value {Value} does not equal {ExpectedValue}`
-    end, ExpectedValue)
+        pcall(table.sort, Keys)
+
+        for _, Key in Keys do
+            WriteString("\n", 8)
+            _MemorizeSerialize(Key, Buffer, NextLevel)
+            WriteString("\n", 8)
+            _MemorizeSerialize(Target[Key], Buffer, NextLevel)
+        end
+
+        return
+    end
+
+    local AsString = tostring(Target)
+    WriteString(LevelTabs, #LevelTabs * 8)
+    WriteString(AsString, #AsString * 8)
+end
+
+local function MemorizeSerialize(Target)
+    local Buffer = BitSerializer(nil, 8192)
+    Buffer.WriteString("\n", 8)
+    _MemorizeSerialize(Target, Buffer, 0)
+    return buffer.tostring(Buffer.GetClippedBuffer())
+end
+
+local function _Equals(_, Value, ExpectedValue)
+    if (Value == ExpectedValue) then
+        return true
+    end
+
+    return false, `Value {Value} does not equal {ExpectedValue}`
+end
+
+local function Equals(self, ExpectedValue)
+    return self:_AddConstraint(true, "Equals", _Equals, ExpectedValue)
+end
+
+local function _GreaterThan(_, Value, GTValue)
+    if (Value > GTValue) then
+        return true
+    end
+
+    return false, `Value {Value} is not greater than {GTValue}`
 end
 
 local function GreaterThan(self, GTValue)
-    return self:_AddConstraint(false, "GreaterThan", function(_, Value, GTValue)
-        if (Value > GTValue) then
-            return true
-        end
+    return self:_AddConstraint(false, "GreaterThan", _GreaterThan, GTValue)
+end
 
-        return false, `Value {Value} is not greater than {GTValue}`
-    end, GTValue)
+local function _LessThan(_, Value, LTValue)
+    if (Value < LTValue) then
+        return true
+    end
+
+    return false, `Value {Value} is not less than {LTValue}`
 end
 
 local function LessThan(self, LTValue)
-    return self:_AddConstraint(false, "LessThan", function(_, Value, LTValue)
-        if (Value < LTValue) then
-            return true
-        end
+    return self:_AddConstraint(false, "LessThan", _LessThan, LTValue)
+end
 
-        return false, `Value {Value} is not less than {LTValue}`
-    end, LTValue)
+local function _GreaterThanOrEqualTo(_, Value, GTEValue)
+    if (Value >= GTEValue) then
+        return true
+    end
+
+    return false, `Value {Value} is not greater than or equal to {GTEValue}`
 end
 
 local function GreaterThanOrEqualTo(self, GTEValue)
-    return self:_AddConstraint(false, "GreaterThanOrEqualTo", function(_, Value, GTEValue)
-        if (Value >= GTEValue) then
-            return true
-        end
+    return self:_AddConstraint(false, "GreaterThanOrEqualTo", _GreaterThanOrEqualTo, GTEValue)
+end
 
-        return false, `Value {Value} is not greater than or equal to {GTEValue}`
-    end, GTEValue)
+local function _LessThanOrEqualTo(_, Value, LTEValue)
+    if (Value <= LTEValue) then
+        return true
+    end
+
+    return false, `Value {Value} is not less than or equal to {LTEValue}`
 end
 
 local function LessThanOrEqualTo(self, LTEValue)
-    return self:_AddConstraint(false, "LessThanOrEqualTo", function(_, Value, LTEValue)
-        if (Value <= LTEValue) then
+    return self:_AddConstraint(false, "LessThanOrEqualTo", _LessThanOrEqualTo, LTEValue)
+end
+
+local function _IsAValueIn(_, TargetValue, Table)
+    for _, Value in Table do
+        if (Value == TargetValue) then
             return true
         end
+    end
 
-        return false, `Value {Value} is not less than or equal to {LTEValue}`
-    end, LTEValue)
+    return false, `Value {TargetValue} was not found in table {Table}`
 end
 
 local function IsAValueIn(self, Table)
     ExpectType(Table, Expect.TABLE_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(false, "IsAValueIn", function(_, TargetValue, Table)
-        for _, Value in Table do
-            if (Value == TargetValue) then
-                return true
-            end
-        end
+    return self:_AddConstraint(false, "IsAValueIn", _IsAValueIn, Table)
+end
 
-        return false, `Value {TargetValue} was not found in table {Table}`
-    end, Table)
+local function _IsAKeyIn(_, TargetValue, Table)
+    if (Table[TargetValue] == nil) then
+        return false, `Key {TargetValue} was not found in table ({ConcatWithToString(Table, ", ")})`
+    end
+
+    return true
 end
 
 local function IsAKeyIn(self, Table)
     ExpectType(Table, Expect.TABLE_OR_FUNCTION, 1)
 
-    return self:_AddConstraint(false, "IsAKeyIn", function(_, TargetValue, Table)
-        if (Table[TargetValue] == nil) then
-            return false, `Key {TargetValue} was not found in table ({ConcatWithToString(Table, ", ")})`
-        end
-
-        return true
-    end, Table)
+    return self:_AddConstraint(false, "IsAKeyIn", _IsAKeyIn, Table)
 end
 
 local WEAK_KEY_MT = {__mode = "ks"}
@@ -202,7 +270,7 @@ local function CreateTemplate(Name: string)
         end
 
         -- Make sure we generate initial serialization & deserialization functions.
-        self = MergeDeep(self, self:_Changed(), false)
+        self = self:Modify({ --[[ _Init = true ]] }, true)
 
         -- Support for a single constraint passed as the constructor, with an arbitrary number of args.
         local InitialConstraint = self.InitialConstraint
@@ -289,22 +357,35 @@ local function CreateTemplate(Name: string)
         })
     end
 
-    function TemplateClass:Modify(Modifications: {[any]: any})
+    local function GetCachedObject(self)
+        local AsString = MemorizeSerialize(self)
+        local Existing = TemplateCache[AsString]
+
+        if (Existing) then
+            return Existing
+        end
+
+        TemplateCache[AsString] = self
+        return self
+    end
+
+    function TemplateClass:Modify(Modifications: {[any]: any}, ForceUpdate: boolean?)
         local Previous = self
         self = MergeDeep(self, Modifications, true)
 
         -- Top level will be the same if no changes were made deep in the object.
-        if (self == Previous) then
-            return self
+        if (self == Previous and not ForceUpdate) then
+            return Previous
         end
 
         local ToMerge = self:_Changed()
 
-        if (ToMerge == nil) then
+        if (ToMerge == nil and not ForceUpdate) then
             return self
         end
 
-        return MergeDeep(self, ToMerge, false)
+        local Result = MergeDeep(self, ToMerge, false)
+        return Result -- (Result._CacheConstruction and GetCachedObject(MergeDeep(self, ToMerge, false)) or Result)
     end
 
     function TemplateClass:ModifyConstraints(ID, Modifier)
@@ -478,12 +559,14 @@ local function CreateTemplate(Name: string)
 
         if (AllowOnlyOne) then
             local Found = false
+
             for _, ConstraintData in ActiveConstraints do
                 if (ConstraintData.Name == Name) then
                     Found = true
                     break
                 end
             end
+
             if (Found) then
                 error(`Attempt to apply a constraint marked as 'only once' more than once: {Name}.`)
             end
@@ -650,12 +733,14 @@ local function CreateTemplate(Name: string)
         -- Handle any cached value.
         if (CacheTag) then
             Cache = self._Cache
+
             if (not Cache) then
                 Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables.
                 self._Cache = Cache
             end
 
             local CacheValue = Cache[Value or NegativeCacheValue]
+
             if (CacheValue) then
                 return CacheValue[1], CacheValue[2]
             end
@@ -804,6 +889,14 @@ local function CreateTemplate(Name: string)
     TemplateClass.IsAKeyIn = IsAKeyIn
     TemplateClass.LessThan = LessThan
     TemplateClass.Equals = Equals
+
+    if (not InitForbiddenKeys) then
+        for Key in TemplateClass do
+            ForbiddenKeys[Key] = true
+        end
+
+        InitForbiddenKeys = true
+    end
 
     return function(...)
         return TemplateClass.new(...)

@@ -10,7 +10,6 @@ local Template = require(script.Parent.Parent._Template)
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type FunctionalArg<T> = Template.FunctionalArg<T>
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-    type SelfReturn<T, P...> = Template.SelfReturn<T, P...>
 
 local Util = require(script.Parent.Parent.Util)
     local ConcatWithToString = Util.ConcatWithToString
@@ -137,10 +136,12 @@ function OrClass:IsATypeIn(Options)
     for _, Option in Options do
         if (Option.Type == "Or") then
             local IsATypeIn = Option:GetConstraint("IsATypeIn")
+
             if (IsATypeIn ~= nil and (#Option._ActiveConstraints == 1)) then
                 for _, Checker in IsATypeIn[1] do
                     table.insert(CompleteList, Checker)
                 end
+
                 continue
             end
         end
@@ -150,6 +151,7 @@ function OrClass:IsATypeIn(Options)
 
     -- Merge existing IsATypeIn constraints into one list.
     local IsATypeIn, Index = self:GetConstraint("IsATypeIn")
+
     if (IsATypeIn) then
         for _, Checker in IsATypeIn[1] do
             table.insert(CompleteList, Checker)
@@ -177,6 +179,7 @@ end
 local function TestComparability(X, Y)
     return (X < Y) ~= nil
 end
+
 function OrClass:InitialConstraintsDirectVariadic(...)
     local First = select(1, ...)
     local Packed = {...}
@@ -191,9 +194,11 @@ function OrClass:InitialConstraintsDirectVariadic(...)
     -- But only possible to do efficiently during serialization with deterministically orderable values.
     if (pcall(TestComparability, First, (select(2, ...)))) then
         local AsKeys = {}
+
         for _, Value in Packed do
             AsKeys[Value] = true
         end
+
         return self:IsAKeyIn(AsKeys)
     end
 
@@ -210,17 +215,21 @@ function OrClass:_UpdateSerializeFunctionCache()
     local KeyToSerializeFunction = self._KeyToSerializeFunction or table.clone(Types)
     table.clear(KeyToSerializeFunction)
     setmetatable(KeyToSerializeFunction, nil)
+
     for Key, Value in Types do
         KeyToSerializeFunction[Key] = Value._Serialize
     end
+
     self._KeyToSerializeFunction = KeyToSerializeFunction
 
     local KeyToDeserializeFunction = self._KeyToDeserializeFunction or table.clone(Types)
     table.clear(KeyToDeserializeFunction)
     setmetatable(KeyToDeserializeFunction, nil)
+
     for Key, Value in Types do
         KeyToDeserializeFunction[Key] = Value._Deserialize
     end
+
     self._KeyToDeserializeFunction = KeyToDeserializeFunction
 end
 
@@ -238,6 +247,7 @@ function OrClass:_UpdateSerialize()
 
     -- Serializes one of multiple values.
     local IsAValueIn = self:GetConstraint("IsAValueIn")
+
     if (IsAValueIn) then
         local Values = IsAValueIn[1]
         local NumberSerializer = Number(1, math.max(1, #Values)):Integer()
@@ -256,6 +266,7 @@ function OrClass:_UpdateSerialize()
 
     -- Serializes one of multiple keys.
     local IsAKeyIn = self:GetConstraint("IsAKeyIn")
+
     if (IsAKeyIn) then
         local AsArray = {}
 
