@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -27,13 +27,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return Path2DControlPoint.new(Value.Position, Value.LeftTangent, Value.RightTangent)
 end):Strict():NoConstraints()
---[[ Checker.Type = "Path2DControlPoint"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Path2DControlPoint";
+    Name = "Path2DControlPoint";
     _TypeOf = {"Path2DControlPoint"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

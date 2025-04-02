@@ -15,25 +15,24 @@ local bwriteu8 = buffer.writeu8
 local breadu32 = buffer.readu32
 local breadf32 = buffer.readf32
 local breadf64 = buffer.readf64
-local breadu8 = buffer.readu8
 local bcreate = buffer.create
 local bcopy = buffer.copy
 local blen = buffer.len
 
-local b32replace = bit32.replace
 local b32extract = bit32.extract
 local b32lshift = bit32.lshift
 local b32band = bit32.band
 
 local mceil = math.ceil
 local mlog = math.log
-local mmin = math.min
 
 local sbyte = string.byte
 
 local SampleBuffer = bcreate(8) -- This is used to capture the raw binary output of Luau's fast implementation of buffer write functions.
 
 local DEFAULT_MIN_SIZE = 16
+
+local function EmptyFunction() end
 
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
@@ -48,8 +47,12 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
 
     --- Only works for up to 32 bits at a time. No assertion for performance.
     --- Same as ReadBits.
-    local function WriteBits(Amount: number, Value: number)
-        local NewPosition = Position + Amount
+    local function WriteBits(Bits: number, Value: number)
+        if (Bits == 0) then
+            return
+        end
+
+        local NewPosition = Position + Bits
         local NewPositionBytes = mceil(NewPosition / 8)
 
         if (NewPositionBytes >= Size) then
@@ -59,14 +62,18 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
             Buffer = NewBuffer
         end
 
-        bwritebits(Buffer :: buffer, Position, Amount, Value)
+        bwritebits(Buffer :: buffer, Position, Bits, Value)
         Position = NewPosition
     end
 
-    local function ReadBits(Amount: number): number
-        local Bits = breadbits(Buffer :: buffer, Position, Amount)
-        Position += Amount
-        return Bits
+    local function ReadBits(Bits: number): number
+        if (Bits == 0) then
+            return 0
+        end
+
+        local Result = breadbits(Buffer :: buffer, Position, Bits)
+        Position += Bits
+        return Result
     end
 
     local function GetClippedBuffer(): buffer
@@ -82,40 +89,42 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
     end ]]
 
     local Result = {
-        --[[ WriteUInt = function(...)
-            print("WU", ...)
-            WriteBits(...)
-        end;
-        ReadUInt = function(...)
-            local Value = ReadBits(...)
-            print("RU", ..., "=", Value)
-            return Value
-        end; ]]
+        Context = EmptyFunction;
+
         WriteUInt = WriteBits;
         ReadUInt = ReadBits;
+
         WriteInt = function(Bits: number, Value: number)
-            -- print("WI", Bits, Value)
-            if (Value >= 0) then
-                WriteBits(Bits, Value)
+            if (Bits == 0) then
                 return
             end
 
-            -- Negative -> apply two's complement.
-            WriteBits(Bits, Value + b32lshift(1, Bits))
-        end;
-        ReadInt = function(Bits: number): number
-            local Value = ReadBits(Bits)
-
-            if (b32extract(Value, Bits - 1) == 1) then
-                -- print("RI", Bits, "=", Value - b32lshift(1, Bits))
-                return Value - b32lshift(1, Bits)
+            if (Value < 0) then
+                Value += b32lshift(1, Bits - 1) * 2
             end
 
-            -- print("RI", Bits, "=", Value)
+            WriteBits(Bits, Value)
+        end;
+        ReadInt = function(Bits: number): number
+            if (Bits == 0) then
+                return 0
+            end
+
+            local Value = ReadBits(Bits)
+            Bits -= 1
+
+            if (b32extract(Value, Bits) == 1) then
+                Value -= b32lshift(1, Bits) * 2
+            end
+
             return Value
         end;
+
         WriteFloat = function(Bits: number, Value: number)
-            -- print("WF", Bits, Value)
+            if (Bits == 0) then
+                return
+            end
+
             -- This will support non-standard precision floats in the future (like 21 bits or 16 bits, and custom exponent length).
             if (Bits > 32) then
                 bwritef64(SampleBuffer, 0, Value)
@@ -128,21 +137,123 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
             WriteBits(32, breadu32(SampleBuffer, 0))
         end;
         ReadFloat = function(Bits: number): number
+            if (Bits == 0) then
+                return 0
+            end
+
             -- We'll support non standard precision floats in the future.
             if (Bits > 32) then
                 bwriteu32(SampleBuffer, 0, ReadBits(32))
                 bwriteu32(SampleBuffer, 4, ReadBits(32))
-                -- print("RF64", Bits, "=", breadf64(SampleBuffer, 0))
                 return breadf64(SampleBuffer, 0)
             end
 
-            -- print("RF32(1)", Position, buffer.len(Buffer) * 8)
             bwriteu32(SampleBuffer, 0, ReadBits(32))
-            -- print("RF32", Bits, "=", breadf32(SampleBuffer, 0))
             return breadf32(SampleBuffer, 0)
         end;
+        --[[ WriteFloat = function(Bits: number, Value: number, Exponent: number?)
+            if (Bits > 32) then
+                bwritef64(SampleBuffer, 0, Value)
+                WriteBits(32, breadu32(SampleBuffer, 0))
+                WriteBits(32, breadu32(SampleBuffer, 4))
+                return
+            end
+        
+            if (Bits == 32 and (Exponent == 8 or Exponent == nil)) then
+                bwritef32(SampleBuffer, 0, Value)
+                WriteBits(32, breadu32(SampleBuffer, 0))
+                return
+            end
+
+            Exponent = Exponent or mceil(Bits / 4)
+
+            local Mantissa = Bits - Exponent - 1
+            local ExponentMask = b32lshift(1, Exponent) - 1
+            local MantissaMask = b32lshift(1, Mantissa) - 1
+        
+            local Sign = (Value < 0 and 1 or 0)
+            local SignBit = b32lshift(Sign, Bits - 1)
+        
+            if (Value == 0) then
+                WriteBits(Bits, 0)
+                return
+            end
+            
+            if (Value ~= Value) then
+                local NanBits = SignBit + b32lshift(ExponentMask, Mantissa) + 1
+                WriteBits(Bits, NanBits)
+                return
+            end
+            
+            if (Value == mhuge or Value == mnhuge) then
+                local InfBits = SignBit + b32lshift(ExponentMask, Mantissa)
+                WriteBits(Bits, InfBits)
+                return
+            end
+        
+            local FrexpMantissa, FrexpExponent = mfrexp(mabs(Value))
+            local BiasedExp = FrexpExponent + b32lshift(1, Exponent - 1) - 2
+        
+            if (BiasedExp <= 0) then
+                FrexpMantissa = mldexp(FrexpMantissa, BiasedExp)
+                BiasedExp = 0
+            end
+        
+            if (BiasedExp >= ExponentMask) then
+                local InfBits = SignBit + b32lshift(ExponentMask, Mantissa)
+                WriteBits(Bits, InfBits)
+                return
+            end
+        
+            local MantissaBits = b32band((FrexpMantissa * 2 - 1) * (2 ^ Mantissa), MantissaMask)
+            local Result = SignBit + b32lshift(BiasedExp, Mantissa) + MantissaBits
+            WriteBits(Bits, Result)
+        end;
+        ReadFloat = function(Bits: number, Exponent: number?): number
+            if (Bits > 32) then
+                bwriteu32(SampleBuffer, 0, ReadBits(32))
+                bwriteu32(SampleBuffer, 4, ReadBits(32))
+                return breadf64(SampleBuffer, 0)
+            end
+        
+            if (Bits == 32 and (Exponent == 8 or Exponent == nil)) then
+                bwriteu32(SampleBuffer, 0, ReadBits(32))
+                return breadf32(SampleBuffer, 0)
+            end
+        
+            Exponent = Exponent or mceil(Bits / 4)
+
+            local Value = ReadBits(Bits)
+            local BitLess = Bits - 1
+            local Mantissa = BitLess - Exponent
+            local ExponentMask = b32lshift(1, Exponent) - 1
+            local ExponentBits = b32band(b32rshift(Value, Mantissa), ExponentMask)
+            local MantissaBits = b32band(Value, b32lshift(1, Mantissa) - 1)
+            local ExponentBias = b32lshift(1, Exponent - 1) - 1
+            local Sign = (b32extract(Value, BitLess) == 1 and -1 or 1)
+        
+            local MantissaValue = MantissaBits / (2 ^ Mantissa)
+        
+            if (ExponentBits == 0) then
+                if (MantissaBits == 0) then
+                    return (Sign > 0 and 0 or -0)
+                else
+                    return Sign * mldexp(MantissaValue, 1 - ExponentBias)
+                end
+            elseif (ExponentBits == ExponentMask) then
+                return (MantissaBits == 0 and (Sign > 0 and mhuge or mnhuge) or NAN)
+            end
+        
+            local UnbiasedExp = ExponentBits - ExponentBias
+            MantissaValue += 1
+            return Sign * mldexp(MantissaValue, UnbiasedExp)
+        end; ]]
+
         WriteString = function(String: string, Length: number)
-            -- print("WS", String)
+            if (Length == 0) then
+                return
+            end
+
             local Bytes = Length // 8
             local FinalBits = b32band(Length, 7)
 
@@ -173,6 +284,10 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
             end
         end;
         ReadString = function(Length: number): string
+            if (Length == 0) then
+                return ""
+            end
+
             local Bytes = Length // 8
             local FinalBits = (Length and b32band(Length, 7) or 0)
 
@@ -195,19 +310,22 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
                 bwriteu8(Result, Bytes, ReadBits(FinalBits))
             end
 
-            -- print("RS(2)", Bytes, "=", btostring(Result))
             return btostring(Result)
         end;
+
         SetPosition = function(Bit: number)
             Position = Bit
         end;
         GetPosition = function()
             return Position
         end;
+
         GetBuffer = function()
             return Buffer :: buffer
         end;
         GetClippedBuffer = GetClippedBuffer;
+
+        Type = "Bit";
     }
 
     --[[ for Key, Value in Result do

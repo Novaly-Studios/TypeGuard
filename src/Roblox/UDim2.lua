@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.UDim2
 end
 
@@ -25,13 +25,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return UDim2.new(Value.X, Value.Y)
 end):Strict():NoConstraints()
---[[ Checker.Type = "UDim2"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "UDim2";
+    Name = "UDim2";
     _TypeOf = {"UDim2"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

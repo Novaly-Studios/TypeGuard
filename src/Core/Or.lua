@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Or
 end
 
@@ -68,6 +68,10 @@ end
 function OrClass:IsAValueIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
 
+    if (#Options == 1) then
+        return self:Equals(Options[1])
+    end
+
     return self:_AddConstraint(false, "IsAValueIn", _IsAValueIn, Options)
 end
 
@@ -88,13 +92,36 @@ end
 function OrClass:IsAKeyIn(Options)
     ExpectType(Options, Expect.TABLE_OR_FUNCTION, 1)
 
+    local Count = 0
+
+    for _ in Options do
+        Count += 1
+    end
+
+    if (Count == 1) then
+        return self:Equals((next(Options)))
+    end
+
     return self:_AddConstraint(false, "IsAKeyIn", _IsAKeyIn, Options)
 end
 
-local function _IsATypeIn(_self, Value, Options)
-    for _, TypeChecker in Options do
-        if (TypeChecker:_Check(Value)) then
-            return true
+local function _IsATypeIn(self, Value, Options)
+    -- Check the value against its intended type checker. This will use the function to get
+    -- a checker from the value if prodived, otherwise iterate through all types.
+    local GetTypeIndexFromValue = self._GetTypeIndexFromValue
+
+    if (GetTypeIndexFromValue) then
+        local IsATypeIn = self:GetConstraint("IsATypeIn")
+        local Found = GetTypeIndexFromValue(Value)
+
+        if (Found and IsATypeIn) then
+            return IsATypeIn[1][Found]:_Check(Value)
+        end
+    else
+        for _, TypeChecker in Options do
+            if (TypeChecker:_Check(Value)) then
+                return true
+            end
         end
     end
 
@@ -134,7 +161,7 @@ function OrClass:IsATypeIn(Options)
     -- Flatten pure IsATypeIn disjunctions into single list.
     -- Can't really do this if it has other constraints as they would be erased.
     for _, Option in Options do
-        if (Option.Type == "Or") then
+        if (Option.Name == "Or") then
             local IsATypeIn = Option:GetConstraint("IsATypeIn")
 
             if (IsATypeIn ~= nil and (#Option._ActiveConstraints == 1)) then
@@ -255,11 +282,14 @@ function OrClass:_UpdateSerialize()
             local NumberSerialize = NumberSerializer._Serialize
 
         return {
-            _Serialize = function(Buffer, Value, Cache)
-                NumberSerialize(Buffer, table.find(Values, Value), Cache)
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Or(IsAValueIn)")
+                NumberSerialize(Buffer, table.find(Values, Value), Context)
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                return Values[NumberDeserialize(Buffer, Cache)]
+            _Deserialize = function(Buffer, Context)
+                return Values[NumberDeserialize(Buffer, Context)]
             end;
         }
     end
@@ -270,37 +300,37 @@ function OrClass:_UpdateSerialize()
     if (IsAKeyIn) then
         local AsArray = {}
 
-        -- Check for non-string keys, set serializer & deserializer to error if any are found.
         for Key in IsAKeyIn[1] do
             table.insert(AsArray, Key)
+        end
 
-            if (type(Key) == "string") then
-                continue
-            end
+        -- Sort keys & use them as the array indexes.
+        local KeysSortable = pcall(table.sort, AsArray)
 
+        if (not KeysSortable) then
             return {
-                _Serialize = function(_Buffer, _Value, _Cache)
+                _Serialize = function(_Buffer, _Value, _Context)
                     error("Cannot serialize with non-string key as Or")
                 end;
-                _Deserialize = function(_Buffer, _Cache)
+                _Deserialize = function(_Buffer, _Context)
                     error("Cannot deserialize with non-string key as Or")
                 end;
             }
         end
-
-        -- Sort string keys & use them as the array indexes.
-        table.sort(AsArray)
 
         local NumberSerializer = Number(1, math.max(1, #AsArray)):Integer()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
         return {
-            _Serialize = function(Buffer, Value, Cache)
-                NumberSerialize(Buffer, table.find(AsArray, Value), Cache)
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Or(IsAKeyIn)")
+                NumberSerialize(Buffer, table.find(AsArray, Value), Context)
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                return AsArray[NumberDeserialize(Buffer, Cache)]
+            _Deserialize = function(Buffer, Context)
+                return AsArray[NumberDeserialize(Buffer, Context)]
             end;
         }
     end
@@ -323,80 +353,78 @@ function OrClass:_UpdateSerialize()
 
         if (GetTypeIndexFromValue) then
             return {
-                _Serialize = Divider and function(Buffer, Value, Cache)
+                _Serialize = function(Buffer, Value, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Or(IsATypeIn, GetTypeIndexFromValue)")
+
                     local Index = GetTypeIndexFromValue(Value)
                     local Serializer = KeyToSerializeFunction[Index]
 
                     if (Serializer) then
-                        NumberSerialize(Buffer, Index, Cache)
-                        Serializer(Buffer, Value, Cache)
-                        Divider()
-                        return
-                    end
+                        NumberSerialize(Buffer, Index, Context)
+                        Serializer(Buffer, Value, Context)
 
-                    error(`Value {Value} did not satisfy any type definition`)
-                end or function(Buffer, Value, Cache)
-                    local Index = GetTypeIndexFromValue(Value)
-                    local Serializer = KeyToSerializeFunction[Index]
+                        if (Divider) then
+                            Divider()
+                        end
 
-                    if (Serializer) then
-                        NumberSerialize(Buffer, Index, Cache)
-                        Serializer(Buffer, Value, Cache)
+                        BufferContext()
                         return
                     end
 
                     error(`Value {Value} did not satisfy any type definition`)
                 end;
-                _Deserialize = Divider and function(Buffer, Cache)
-                    local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
-                    Divider()
+                _Deserialize = function(Buffer, Context)
+                    local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Context)](Buffer, Context)
+
+                    if (Divider) then
+                        Divider()
+                    end
+
                     return Result
-                end or function(Buffer, Cache)
-                    return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
                 end;
             }
         end
 
         return {
-            _Serialize = Divider and function(Buffer, Value, Cache)
-                for Index, SubType in Types do
-                    if (SubType:_Check(Value)) then
-                        local Serializer = KeyToSerializeFunction[Index]
-                        NumberSerialize(Buffer, Index, Cache)
-                        Serializer(Buffer, Value, Cache)
-                        Divider()
-                        return
-                    end
-                end
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Or(IsATypeIn)")
 
-                error(`Value {Value} did not satisfy any type definition`)
-            end or function(Buffer, Value, Cache)
                 for Index, SubType in Types do
                     if (SubType:_Check(Value)) then
                         local Serializer = KeyToSerializeFunction[Index]
-                        NumberSerialize(Buffer, Index, Cache)
-                        Serializer(Buffer, Value, Cache)
+                        NumberSerialize(Buffer, Index, Context)
+                        Serializer(Buffer, Value, Context)
+
+                        if (Divider) then
+                            Divider()
+                        end
+
+                        BufferContext()
                         return
                     end
                 end
 
                 error(`Value {Value} did not satisfy any type definition`)
             end;
-            _Deserialize = Divider and function(Buffer, Cache)
-                local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
-                Divider()
+            _Deserialize = function(Buffer, Context)
+                local Result = KeyToDeserializeFunction[NumberDeserialize(Buffer, Context)](Buffer, Context)
+
+                if (Divider) then
+                    Divider()
+                end
+
                 return Result
-            end or function(Buffer, Cache)
-                return KeyToDeserializeFunction[NumberDeserialize(Buffer, Cache)](Buffer, Cache)
             end;
         }
     end
 
     return {
-        _Serialize = function(_Buffer, _Value, _Cache)
+        _Serialize = function(_Buffer, _Value, _Context)
             error("No constraints: cannot serialize")
         end;
-        _Deserialize = function(_Buffer, _Cache)
+        _Deserialize = function(_Buffer, _Context)
             error("No constraints: cannot deserialize")
         end;
     }

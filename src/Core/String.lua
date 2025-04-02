@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.String
 end
 
@@ -176,26 +176,9 @@ StringClass.InitialConstraintsDirectVariadic = function(self, ...)
     return IsAValueIn(self, {...})
 end
 
-local DynamicUInt = Number():Positive():Integer():Dynamic() -- Number(0, 2^16-1):Integer()
+local DynamicUInt = Number():Integer(32, false):Positive():Dynamic()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
-
-local function TryCache(Buffer, Value, Cache)
-    if (Cache) then
-        DynamicUIntSerialize(Buffer, Cache(Value))
-        return true
-    end
-
-    return false
-end
-
-local function TryDecache(Buffer, Cache)
-    if (Cache) then
-        return Cache[DynamicUIntDeserialize(Buffer)]
-    end
-
-    return nil
-end
 
 function StringClass:_UpdateSerialize()
     -- TODO: contains can substitute all the found strings to empty & record positions at the start of the string.
@@ -212,17 +195,24 @@ function StringClass:_UpdateSerialize()
         end
 
         return {
-            _Serialize = function(Buffer, Value, Cache)
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("String(GUID)")
+
                 Value = Value:lower():gsub("%-", ""):gsub("%x%x", function(Pair)
                     return string.char(tonumber(Pair, 16) :: number)
                 end)
-                if (TryCache(Buffer, Value, Cache)) then
+
+                if (TryCache(Buffer, Value, Context)) then
                     return
                 end
+
                 Buffer.WriteString(Value, #Value * 8)
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                return Dashify(TryDecache(Buffer, Cache) or Buffer.ReadString(16)):gsub(".", function(Char)
+            _Deserialize = function(Buffer, Context)
+                return Dashify(TryDecache(Buffer, Context) or Buffer.ReadString(16)):gsub(".", function(Char)
                     return string.format("%02x", Char:byte())
                 end)
             end;
@@ -230,31 +220,40 @@ function StringClass:_UpdateSerialize()
     end ]]
 
     local UsingCharacters = self:GetConstraint("UsingCharacters")
+
     if (UsingCharacters) then
         local CharacterSet = UsingCharacters[1]
-        local Bits = math.ceil(math.log(#CharacterSet + 1, 2))
         local IndexToCharacter = CharacterSet:split("")
+        local Bits = math.ceil(math.log(#CharacterSet + 1, 2))
+
         local IndexToCharacterByte = TableUtil.Map.Map(IndexToCharacter, function(Character, Index)
             return string.byte(Character)
         end)
+
         local CharacterToIndex = TableUtil.Map.Map(IndexToCharacter, function(Character, Index)
             return Index, Character
         end)
+
         local Serializer = Number(0, 2^16-1):Integer()
             local SizeDeserialize = Serializer._Deserialize
             local SizeSerialize = Serializer._Serialize
 
         return {
-            _Serialize = function(Buffer, Value, Cache)
-                SizeSerialize(Buffer, #Value, Cache)
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("String(UsingCharacters)")
+
+                SizeSerialize(Buffer, #Value, Context)
 
                 local WriteUInt = Buffer.WriteUInt
                 for Character in Value:gmatch(".") do
                     WriteUInt(Bits, CharacterToIndex[Character])
                 end
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                local Size = SizeDeserialize(Buffer, Cache)
+            _Deserialize = function(Buffer, Context)
+                local Size = SizeDeserialize(Buffer, Context)
                 local Result = buffer.create(Size)
                 local ReadUInt = Buffer.ReadUInt
 
@@ -271,11 +270,16 @@ function StringClass:_UpdateSerialize()
 
     if (NullTerminated) then
         return {
-            _Serialize = function(Buffer, Value, Cache)
+            _Serialize = function(Buffer, Value, _Context)
+                local BufferContext = Buffer.Context
+                BufferContext("String(NullTerminated)")
+
                 Buffer.WriteString(Value, #Value * 8)
                 Buffer.WriteUInt(1, 0)
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
+            _Deserialize = function(Buffer, _Context)
                 local Result = ByteSerializer()
                 local LastChar
                 local ReadUInt = Buffer.ReadUInt
@@ -301,14 +305,16 @@ function StringClass:_UpdateSerialize()
         -- Length equals a certain value.
         if (MaxLengthValue == MinLengthValue) then
             return {
-                _Serialize = function(Buffer, Value, Cache)
-                    if (TryCache(Buffer, Value, Cache)) then
-                        return
-                    end
+                _Serialize = function(Buffer, Value, _Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("String(FixedLength)")
+
                     Buffer.WriteString(Value, #Value * 8)
+
+                    BufferContext()
                 end;
-                _Deserialize = function(Buffer, Cache)
-                    return (TryDecache(Buffer, Cache) or Buffer.ReadString(MaxLengthValue * 8))
+                _Deserialize = function(Buffer, _Context)
+                    return Buffer.ReadString(MaxLengthValue * 8)
                 end;
             }
         end
@@ -319,34 +325,36 @@ function StringClass:_UpdateSerialize()
             local NumberSerialize = Serializer._Serialize
 
         return {
-            _Serialize = function(Buffer, Value, Cache)
-                if (TryCache(Buffer, Value, Cache)) then
-                    return
-                end
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("String(MinLength, MaxLength)")
 
                 local Length = #Value
-                NumberSerialize(Buffer, Length, Cache)
+                NumberSerialize(Buffer, Length, Context)
                 Buffer.WriteString(Value, Length * 8)
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                return (TryDecache(Buffer, Cache) or Buffer.ReadString(NumberDeserialize(Buffer, Cache) * 8))
+            _Deserialize = function(Buffer, Context)
+                return Buffer.ReadString(NumberDeserialize(Buffer, Context) * 8)
             end;
         }
     end
 
     -- Last resort: dynamic length string.
     return {
-        _Serialize = function(Buffer, Value, Cache)
-            if (TryCache(Buffer, Value, Cache)) then
-                return
-            end
+        _Serialize = function(Buffer, Value, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("String(DynamicLength)")
 
             local Length = #Value
             DynamicUIntSerialize(Buffer, Length)
             Buffer.WriteString(Value, Length * 8)
+
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, Cache)
-            return TryDecache(Buffer, Cache) or Buffer.ReadString(DynamicUIntDeserialize(Buffer) * 8)
+        _Deserialize = function(Buffer, Context)
+            return Buffer.ReadString(DynamicUIntDeserialize(Buffer) * 8)
         end;
     }
 end

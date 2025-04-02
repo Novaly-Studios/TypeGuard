@@ -161,7 +161,7 @@ local Checker = TypeGuard.FromTemplate({
 ### 10: serialization & deserialization
 
 ```lua
-local Any = TypeGuard.BaseAny(1) -- Version 1 of Any serialization scheme.
+local Any = TypeGuard.BaseAny()
 local Serialize1 = Any:Serialize({
     X = 1;
     Y = 2;

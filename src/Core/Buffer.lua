@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Buffer
 end
 
@@ -12,6 +12,7 @@ local Template = require(script.Parent.Parent._Template)
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
 
+local Cacheable = require(script.Parent.Cacheable)
 local String = require(script.Parent.String)
 
 type BufferTypeChecker = TypeChecker<BufferTypeChecker, buffer> & {
@@ -24,16 +25,19 @@ BufferClass._Initial = CreateStandardInitial("buffer")
 BufferClass._TypeOf = {"buffer"}
 
 function BufferClass:_UpdateSerialize()
-    local Serializer = String()
+    local Serializer = Cacheable(String())
         local Deserialize = Serializer._Deserialize
         local Serialize = Serializer._Serialize
 
     return {
-        _Serialize = function(Buffer, Value, Cache)
-            Serialize(Buffer, buffer.tostring(Value), Cache)
+        _Serialize = function(Buffer, Value, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Buffer")
+            Serialize(Buffer, buffer.tostring(Value), Context)
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, Cache)
-            return buffer.fromstring(Deserialize(Buffer, Cache))
+        _Deserialize = function(Buffer, Context)
+            return buffer.fromstring(Deserialize(Buffer, Context))
         end;
     }
 end

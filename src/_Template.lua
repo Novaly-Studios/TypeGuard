@@ -10,6 +10,8 @@ local Or
 
 local Util = require(script.Parent.Util)
     local ConcatWithToString = Util.ConcatWithToString
+    local HumanReadableSerializer = Util.HumanReadableSerializer
+        type HumanReadableSerializer = typeof(HumanReadableSerializer)
     local ByteSerializer = Util.ByteSerializer
         type ByteSerializer = typeof(ByteSerializer)
     local BitSerializer = Util.BitSerializer
@@ -32,11 +34,11 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
     GreaterThanOrEqualTo: AnyMethod;
     LessThanOrEqualTo: AnyMethod;
     NoConstraints: AnyMethod;
-    NonSerialized: AnyMethod;
     GreaterThan: AnyMethod;
     FailMessage: AnyMethod;
     AsPredicate: AnyMethod;
     WithContext: AnyMethod;
+    RemapDeep: AnyMethod;
     AsAssert: AnyMethod;
     LessThan: AnyMethod;
     NoCheck: AnyMethod;
@@ -57,17 +59,18 @@ export type TypeChecker<ExtensionClass, SampleType> = {
 
     -- Methods available in all TypeCheckers.
     NoConstraints: ((self: ExtensionClass) -> (ExtensionClass));
-    NonSerialized: ((self: ExtensionClass) -> (ExtensionClass));
     FailMessage: ((self: ExtensionClass, Message: FunctionalArg<string>) -> (ExtensionClass));
     AsAssertion: ((self: ExtensionClass) -> ((Input: SampleType) -> ()));
     AsPredicate: ((self: ExtensionClass) -> ((Input: SampleType) -> (boolean, string?)));
-    Deserialize: ((self: ExtensionClass, Buffer: buffer, Atom: ("Bit" | "Byte")?, BypassCheck: boolean?) -> (SampleType));
+    Deserialize: ((self: ExtensionClass, Buffer: buffer, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (SampleType));
     WithContext: ((self: ExtensionClass, Context: any?) -> (ExtensionClass));
-    Serialize: ((self: ExtensionClass, Value: SampleType, Atom: ("Bit" | "Byte")?, BypassCheck: boolean?) -> (buffer));
+    RemapDeep: ((self: ExtensionClass, Mapper: ((any?) -> (any?)), Recursive: boolean?) -> (ExtensionClass));
+    Serialize: ((self: ExtensionClass, Value: SampleType, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (buffer));
     NoCheck: ((self: ExtensionClass) -> (ExtensionClass));
     Assert: ((self: ExtensionClass, Value: any) -> ());
     Negate: ((self: ExtensionClass) -> (ExtensionClass));
     Cached: ((self: ExtensionClass) -> (ExtensionClass));
+    Modify: ((self: ExtensionClass, Modifications: {[any]: any}, ForceUpdate: boolean?) -> (ExtensionClass));
     Check: ((self: ExtensionClass, Value: any) -> (boolean, string?));
     Unmap: ((self: ExtensionClass, Unmapper: ((any?) -> (SampleType))) -> (ExtensionClass));
     Copy: ((self: ExtensionClass) -> (ExtensionClass));
@@ -79,6 +82,12 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     GreaterThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
+}
+
+local SerializerIDToConstructor = {
+    Human = HumanReadableSerializer;
+    Byte = ByteSerializer;
+    Bit = BitSerializer;
 }
 
 local InitForbiddenKeys = false
@@ -236,7 +245,7 @@ local function CreateTemplate(Name: string)
         InitialConstraintsVariadic = nil;
         InitialConstraints = nil;
         InitialConstraint = nil;
-        Type = Name;
+        Name = Name;
         _TC = true;
     }
     TemplateClass.__index = TemplateClass
@@ -253,8 +262,9 @@ local function CreateTemplate(Name: string)
             _LastConstraint = 0;
         }
 
-        -- __index slows down benchmarks by ~10%. We should safely be able to get away with copying in
-        -- methods & data manually without causing large heap size increases.
+        -- __index slows down benchmarks by ~10% at the expense of more memory usage.
+        -- These objects are not meant to be rapidly constructed, so this is usually
+        -- a good tradeoff.
         if (USE_INDEX) then
             setmetatable(self, TemplateClass)
         else
@@ -270,7 +280,7 @@ local function CreateTemplate(Name: string)
         end
 
         -- Make sure we generate initial serialization & deserialization functions.
-        self = self:Modify({ --[[ _Init = true ]] }, true)
+        self = self:Modify({}, true)
 
         -- Support for a single constraint passed as the constructor, with an arbitrary number of args.
         local InitialConstraint = self.InitialConstraint
@@ -296,7 +306,7 @@ local function CreateTemplate(Name: string)
 
         if (InitialConstraintsVariadic and NumArgs > 0) then
             for Index = 1, NumArgs do
-                self = InitialConstraintsVariadic(self, select(Index, ...))
+                self = InitialConstraintsVariadic(self, (select(Index, ...)))
             end
 
             return self
@@ -406,48 +416,7 @@ local function CreateTemplate(Name: string)
         return self
     end
 
-    function TemplateClass:_MapCheckers(Mapper, Recursive)
-        --[[ local Copy = table.clone(self)
-        local ConstraintsModify = {}
-
-        for ConstraintIndex, Constraint in Copy._ActiveConstraints do
-            local Args = Constraint[2]
-            local ArgsModify = {}
-
-            for ArgIndex, Arg in Args do
-                if (type(Arg) ~= "table") then
-                    continue
-                end
-
-                -- Case 1: arg is a checker.
-                if (Arg._MapCheckers) then
-                    ArgsModify[ArgIndex] = Mapper(Arg:_MapCheckers(Mapper, Recursive))
-                    continue
-                end
-
-                -- Case 2: arg is a table of checkers.
-                local _, FirstItem = next(Arg)
-                if (type(FirstItem) == "table" and FirstItem._MapCheckers) then
-                    local Changes = {}
-                    for Index, Checker in Arg do
-                        Changes[Index] = Mapper(Checker:_MapCheckers(Mapper, Recursive))
-                    end
-                    ArgsModify[ArgIndex] = Changes
-                    continue
-                end
-            end
-
-            if (next(ArgsModify) == nil) then
-                continue
-            end
-
-            ConstraintsModify[ConstraintIndex] = Merge(Constraint, {[2] = Merge(Args, ArgsModify)})
-        end
-
-        Copy._ActiveConstraints = Merge(Copy._ActiveConstraints, ConstraintsModify)
-        Copy:_UpdateSerialize()
-        return Copy ]]
-
+    function TemplateClass:RemapDeep(Mapper, Recursive)
         return self:Modify({
             _ActiveConstraints = function(ActiveConstraints)
                 for ConstraintIndex, Constraint in ActiveConstraints do
@@ -462,10 +431,10 @@ local function CreateTemplate(Name: string)
                                     end
 
                                     -- Case 1: arg is a checker.
-                                    if (Arg._MapCheckers) then
+                                    if (Arg.RemapDeep) then
                                         NewArgs = MergeDeep(NewArgs, {
                                             [Index] = function(Arg)
-                                                return Mapper(Arg:_MapCheckers(Mapper, Recursive))
+                                                return Mapper(Arg:RemapDeep(Mapper, Recursive))
                                             end;
                                         }, true)
 
@@ -475,11 +444,11 @@ local function CreateTemplate(Name: string)
                                     -- Case 2: arg is a table of checkers.
                                     local _, FirstItem = next(Arg)
 
-                                    if (type(FirstItem) == "table" and FirstItem._MapCheckers) then
+                                    if (type(FirstItem) == "table" and FirstItem.RemapDeep) then
                                         local Changes = {}
 
                                         for Index, Checker in Arg do
-                                            Changes[Index] = Mapper(Checker:_MapCheckers(Mapper, Recursive))
+                                            Changes[Index] = Mapper(Checker:RemapDeep(Mapper, Recursive))
                                         end
 
                                         NewArgs = MergeDeep(NewArgs, {
@@ -525,6 +494,11 @@ local function CreateTemplate(Name: string)
 
     --- Check (like above) except sets a universal context for the duration of the check.
     function TemplateClass:Check(Value)
+        local InitCheck = self._InitCheck
+        if (InitCheck) then
+            InitCheck()
+        end
+
         RootContext = self._Context
         local Success, Result = self:_Check(Value)
         RootContext = nil
@@ -591,20 +565,17 @@ local function CreateTemplate(Name: string)
     function TemplateClass:_Changed()
         -- Equals - return the value itself when deserialized in every case.
         -- No bits written or read from buffer.
-        if (self._NonSerialized) then
-            return {
-                _Serialize = function(_, _, _) end;
-                _Deserialize = function(_, _) end;
-            }
-        end
-
         local Equals = self:GetConstraint("Equals")
 
         if (Equals) then
             local Value = Equals[1]
 
             return {
-                _Serialize = function(_, _, _) end;
+                _Serialize = function(Buffer, _, _)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Template(Equals)")
+                    BufferContext()
+                end;
                 _Deserialize = function(_, _)
                     return Value
                 end;
@@ -615,7 +586,7 @@ local function CreateTemplate(Name: string)
         -- Hacky cyclic dependency, but this is used because of String's ergonomic initial constraint & backwards compatibility.
         local IsAValueIn = self:GetConstraint("IsAValueIn")
 
-        if (IsAValueIn and self.Type ~= "Or") then
+        if (IsAValueIn and self.Name ~= "Or") then
             Or = Or or require(script.Parent.Core.Or) :: any
 
             local Serializer = Or():IsAValueIn(IsAValueIn[1])
@@ -623,18 +594,21 @@ local function CreateTemplate(Name: string)
                 local DoSerialize = Serializer._Serialize
 
             return {
-                _Serialize = function(Buffer, Value, Cache)
-                    DoSerialize(Buffer, Value, Cache)
+                _Serialize = function(Buffer, Value, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Template(IsAValueIn)")
+                    DoSerialize(Buffer, Value, Context)
+                    BufferContext()
                 end;
-                _Deserialize = function(Buffer, Cache)
-                    return DoDeserialize(Buffer, Cache)
+                _Deserialize = function(Buffer, Context)
+                    return DoDeserialize(Buffer, Context)
                 end;
             }
         end
 
         local IsAKeyIn = self:GetConstraint("IsAKeyIn")
 
-        if (IsAKeyIn and self.Type ~= "Or") then
+        if (IsAKeyIn and self.Name ~= "Or") then
             Or = Or or require(script.Parent.Core.Or) :: any
 
             local Serializer = Or():IsAKeyIn(IsAKeyIn[1])
@@ -642,11 +616,14 @@ local function CreateTemplate(Name: string)
                 local DoSerialize = Serializer._Serialize
 
             return {
-                _Serialize = function(Buffer, Value, Cache)
-                    DoSerialize(Buffer, Value, Cache)
+                _Serialize = function(Buffer, Value, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Template(IsAKeyIn)")
+                    DoSerialize(Buffer, Value, Context)
+                    BufferContext()
                 end;
-                _Deserialize = function(Buffer, Cache)
-                    return DoDeserialize(Buffer, Cache)
+                _Deserialize = function(Buffer, Context)
+                    return DoDeserialize(Buffer, Context)
                 end;
             }
         end
@@ -692,6 +669,32 @@ local function CreateTemplate(Name: string)
         return false
     end
 
+    --- Quickly checks if a constraint exists on the type checker.
+    function TemplateClass:HasConstraint(ID)
+        local HasConstraintCache = self._HasConstraintCache
+
+        if (not HasConstraintCache) then
+            HasConstraintCache = {}
+
+            for _, Constraint in self._ActiveConstraints do
+                HasConstraintCache[Constraint.Name] = true
+            end
+
+            self._HasConstraintCache = HasConstraintCache
+        end
+
+        local Found = HasConstraintCache[ID]
+
+        if (Found) then
+            return Found
+        end
+
+        local Has = (self:GetConstraint(ID) ~= nil)
+        HasConstraintCache[ID] = Has
+        return Has
+    end
+
+    --- Gets the arguments for a constraint if it exists.
     function TemplateClass:GetConstraint(ID)
         ExpectType(ID, Expect.STRING, 1)
 
@@ -819,44 +822,44 @@ local function CreateTemplate(Name: string)
         error(`Deserialization not implemented for '{Name}'`)
     end
 
-    function TemplateClass:Serialize(Value, Atom, BypassCheck, Cache)
+    function TemplateClass:Serialize(Value, Atom, BypassCheck, Context)
+        local InitSerialize = self._InitSerialize
+
+        if (InitSerialize) then
+            local NewContext = InitSerialize(self, Context)
+
+            if (NewContext) then
+                Context = NewContext
+            end
+        end
+
         if (not BypassCheck) then
             self:Assert(Value)
         end
 
-        local Serializer = ((Atom or "Byte") == "Byte" and ByteSerializer or BitSerializer)(buffer.create(1))
-        local PreSerialize = self.PreSerialize
-
-        if (PreSerialize) then
-            PreSerialize(self, Serializer, Cache)
-        end
-
-        self._Serialize(Serializer, Value, Cache)
+        local Serializer = SerializerIDToConstructor[Atom or "Byte"](buffer.create(16))
+        self._Serialize(Serializer, Value, Context)
         return Serializer.GetClippedBuffer()
     end
 
-    function TemplateClass:Deserialize(Buffer, Atom, BypassCheck, Cache)
-        local Deserializer = ((Atom or "Byte") == "Byte" and ByteSerializer or BitSerializer)(Buffer)
-        local PreDeserialize = self.PreDeserialize
-        local Value
+    function TemplateClass:Deserialize(Buffer, Atom, BypassCheck, Context)
+        local InitDeserialize = self._InitDeserialize
 
-        if (PreDeserialize) then
-            Value = PreDeserialize(self, Deserializer, Cache)
+        if (InitDeserialize) then
+            local NewContext = InitDeserialize(self, Context)
+
+            if (NewContext) then
+                Context = NewContext
+            end
         end
 
-        Value = Value or self._Deserialize(Deserializer, Cache)
+        local Value = self._Deserialize(SerializerIDToConstructor[Atom or "Byte"](Buffer), Context)
 
         if (not BypassCheck) then
             self:Assert(Value)
         end
 
         return Value
-    end
-
-    function TemplateClass:NonSerialized()
-        return self:Modify({
-            _NonSerialized = true;
-        })
     end
 
     --[[ function TemplateClass:__tostring()
@@ -879,7 +882,7 @@ local function CreateTemplate(Name: string)
             table.insert(Fields, "Context = " .. tostring(Context))
         end
 
-        return self.Type .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
+        return self.Name .. "(" .. ConcatWithToString(Fields, ", ") .. ")"
     end ]]
 
     TemplateClass.GreaterThanOrEqualTo = GreaterThanOrEqualTo
@@ -903,10 +906,10 @@ local function CreateTemplate(Name: string)
     end, TemplateClass
 end
 
-return {
+return table.freeze({
     Create = CreateTemplate;
 
-    BaseMethods = {
+    BaseMethods = table.freeze({
         GreaterThanOrEqualTo = GreaterThanOrEqualTo;
         LessThanOrEqualTo = LessThanOrEqualTo;
         GreaterThan = GreaterThan;
@@ -914,5 +917,5 @@ return {
         IsAKeyIn = IsAKeyIn;
         LessThan = LessThan;
         Equals = Equals;
-    };
-}
+    });
+})

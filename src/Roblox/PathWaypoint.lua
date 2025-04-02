@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -15,9 +15,10 @@ type PathWaypointTypeChecker = TypeChecker<PathWaypointTypeChecker, PathWaypoint
 };
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Object = require(Core.Object)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
 
 local RbxEnum = require(script.Parent.Enum)
     local EnumPathWaypointAction = RbxEnum(Enum.PathWaypointAction)
@@ -28,17 +29,17 @@ local RbxVector3 = require(script.Parent.Vector3)
 local Checker = Object({
     Position = DefaultVector3;
     Action = EnumPathWaypointAction;
-    Label = DefaultString;
+    Label = CacheableString;
 }):Unmap(function(Value)
     return PathWaypoint.new(Value.Position, Value.Action, Value.Label)
 end):Strict():NoConstraints()
---[[ Checker.Type = "PathWaypoint"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "PathWaypoint";
+    Name = "PathWaypoint";
     _TypeOf = {"PathWaypoint"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

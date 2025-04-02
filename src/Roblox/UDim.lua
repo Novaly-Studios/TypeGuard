@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.UDim
 end
 
@@ -15,23 +15,23 @@ type UDimTypeChecker = TypeChecker<UDimTypeChecker, UDim> & {
 
 local Core = script.Parent.Parent.Core
     local Number = require(Core.Number)
+        local DynamicInt32 = Number():Integer(32, true):Dynamic()
         local Float32 = Number():Float(32)
-        local UInt32 = Number():Integer(32, false)
     local Object = require(Core.Object)
 
 local Checker = Object({
-    Offset = UInt32; -- Todo: change to dynamic UInt by default. Add Int(Bits, Unsigned) constraint.
+    Offset = DynamicInt32;
     Scale = Float32;
 }):Unmap(function(Value)
     return UDim.new(Value.Scale, Value.Offset)
 end):Strict():NoConstraints()
---[[ Checker.Type = "UDim"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "UDim";
+    Name = "UDim";
     _TypeOf = {"UDim"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

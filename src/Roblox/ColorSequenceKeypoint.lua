@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.ColorSequenceKeypoint
 end
 
@@ -27,13 +27,12 @@ local Checker = Object({
     return ColorSequenceKeypoint.new(Value.Time, Value.Value)
 end):Strict():NoConstraints()
 
---[[ Checker.Type = "ColorSequenceKeypoint"
-Checker._TypeOf = {Checker.Type} ]]
-
 Checker = Checker:Modify({
-    Type = "ColorSequenceKeypoint";
+    Name = "ColorSequenceKeypoint";
     _TypeOf = {"ColorSequenceKeypoint"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

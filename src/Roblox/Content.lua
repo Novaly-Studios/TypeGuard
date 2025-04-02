@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Content
 end
 
@@ -15,28 +15,38 @@ type ContentTypeChecker = TypeChecker<ContentTypeChecker, Content> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Optional = require(Core.Optional)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
     local Object = require(Core.Object)
 
-local RbxEnum = require(script.Parent.Enum)
-    local EnumContentSourceType = RbxEnum(Enum.ContentSourceType)
+local RbxInstance = require(script.Parent.Instance)
+    local CacheableInstance = Cacheable(RbxInstance())
 
 local Checker = Object({
-    SourceType = EnumContentSourceType;
-    Uri = Optional(DefaultString);
-    -- No 'Object' support yet.
+    Object = Optional(CacheableInstance);
+    Uri = Optional(CacheableString);
 }):Unmap(function(Value)
-    return Content.fromUri(Value.Uri)
+    local Object = Value.Object
+    if (Object) then
+        return Content.fromObject(Object)
+    end
+
+    local Uri = Value.Uri
+    if (Uri) then
+        return Content.fromUri(Uri)
+    end
+
+    return Content.none
 end):Strict():NoConstraints()
---[[ Checker.Type = "Content"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Content";
+    Name = "Content";
     _TypeOf = {"Content"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

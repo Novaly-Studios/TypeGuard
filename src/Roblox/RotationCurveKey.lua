@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.RotationCurveKey
 end
 
@@ -37,13 +37,13 @@ local Checker = Object({
     Result.LeftTangent = Value.LeftTangent
     return Result
 end):Strict():NoConstraints()
---[[ Checker.Type = "RotationCurveKey"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "RotationCurveKey";
+    Name = "RotationCurveKey";
     _TypeOf = {"RotationCurveKey"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

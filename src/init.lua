@@ -3,7 +3,7 @@
 --!nonstrict
 
 -- Allows easy command bar paste.
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard
 end
 
@@ -20,8 +20,9 @@ local Core = script.Core
 local Template = require(script._Template)
     type SignatureTypeCheckerInternal = Template.SignatureTypeCheckerInternal
     type TypeCheckerConstructor<T, P...> = Template.TypeCheckerConstructor<T, P...>
-    type SignatureTypeChecker = Template.SignatureTypeChecker
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
+    
+export type SignatureTypeChecker = Template.SignatureTypeChecker
 
 local TypeGuard = {
     CreateTemplate = Template.Create;
@@ -57,6 +58,8 @@ TypeGuard.FromTypeSample = FromTypeSample
 -- Complex type checker imports...
 do
     TypeGuard.ValueCache = require(Core.ValueCache)
+    TypeGuard.Versioned = require(Core.Versioned)
+    TypeGuard.Cacheable = require(Core.Cacheable)
     TypeGuard.Function = require(Core.Function)
     TypeGuard.Userdata = require(Core.Userdata)
     TypeGuard.Optional = require(Core.Optional)
@@ -238,12 +241,12 @@ do
                 for Key, Value in Subject do
                     local Temp = _FromTemplate(Value, Strict)
 
-                    if (Temp.Type == LastType) then
+                    if (Temp.Name == LastType) then
                         continue
                     end
 
                     Last = if (Last) then TypeGuard.Or(Temp, Last) else Temp
-                    LastType = Temp.Type
+                    LastType = Temp.Name
                 end
 
                 return TypeGuard.Array(Strict and Last:Strict() or Last)
@@ -292,4 +295,4 @@ do
     end
 end
 
-return TypeGuard
+return table.freeze(TypeGuard)

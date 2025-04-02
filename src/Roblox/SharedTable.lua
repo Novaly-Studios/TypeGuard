@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.SharedTable
 end
 
@@ -16,14 +16,11 @@ local Core = script.Parent.Parent.Core
 local TypeOf = {"SharedTable"}
 
 return function(...)
-    local Checker = Object(...):UnmapStructure(function(Value)
-        return SharedTable.new(Value)
-    end)
-    --[[ Checker.Type = TypeOf[1]
-    Checker._TypeOf = TypeOf ]]
+    local Checker = Object(...):UnmapStructure(SharedTable.new)
     Checker = Checker:Modify({
-        Type = TypeOf[1];
+        Name = TypeOf[1];
         _TypeOf = TypeOf;
     })
+    table.freeze(Checker)
     return Checker
 end

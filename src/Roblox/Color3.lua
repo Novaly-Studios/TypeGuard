@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Color3
 end
 
@@ -27,13 +27,12 @@ local Checker = Object({
     return Color3.new(Value.R, Value.G, Value.B)
 end):Strict():NoConstraints()
 
---[[ Checker.Type = "Color3"
-Checker._TypeOf = {Checker.Type} ]]
-
 Checker = Checker:Modify({
-    Type = "Color3";
+    Name = "Color3";
     _TypeOf = {"Color3"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

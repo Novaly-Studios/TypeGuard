@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -34,13 +34,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return TweenInfo.new(Value.Time, Value.EasingStyle, Value.EasingDirection, Value.RepeatCount, Value.Reverses, Value.DelayTime)
 end):Strict():NoConstraints()
---[[ Checker.Type = "TweenInfo"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "TweenInfo";
+    Name = "TweenInfo";
     _TypeOf = {"TweenInfo"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

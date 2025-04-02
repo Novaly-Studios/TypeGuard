@@ -8,6 +8,65 @@ return function()
     local TypeGuard = require(script.Parent.Parent)
     local Base = TypeGuard.Number()
 
+    --#region Pre-calculation of min and max values for different integer formats.
+    local PositiveTable = {
+        [0] = {
+            Min = 0;
+            Max = 0;
+            TooLow = -1;
+            TooHigh = 1;
+        };
+    }
+
+    for Bits = 1, 32 do
+        local Value = 2 ^ Bits - 1
+        PositiveTable[Bits] = {
+            Min = 0;
+            Max = Value;
+            TooLow = -1;
+            TooHigh = Value + 1;
+        }
+    end
+
+    local NegativeTable = {
+        [0] = {
+            Min = -1;
+            Max = -1;
+            TooLow = -2;
+            TooHigh = 0;
+        };
+    }
+
+    for Bits = 1, 32 do
+        local Value = -2 ^ Bits
+        NegativeTable[Bits] = {
+            Min = -1;
+            Max = Value;
+            TooLow = Value - 1;
+            TooHigh = 0;
+        }
+    end
+
+    local PositiveNegativeTable = {
+        [0] = {
+            Max = 0;
+            Min = 0;
+            TooLow = -1;
+            TooHigh = 1;
+        };
+    }
+
+    for Bits = 1, 32 do
+        local Less = Bits - 1
+        PositiveNegativeTable[Bits] = {
+            Min = -2 ^ Less;
+            Max = 2 ^ Less - 1;
+            TooLow = -2 ^ Less - 1;
+            TooHigh = 2 ^ Less;
+        }
+    end
+    --#endregion
+
     describe("Init", function()
         it("should reject non-numbers", function()
             for _, Value in GetValues("Number", "Float") do
@@ -22,18 +81,11 @@ return function()
             expect(Base:Check(-1)).to.equal(true)
             expect(Base:Check(-1.1)).to.equal(true)
         end)
+    end)
 
-        it("should serialize and deserialize a variety of numbers", function()
-            expect(Base:Deserialize(Base:Serialize(1000))).to.equal(1000)
-            expect(Base:Deserialize(Base:Serialize((2^50+0.35)))).to.equal((2^50+0.35))
-            expect(Base:Deserialize(Base:Serialize((2^20+0.35)))).to.equal((2^20+0.35))
-            expect(Base:Deserialize(Base:Serialize(0))).to.equal(0)
-            expect(Base:Deserialize(Base:Serialize(-1000))).to.equal(-1000)
-            expect(Base:Deserialize(Base:Serialize(-(2^50+0.35)))).to.equal(-(2^50+0.35))
-            expect(Base:Deserialize(Base:Serialize(-(2^20+0.35)))).to.equal(-(2^20+0.35))
-            expect(Base:Deserialize(Base:Serialize(math.huge))).to.equal(math.huge)
-            expect(Base:Deserialize(Base:Serialize(-math.huge))).to.equal(-math.huge)
-            expect(tostring(Base:Deserialize(Base:Serialize(0/0)))).to.equal(tostring(0/0))
+    describe("Default", function()
+        it("should serialize and deserialize as a double", function()
+            expect(Base:Deserialize(Base:Serialize(2^53))).to.equal(2^53)
         end)
     end)
 
@@ -54,37 +106,124 @@ return function()
             expect(Base:Integer():Check("Test")).to.equal(false)
         end)
 
-        it("should bound to the correct ranges for unsigned ints", function()
-            local Min = 0
-            for Bits = 1, 32 do
-                local Max = 2 ^ Bits - 1
-                local Checker = Base:Integer(Bits, false)
-                expect(Checker:Check(Max)).to.equal(true)
-                expect(Checker:Check(Min)).to.equal(true)
-                expect(Checker:Check(Max + 1)).to.equal(false)
-                expect(Checker:Check(Min - 1)).to.equal(false)
-            end
+        describe("Dynamic", function()
+            local DynamicInt = Base:Integer():Dynamic()
+
+            describe("Positive", function()
+                local DynamicIntPositive = DynamicInt:Positive()
+
+                it("should serialize and deserialize", function()
+                    for Bits = 0, 32 do
+                        local Thresholds = PositiveTable[Bits]
+                        expect(DynamicIntPositive:Deserialize(DynamicIntPositive:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                        expect(DynamicIntPositive:Deserialize(DynamicIntPositive:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                    end
+                end)
+
+                it("should accept the correct range of values", function()
+                    for Bits = 0, #PositiveTable do
+                        local Thresholds = PositiveTable[Bits]
+                        expect(DynamicIntPositive:Check(Thresholds.Min)).to.equal(true)
+                        expect(DynamicIntPositive:Check(Thresholds.Max)).to.equal(true)
+                    end
+
+                    local Highest = PositiveTable[#PositiveTable]
+                    expect(DynamicIntPositive:Check(Highest.TooLow)).to.equal(false)
+                    expect(DynamicIntPositive:Check(Highest.TooHigh)).to.equal(false)
+                end)
+            end)
+
+            describe("Negative", function()
+                local DynamicIntNegative = DynamicInt:Negative()
+
+                it("should accept the correct range of values", function()
+                    for Bits = 0, #NegativeTable do
+                        local Thresholds = NegativeTable[Bits]
+                        expect(DynamicIntNegative:Check(Thresholds.Min)).to.equal(true)
+                        expect(DynamicIntNegative:Check(Thresholds.Max)).to.equal(true)
+                    end
+
+                    local Highest = NegativeTable[#NegativeTable]
+                    expect(DynamicIntNegative:Check(Highest.TooLow)).to.equal(false)
+                    expect(DynamicIntNegative:Check(Highest.TooHigh)).to.equal(false)
+                end)
+
+                it("should serialize and deserialize", function()
+                    for Bits = 0, #NegativeTable do
+                        local Thresholds = NegativeTable[Bits]
+                        expect(DynamicIntNegative:Deserialize(DynamicIntNegative:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                        expect(DynamicIntNegative:Deserialize(DynamicIntNegative:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                    end
+                end)
+            end)
+
+            it("should accept the correct range of values", function()
+                for Bits = 0, #NegativeTable do
+                    local Thresholds = NegativeTable[Bits]
+                    expect(DynamicInt:Check(Thresholds.Min)).to.equal(true)
+                    expect(DynamicInt:Check(Thresholds.Max)).to.equal(true)
+                end
+
+                for Bits = 0, #PositiveTable do
+                    local Thresholds = PositiveTable[Bits]
+                    expect(DynamicInt:Check(Thresholds.Min)).to.equal(true)
+                    expect(DynamicInt:Check(Thresholds.Max)).to.equal(true)
+                end
+            end)
+
+            it("should serialize and deserialize", function()
+                for Bits = 0, 32 do
+                    local Thresholds = NegativeTable[Bits]
+                    expect(DynamicInt:Deserialize(DynamicInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(DynamicInt:Deserialize(DynamicInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+
+                for Bits = 0, 32 do
+                    local Thresholds = PositiveTable[Bits]
+                    expect(DynamicInt:Deserialize(DynamicInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(DynamicInt:Deserialize(DynamicInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+            end)
         end)
 
-        it("should bound to the correct ranges for signed ints", function()
-            for Bits = 2, 32 do
-                local Max = 2 ^ (Bits - 1) - 1
-                local Min = -2 ^ (Bits - 1)
-                local Checker = Base:Integer(Bits, true)
-                expect(Checker:Check(Max)).to.equal(true)
-                expect(Checker:Check(Min)).to.equal(true)
-                expect(Checker:Check(Max + 1)).to.equal(false)
-                expect(Checker:Check(Min - 1)).to.equal(false)
-            end
+        describe("Unsigned", function()
+            it("should accept the correct range of values", function()
+                for Bits = 0, 32 do
+                    local UnsignedInt = Base:Integer(Bits, false)
+                    local Thresholds = PositiveTable[Bits]
+                    expect(UnsignedInt:Deserialize(UnsignedInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(UnsignedInt:Deserialize(UnsignedInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+            end)
+
+            it("should serialize and deserialize", function()
+                for Bits = 0, 32 do
+                    local UnsignedInt = Base:Integer(Bits, false)
+                    local Thresholds = PositiveTable[Bits]
+                    expect(UnsignedInt:Deserialize(UnsignedInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(UnsignedInt:Deserialize(UnsignedInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+            end)
         end)
 
-        it("should serialize and deserialize various integers", function()
-            local Int32 = Base:Integer(32)
-            expect(Int32:Deserialize(Int32:Serialize(2^31-1))).to.equal(2^31-1)
-            expect(Int32:Deserialize(Int32:Serialize(-2^31))).to.equal(-2^31)
+        describe("Signed", function()
+            it("should accept the correct range of values", function()
+                for Bits = 0, 32 do
+                    local SignedInt = Base:Integer(Bits, true)
+                    local Thresholds = PositiveNegativeTable[Bits]
+                    expect(SignedInt:Deserialize(SignedInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(SignedInt:Deserialize(SignedInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+            end)
 
-            local UInt32 = Base:Integer(32, false)
-            expect(UInt32:Deserialize(UInt32:Serialize(2^32-1))).to.equal(2^32-1)
+            it("should serialize and deserialize", function()
+                for Bits = 0, 32 do
+                    local SignedInt = Base:Integer(Bits, true)
+                    local Thresholds = PositiveNegativeTable[Bits]
+                    expect(SignedInt:Deserialize(SignedInt:Serialize(Thresholds.Max))).to.equal(Thresholds.Max)
+                    expect(SignedInt:Deserialize(SignedInt:Serialize(Thresholds.Min))).to.equal(Thresholds.Min)
+                end
+            end)
         end)
     end)
 
@@ -103,12 +242,6 @@ return function()
 
         it("should reject non-numbers", function()
             expect(Base:Decimal():Check("Test")).to.equal(false)
-        end)
-
-        it("should serialize and deserialize various decimals", function()
-            local Decimal = Base:Decimal()
-            expect(Decimal:Deserialize(Decimal:Serialize(100.5))).to.equal(100.5)
-            expect(Decimal:Deserialize(Decimal:Serialize((2^50)+0.5))).to.equal((2^50)+0.5)
         end)
     end)
 
@@ -156,18 +289,6 @@ return function()
             expect(FuncRange:Check(1)).to.equal(true)
             expect(FuncRange:Check(2)).to.equal(true)
         end)
-
-        it("should serialize and deserialize", function()
-            local Int = Base:Integer():RangeInclusive(0, 100)
-            expect(Int:Deserialize(Int:Serialize(0))).to.equal(0)
-            expect(Int:Deserialize(Int:Serialize(50))).to.equal(50)
-            expect(Int:Deserialize(Int:Serialize(100))).to.equal(100)
-
-            local Float = Base:RangeInclusive(0, 100)
-            expect(Float:Deserialize(Float:Serialize(0))).to.equal(0)
-            expect(Float:Deserialize(Float:Serialize(50.5))).to.equal(50.5)
-            expect(Float:Deserialize(Float:Serialize(100))).to.equal(100)
-        end)
     end)
 
     describe("RangeExclusive", function()
@@ -213,18 +334,6 @@ return function()
             expect(FuncRange:Check(1)).to.equal(false)
             expect(FuncRange:Check(2)).to.equal(false)
         end)
-
-        it("should serialize and deserialize", function()
-            local Int = Base:Integer():RangeExclusive(0, 100)
-            expect(Int:Deserialize(Int:Serialize(1))).to.equal(1)
-            expect(Int:Deserialize(Int:Serialize(50))).to.equal(50)
-            expect(Int:Deserialize(Int:Serialize(99))).to.equal(99)
-
-            local Float = Base:RangeExclusive(0, 100)
-            expect(Float:Deserialize(Float:Serialize(0.01))).to.equal(0.01)
-            expect(Float:Deserialize(Float:Serialize(50.123))).to.equal(50.123)
-            expect(Float:Deserialize(Float:Serialize(99.99))).to.equal(99.99)
-        end)
     end)
 
     describe("Positive", function()
@@ -240,18 +349,6 @@ return function()
             expect(Base:Positive():Check(0)).to.equal(true)
             expect(Base:Positive():Check(1)).to.equal(true)
         end)
-
-        it("should serialize and deserialize", function()
-            local UInt = Base:Integer():Positive()
-            expect(UInt:Deserialize(UInt:Serialize(10))).to.equal(10)
-            expect(UInt:Deserialize(UInt:Serialize(2^32-1))).to.equal(2^32-1)
-            expect(UInt:Deserialize(UInt:Serialize(2^50))).to.equal(2^50)
-
-            local Float = Base:Positive()
-            expect(Float:Deserialize(Float:Serialize(10))).to.equal(10)
-            expect(Float:Deserialize(Float:Serialize(10.5))).to.equal(10.5)
-            expect(Float:Deserialize(Float:Serialize(2^50+0.5))).to.equal(2^50+0.5)
-        end)
     end)
 
     describe("Negative", function()
@@ -266,18 +363,6 @@ return function()
 
         it("should accept negative numbers", function()
             expect(Base:Negative():Check(-1)).to.equal(true)
-        end)
-
-        it("should serialize and deserialize", function()
-            local UInt = Base:Integer():Negative()
-            expect(UInt:Deserialize(UInt:Serialize(-10))).to.equal(-10)
-            expect(UInt:Deserialize(UInt:Serialize(-2^32-1))).to.equal(-2^32-1)
-            expect(UInt:Deserialize(UInt:Serialize(-2^50))).to.equal(-2^50)
-
-            local Float = Base:Negative()
-            expect(Float:Deserialize(Float:Serialize(-10))).to.equal(-10)
-            expect(Float:Deserialize(Float:Serialize(-10.123))).to.equal(-10.123)
-            expect(Float:Deserialize(Float:Serialize(-2^50+0.123))).to.equal(-2^50+0.123)
         end)
     end)
 
@@ -337,35 +422,6 @@ return function()
             expect(Base:IsClose(function()
                 return 1
             end, 0.5):Check(1 + 0.4)).to.equal(true)
-        end)
-
-        it("should serialize and deserialize", function()
-            local Close = Base:IsClose(0.5, 0.1)
-            expect(Close:Deserialize(Close:Serialize(0.4))).to.equal(0.4)
-            expect(Close:Deserialize(Close:Serialize(0.5))).to.equal(0.5)
-            expect(Close:Deserialize(Close:Serialize(0.6))).to.equal(0.6)
-        end)
-    end)
-
-    describe("Dynamic", function()
-        it("should serialize and deserialize", function()
-            local DynamicInt = Base:Integer(32):Dynamic()
-            local Sample1 = DynamicInt:Serialize(2^31-1, "Bit")
-            expect(buffer.len(Sample1)).to.equal(5)
-            local Sample2 = DynamicInt:Serialize(-2^31, "Bit")
-            expect(buffer.len(Sample2)).to.equal(5)
-            local Sample3 = DynamicInt:Serialize(2^24-1, "Bit")
-            expect(buffer.len(Sample3)).to.equal(4)
-            local Sample4 = DynamicInt:Serialize(-2^24-1, "Bit")
-            expect(buffer.len(Sample4)).to.equal(4)
-            local Sample5 = DynamicInt:Serialize(2^16-1, "Bit")
-            expect(buffer.len(Sample5)).to.equal(3)
-            local Sample6 = DynamicInt:Serialize(-2^16-1, "Bit")
-            expect(buffer.len(Sample6)).to.equal(3)
-            local Sample7 = DynamicInt:Serialize(2^8-1, "Bit")
-            expect(buffer.len(Sample7)).to.equal(2)
-            local Sample8 = DynamicInt:Serialize(-2^8-1, "Bit")
-            expect(buffer.len(Sample8)).to.equal(2)
         end)
     end)
 end

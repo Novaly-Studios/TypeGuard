@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Enum
 end
 
@@ -14,8 +14,10 @@ local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local Number = require(script.Parent.Parent.Core.Number)
-local String = require(script.Parent.Parent.Core.String)
+local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
+    local Number = require(Core.Number)
+    local String = require(Core.String)
 
 type EnumTypeChecker = TypeChecker<EnumTypeChecker, Enum | EnumItem> & {
     IsA: ((self: EnumTypeChecker, Type: FunctionalArg<Enum | EnumItem>) -> (EnumTypeChecker));
@@ -82,7 +84,7 @@ end
 
 -- For now, since I can't find any way to find a numerical index for an Enum which won't be re-ordered
 -- over time, thus rendered incompatible with Roblox updates. Nasty oof solution.
-local EnumSerializer = String()
+local EnumSerializer = Cacheable(String())
     local EnumSerializerSerialize = EnumSerializer._Serialize
     local EnumSerializerDeserialize = EnumSerializer._Deserialize
 
@@ -99,10 +101,15 @@ function EnumCheckerClass:_UpdateSerialize()
         -- Enum class is known -> only need to serialize the specific EnumItem.
         if (typeof(IsAValue) == "Enum") then
             return {
-                _Serialize = function(Buffer, Value, Cache)
-                    EnumItemSerializerSerialize(Buffer, Value.Value, Cache)
+                _Serialize = function(Buffer, Value, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Enum(IsA/Enum)")
+
+                    EnumItemSerializerSerialize(Buffer, Value.Value, Context)
+
+                    BufferContext()
                 end;
-                _Deserialize = function(Buffer, Cache)
+                _Deserialize = function(Buffer, Context)
                     return EnumClassToIDToEnumItem[IsAValue][EnumItemSerializerDeserialize(Buffer)]
                 end;
             }
@@ -110,8 +117,12 @@ function EnumCheckerClass:_UpdateSerialize()
 
         -- Or it's literally equivalent to an EnumItem -> this doesn't need to store anything.
         return {
-            _Serialize = function(_Buffer, _Value, _Cache) end;
-            _Deserialize = function(_Buffer, _Cache)
+            _Serialize = function(Buffer, _Value, _Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Enum(IsA/EnumItem)")
+                BufferContext()
+            end;
+            _Deserialize = function(_Buffer, _Context)
                 return IsAValue
             end;
         }
@@ -120,30 +131,35 @@ function EnumCheckerClass:_UpdateSerialize()
     -- No Enum class or EnumItem narrowed down, so it will store a reference to the Enum class (string)
     -- and then a reference to the EnumItem (number).
     return {
-        _Serialize = function(Buffer, Value, Cache)
+        _Serialize = function(Buffer, Value, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Enum")
+
             local IsEnumItem = (typeof(Value) == "EnumItem")
             Buffer.WriteUInt(1, (IsEnumItem and 0 or 1)) -- 0 = EnumItem, 1 = Enum
             
             if (IsEnumItem) then
-                EnumSerializerSerialize(Buffer, tostring(Value.EnumType), Cache)
-                EnumItemSerializerSerialize(Buffer, Value.Value, Cache)
+                EnumSerializerSerialize(Buffer, tostring(Value.EnumType), Context)
+                EnumItemSerializerSerialize(Buffer, Value.Value, Context)
+                BufferContext()
                 return
             end
 
-            EnumSerializerSerialize(Buffer, tostring(Value), Cache)
+            EnumSerializerSerialize(Buffer, tostring(Value), Context)
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, Cache)
+        _Deserialize = function(Buffer, Context)
             local IsEnumItem = (Buffer.ReadUInt(1) == 0)
 
             if (IsEnumItem) then
-                local EnumType = EnumSerializerDeserialize(Buffer, Cache)
+                local EnumType = EnumSerializerDeserialize(Buffer, Context)
                 local EnumItem = EnumItemSerializerDeserialize(Buffer)
 
-                -- Maybe we cash each Enum class to GetEnumItems() call above?
+                -- Maybe we cache each Enum class to GetEnumItems() call above?
                 return EnumClassToIDToEnumItem[Enum[EnumType]][EnumItem]
             end
 
-            return Enum[EnumSerializerDeserialize(Buffer, Cache)]
+            return Enum[EnumSerializerDeserialize(Buffer, Context)]
         end
     }
 end

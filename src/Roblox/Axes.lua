@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Axes
 end
 
@@ -17,20 +17,12 @@ type AxesTypeChecker = TypeChecker<AxesTypeChecker, Axes> & {
 local Core = script.Parent.Parent.Core
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-        local NonSerializedBoolean = Boolean():NonSerialized();
     local Object = require(Core.Object)
 
 local Checker = Object({
-    X = NonSerializedBoolean;
-    Y = NonSerializedBoolean;
-    Z = NonSerializedBoolean;
-
     Front = DefaultBoolean;
-    Back = NonSerializedBoolean;
     Right = DefaultBoolean;
-    Left = NonSerializedBoolean;
     Top = DefaultBoolean;
-    Bottom = NonSerializedBoolean;
 }):Unmap(function(Value)
     return Axes.new(
         Value.Front and Enum.NormalId.Front or nil,
@@ -38,13 +30,13 @@ local Checker = Object({
         Value.Top and Enum.NormalId.Top or nil
     )
 end):Strict():NoConstraints()
---[[ Checker.Type = "Axes"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Axes";
+    Name = "Axes";
     _TypeOf = {"Axes"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Nil
 end
 
@@ -23,7 +23,11 @@ NilCheckerClass._TypeOf = {"nil"}
 
 function NilCheckerClass:_UpdateSerialize()
     return {
-        _Serialize = function(_, _, _) end;
+        _Serialize = function(Buffer, _, _)
+            local BufferContext = Buffer.Context
+            BufferContext("Nil")
+            BufferContext()
+        end;
         _Deserialize = function(_, _)
             return nil
         end;

@@ -1,4 +1,5 @@
 {
+    "emitLegacyScripts": false,
 	"name": "TypeGuard",
 	"tree": {
 		"$className": "DataModel",

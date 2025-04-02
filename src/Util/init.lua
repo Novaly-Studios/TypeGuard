@@ -55,11 +55,11 @@ end
 --- Checks if an object contains the fields which define a TypeChecker from this library.
 function AssertIsTypeBase(Subject: any, Position: number | string)
     ExpectType(Subject, Expect.TABLE, Position)
-    assert(Subject._TC, "Subject is not a TypeChecker.")
+    assert(Subject._TC, "Subject is not a TypeChecker")
 end
 
 -- Helps printing out the simplified structure of constraints and the contents of tables which do not satisfy some constraints.
-local STRUCTURE_STRING_MT = {
+local STRUCTURE_STRING_MT = table.freeze({
     __tostring = function(self)
         local Pairings = {}
 
@@ -69,9 +69,10 @@ local STRUCTURE_STRING_MT = {
 
         return "{" .. ConcatWithToString(Pairings, ", ") .. "}"
     end;
-}
+})
 
-return {
+return table.freeze({
+    HumanReadableSerializer = require(script.HumanReadableSerializer);
     ByteSerializer = require(script.ByteSerializer);
     BitSerializer = require(script.BitSerializer);
 
@@ -83,4 +84,4 @@ return {
     StructureStringMT = STRUCTURE_STRING_MT;
 
     Expect = Expect;
-}
+})

@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Boolean
 end
 
@@ -23,10 +23,13 @@ BooleanClass._TypeOf = {"boolean"}
 
 function BooleanClass:_UpdateSerialize()
     return {
-        _Serialize = function(Buffer, Value, _Cache)
+        _Serialize = function(Buffer, Value, _Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Boolean")
             Buffer.WriteUInt(1, Value and 1 or 0)
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, _Cache)
+        _Deserialize = function(Buffer, _Context)
             return (Buffer.ReadUInt(1) == 1)
         end;
     }

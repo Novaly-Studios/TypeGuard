@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -15,11 +15,12 @@ type RaycastParamsTypeChecker = TypeChecker<RaycastParamsTypeChecker, RaycastPar
 };
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
     local Object = require(Core.Object)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
     local Array = require(Core.Array)
 
 local RbxEnum = require(script.Parent.Enum)
@@ -31,7 +32,7 @@ local Checker = Object({
     FilterDescendantsInstances = Array(RbxInstance);
     BruteForceAllSlow = DefaultBoolean;
     RespectCanCollide = DefaultBoolean;
-    CollisionGroup = DefaultString;
+    CollisionGroup = CacheableString;
     IgnoreWater = DefaultBoolean;
     FilterType = EnumRaycastFilterType;
 }):Unmap(function(Value)
@@ -43,13 +44,13 @@ local Checker = Object({
 
     return Result
 end):Strict():NoConstraints()
---[[ Checker.Type = "RaycastParams"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "RaycastParams";
+    Name = "RaycastParams";
     _TypeOf = {"RaycastParams"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

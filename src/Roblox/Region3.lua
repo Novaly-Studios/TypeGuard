@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Region3
 end
 
@@ -31,13 +31,13 @@ local Checker = Object({
     local Half = Value.Size / 2
     return Region3.new(Center - Half, Center + Half)
 end):Strict():NoConstraints()
---[[ Checker.Type = "Region3"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Region3";
+    Name = "Region3";
     _TypeOf = {"Region3"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

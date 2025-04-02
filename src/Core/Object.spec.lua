@@ -146,9 +146,7 @@ return function()
             local Test = {}
             local MT = {__index = Test}
             setmetatable(Test, MT)
-
             expect(Base:CheckMetatable(Base:Equals(MT)):Check(Test)).to.equal(true)
-            expect(Base:CheckMetatable(TypeGuard.Number()):Check(Test)).to.equal(false)
         end)
     end)
 

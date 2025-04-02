@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.CatalogSearchParams
 end
 
@@ -15,6 +15,7 @@ type CatalogSearchParamsTypeChecker = TypeChecker<CatalogSearchParamsTypeChecker
 };
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Number = require(Core.Number)
         local Float = Number()
         local Int32 = Number():Integer(32)
@@ -22,7 +23,7 @@ local Core = script.Parent.Parent.Core
         local DefaultBoolean = Boolean()
     local Object = require(Core.Object)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
     local Array = require(Core.Array)
 
 local RbxEnum = require(script.Parent.Enum)
@@ -35,7 +36,7 @@ local RbxEnum = require(script.Parent.Enum)
     local EnumCreatorTypeFilter = RbxEnum(Enum.CreatorTypeFilter)
 
 local Checker = Object({
-    SearchKeyword = DefaultString;
+    SearchKeyword = CacheableString;
     MinPrice = Int32;
     MaxPrice = Int32;
     SortType = EnumCatalogSortType;
@@ -45,7 +46,7 @@ local Checker = Object({
     BundleTypes = Array(EnumBundleType);
     AssetTypes = Array(EnumAvatarAssetType);
     IncludeOffSale = DefaultBoolean;
-    CreatorName = DefaultString;
+    CreatorName = CacheableString;
     CreatorType = EnumCreatorTypeFilter;
     CreatorId = Float;
     Limit = Int32;
@@ -67,13 +68,13 @@ local Checker = Object({
     Result.Limit = Value.Limit
     return Result
 end):Strict():NoConstraints()
---[[ Checker.Type = "CatalogSearchParams"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "CatalogSearchParams";
+    Name = "CatalogSearchParams";
     _TypeOf = {"CatalogSearchParams"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

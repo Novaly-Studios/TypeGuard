@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.DateTime
 end
 
@@ -20,18 +20,17 @@ local Core = script.Parent.Parent.Core
     local Object = require(Core.Object)
 
 local Checker = Object({
-    UnixTimestampMillis = DefaultNumber:NonSerialized();
     UnixTimestamp = DefaultNumber;
 }):Unmap(function(Value)
     return DateTime.fromUnixTimestamp(Value.UnixTimestamp)
 end):Strict():NoConstraints()
---[[ Checker.Type = "DateTime"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "DateTime";
+    Name = "DateTime";
     _TypeOf = {"DateTime"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

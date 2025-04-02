@@ -7,7 +7,7 @@ return function()
     local DeepEquals = require(script.Parent.Parent.Core._Equals)
     local GetValues = require(script.Parent.Parent.Core._TestValues)
     local TypeGuard = require(script.Parent.Parent)
-    local Base = TypeGuard.Any
+    local Base = TypeGuard.Any()
 
     describe("Init", function()
         it(`should accept all known Luau and Roblox types`, function()

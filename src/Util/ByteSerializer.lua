@@ -1,7 +1,7 @@
 --!optimize 2
 --!native
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Util.ByteSerializer
 end
 
@@ -31,6 +31,12 @@ local mceil = math.ceil
 local mlog = math.log
 
 local DEFAULT_MIN_SIZE = 16
+
+local function WriteError()
+    error("Attempt to write to read-only ByteSerializer")
+end
+
+local function EmptyFunction() end
 
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
@@ -66,12 +72,14 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
         error("Unimplemented")
     end ]]
 
-    local function WriteError()
-        error("Attempt to write to read-only ByteSerializer")
-    end
-
     local Result = {
+        Context = EmptyFunction;
+
         WriteUInt = ReadOnly and WriteError or function(Bits: number, Value: number)
+            if (Bits == 0) then
+                return
+            end
+
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwriteu8 or Bytes == 2 and bwriteu16 or bwriteu32)
@@ -79,6 +87,10 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             Position += Bytes
         end;
         ReadUInt = function(Bits: number): number
+            if (Bits == 0) then
+                return 0
+            end
+
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             local Reader = (Bytes == 1 and breadu8 or Bytes == 2 and breadu16 or breadu32)
             local Value = Reader(Buffer, Position)
@@ -87,6 +99,10 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
         end;
 
         WriteInt = ReadOnly and WriteError or function(Bits: number, Value: number)
+            if (Bits == 0) then
+                return
+            end
+
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwritei8 or Bytes == 2 and bwritei16 or bwritei32)
@@ -94,6 +110,10 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             Position += Bytes
         end;
         ReadInt = function(Bits: number): number
+            if (Bits == 0) then
+                return 0
+            end
+
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
             local Reader = (Bytes == 1 and breadi8 or Bytes == 2 and breadi16 or breadi32)
             local Value = Reader(Buffer, Position)
@@ -102,6 +122,10 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
         end;
 
         WriteFloat = ReadOnly and WriteError or function(Bits: number, Value: number)
+            if (Bits == 0) then
+                return
+            end
+
             local Bytes = (Bits < 33 and 4 or 8)
             CheckResize(Bytes)
             local Writer = (Bytes == 4 and bwritef32 or bwritef64)
@@ -109,6 +133,10 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             Position += Bytes
         end;
         ReadFloat = function(Bits: number): number
+            if (Bits == 0) then
+                return 0
+            end
+
             local Bytes = (Bits < 33 and 4 or 8)
             local Reader = (Bytes == 4 and breadf32 or breadf64)
             local Result = Reader(Buffer, Position)
@@ -117,12 +145,20 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
         end;
 
         WriteString = ReadOnly and WriteError or function(String: string, Length: number)
+            if (Length == 0) then
+                return
+            end
+
             local Bytes = mceil(Length / 8)
             CheckResize(Bytes)
             bwritestring(Buffer :: buffer, Position, String, Bytes)
             Position += Bytes
         end;
         ReadString = function(Length: number): string
+            if (Length == 0) then
+                return ""
+            end
+
             local Bytes = mceil(Length / 8)
             local Result = breadstring(Buffer :: buffer, Position, Bytes)
             Position += Bytes
@@ -143,6 +179,8 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             return Buffer :: buffer
         end;
         GetClippedBuffer = GetClippedBuffer;
+
+        Type = "Byte";
     }
 
     --[[ for Key, Value in Result do

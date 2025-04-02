@@ -1,31 +1,27 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Any
 end
 
-local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
-    local ArrayMerge = TableUtil.Array.Merge
-    local MergeDeep = TableUtil.Map.MergeDeep
+local AnyConstructor = require(script.Parent.Parent.Core._AnyConstructor)
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Function = require(Core.Function)
     local Userdata = require(Core.Userdata)
     local Boolean = require(Core.Boolean)
     local Number = require(Core.Number)
     local String = require(Core.String)
-    local Object = require(Core.Object)
     local Thread = require(Core.Thread)
     local Buffer = require(Core.Buffer)
-    local Array = require(Core.Array)
-    local Or = require(Core.Or)
 
 local Roblox = script.Parent
     local RbxBrickColor = require(Roblox.BrickColor)
         local DefaultBrickColor = RbxBrickColor()
     local RbxCFrame = require(Roblox.CFrame)
-        local DefaultCFrame = RbxCFrame()
+        local DefaultCFrame = RbxCFrame():Compressed(1024)
     local RbxColor3 = require(Roblox.Color3)
         local DefaultColor3 = RbxColor3()
     local RbxColorSequence = require(Roblox.ColorSequence)
@@ -35,7 +31,7 @@ local Roblox = script.Parent
     local RbxEnum = require(Roblox.Enum)
         local DefaultEnum = RbxEnum()
     local RbxInstance = require(Roblox.Instance)
-        local DefaultInstance = RbxInstance()
+        local CacheableInstance = Cacheable(RbxInstance())
     local RbxNumberSequence = require(Roblox.NumberSequence)
         local DefaultNumberSequence = RbxNumberSequence()
     local RbxNumberSequenceKeypoint = require(Roblox.NumberSequenceKeypoint)
@@ -85,34 +81,34 @@ local Roblox = script.Parent
     local RbxRotationCurveKey = require(Roblox.RotationCurveKey)
         local DefaultRotationCurveKey = RbxRotationCurveKey()
 
-local UInt8 = Number():Integer(8, true)
-local Int8 = Number():Integer(8, false)
-local UInt16 = Number():Integer(16, true)
-local Int16 = Number():Integer(16, false)
-local UInt32 = Number():Integer(32, true)
-local Int32 = Number():Integer(32, false)
+local UInt8 = Number():Integer(8, false)
+local NUInt8 = UInt8:Negative()
+local UInt16 = Number():Integer(16, false)
+local NUInt16 = UInt16:Negative()
+local UInt32 = Number():Integer(32, false)
+local NUInt32 = UInt32:Negative()
 local Float32 = Number():Float(32)
 local Float = Number()
 local DefaultFunction = Function()
 local DefaultUserdata = Userdata()
 local DefaultBoolean = Boolean()
-local DefaultString = String()
+local CacheableString = Cacheable(String())
 local DefaultThread = Thread()
 local DefaultBuffer = Buffer()
 
 local Types = {
     -- Numbers
     UInt8;
-    Int8;
+    NUInt8;
     UInt16;
-    Int16;
+    NUInt16;
     UInt32;
-    Int32;
+    NUInt32;
     Float32;
     Float;
 
     -- Common Strings
-    DefaultString;
+    CacheableString;
 
     -- Misc
     DefaultBoolean;
@@ -124,7 +120,7 @@ local Types = {
     DefaultColorSequence;
     DefaultColorSequenceKeypoint;
     DefaultEnum;
-    DefaultInstance;
+    CacheableInstance;
     DefaultNumberSequence;
     DefaultNumberSequenceKeypoint;
     DefaultRay;
@@ -157,160 +153,58 @@ local Types = {
     DefaultThread;
 }
 
-local TypeToIndex = {}
-for Index, Type in Types do
-    --[[ Types[Index] = Type:_MapCheckers(function(Checker)
-        if (Checker.Type ~= "Instance") then
-            return Checker
-        end
-
-        return Checker:Reference("NetSync")
-    end, true) ]]
-
-    for _, TypeOf in Type._TypeOf do
-        TypeToIndex[TypeOf] = Index
-    end
-end
-
-local DefaultObjectIndex
-local DefaultArrayIndex
 local UInt8Index = table.find(Types, UInt8)
-local Int8Index = table.find(Types, Int8)
+local NUInt8Index = table.find(Types, NUInt8)
 local UInt16Index = table.find(Types, UInt16)
-local Int16Index = table.find(Types, Int16)
+local NUInt16Index = table.find(Types, NUInt16)
 local UInt32Index = table.find(Types, UInt32)
-local Int32Index = table.find(Types, Int32)
+local NUInt32Index = table.find(Types, NUInt32)
 local Float32Index = table.find(Types, Float32)
 local FloatIndex = table.find(Types, Float)
 
-local Any = table.clone(Or(unpack(Types)):DefineGetType(function(Value)
-    local ValueType = typeof(Value)
-
+local function GetType(Value: any, ValueType: string): number?
     if (ValueType == "number") then
         if (Value % 1 == 0) then
-            if (Value >= 0) then
-                if (Value <= 0xFF) then
-                    return UInt8Index
+            if (Value < 0) then
+                if (Value > -0x101) then
+                    return NUInt8Index
                 end
-
-                if (Value <= 0xFFFF) then
-                    return UInt16Index
+    
+                if (Value > -0x10001) then
+                    return NUInt16Index
                 end
-
-                if (Value <= 0xFFFFFFFF) then
-                    return UInt32Index
+    
+                if (Value > -0x100000001) then
+                    return NUInt32Index
                 end
-
-                error(`Unsigned integer cannot be represented: {Value}`)
+    
+                -- Not Float32 because that only stays stable up to -2^24 and this check is already at -2^32.
+                return FloatIndex
             end
 
-            if (Value >= -0x80) then
-                return Int8Index
+            if (Value < 0x100) then
+                return UInt8Index
             end
 
-            if (Value >= -0x8000) then
-                return Int16Index
+            if (Value < 0x10000) then
+                return UInt16Index
             end
 
-            if (Value >= -0x80000000) then
-                return Int32Index
+            if (Value < 0x100000000) then
+                return UInt32Index
             end
 
-            error(`Signed integer cannot be represented: {Value}`)
+            return FloatIndex
         end
 
-        if (Value <= 3.402823466e+38) then
-            return Float32Index
+        if (Value > 3.402823466e+38) then
+            return FloatIndex
         end
 
-        return FloatIndex
+        return Float32Index
     end
 
-    if (ValueType == "table" or ValueType == "SharedTable") then
-        if (Value[1] == nil) then
-            return DefaultObjectIndex
-        end
-
-        return DefaultArrayIndex
-    end
-
-    local Index = TypeToIndex[ValueType]
-
-    if (Index) then
-        return Index
-    end
-
-    error(`Unhandled type: {ValueType}`)
-end))
-
--- Self-reference / recursive (object or array of type Any). Can't copy the root table.
-local function Setup()
-    if (Any._Setup) then
-        return
-    end
-    Any._Setup = true
-
-    local DefaultArray = Array(Any)
-    local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
-    local _, Index = Any:GetConstraint("IsATypeIn")
-    Any._ActiveConstraints = MergeDeep(Any._ActiveConstraints, {
-        [Index] = {
-            Args = {
-                [1] = function(ExistingArgs)
-                    return ArrayMerge(ExistingArgs, {DefaultArray, DefaultObject})
-                end;
-            };
-        };
-    }, true)
-
-    local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
-    DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
-    DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
-    Any:_UpdateSerializeFunctionCache()
-    table.freeze(Any)
+    return nil
 end
 
--- We wrap Serialize and Deserialize to avoid immediate cyclic requires. Some other modules
--- require BaseAny while BaseAny also requires them, we can instead run the require setup when
--- these functions are called.
-local OriginalSerialize = Any.Serialize
-Any.Serialize = function(...)
-    Setup()
-    return OriginalSerialize(...)
-end
-
-local OriginalDeserialize = Any.Deserialize
-Any.Deserialize = function(...)
-    Setup()
-    return OriginalDeserialize(...)
-end
-
--- Avoid recursive tostring weirdness.
-local NewMT = table.clone(getmetatable(Any))
-NewMT.__tostring = function()
-    return "Any()"
-end
-setmetatable(Any, NewMT)
-
--- Disallow all constraints or functions which would copy the root, as that will break the self-reference to Any.
-local AllowFunctions = {"Check", "Assert", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "GetConstraint", "_Serialize", "_Deserialize", "_Check", "_Initial", "_UpdateSerializeFunctionCache"}
-for Key, Value in Any do
-    if (type(Value) ~= "function") then
-        continue
-    end
-
-    if (table.find(AllowFunctions, Key)) then
-        continue
-    end
-
-    Any[Key] = nil
-end
-
-return Any :: {
-    Deserialize: ((Buffer: buffer, Cache: any?) -> (any));
-    AsPredicate: (() -> ((Value: any) -> (boolean)));
-    Serialize: ((Value: any, Atom: string?, BypassCheck: boolean?, Cache: any?) -> (buffer));
-    AsAssert: (() -> ((Value: any) -> ()));
-    Assert: ((Value: any) -> ());
-    Check: ((Value: any) -> (boolean));
-}
+return AnyConstructor(Types, GetType, "Any")

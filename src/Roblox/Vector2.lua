@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Vector2
 end
 
@@ -25,13 +25,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return Vector2.new(Value.X, Value.Y)
 end):Strict():NoConstraints()
---[[ Checker.Type = "Vector2"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Vector2";
+    Name = "Vector2";
     _TypeOf = {"Vector2"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

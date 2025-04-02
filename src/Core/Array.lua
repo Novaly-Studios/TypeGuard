@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Array
 end
 
@@ -16,6 +16,9 @@ local Util = require(script.Parent.Parent.Util)
     local AssertIsTypeBase = Util.AssertIsTypeBase
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
+
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
+    local Merge = TableUtil.Map.Merge
 
 local Number = require(script.Parent.Number)
 
@@ -309,43 +312,50 @@ end
 
 ArrayClass.InitialConstraint = ArrayClass.OfType
 
-local DynamicUInt = Number():Integer():Positive():Dynamic() -- Number(0, 2^16-1):Integer()
+local DynamicUInt = Number():Integer(32, false):Positive():Dynamic()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
 function ArrayClass:_UpdateSerialize()
+    local HasFunctionalConstraints = self:_HasFunctionalConstraints()
     local IsFrozen = self:GetConstraint("IsFrozen")
     local Type = self:GetConstraint("OfType")
-    local HasFunctionalConstraints = self:_HasFunctionalConstraints()
+    local Any
 
     if (HasFunctionalConstraints or not Type) then
-        local AnySerialize, AnyDeserialize
-
         return {
-            _Serialize = function(Buffer, Array, Cache)
-                if (not AnySerialize) then
-                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                    AnySerialize = Any._Serialize
-                    Any:Serialize(1) -- Initialize Any.
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Array(Any)")
+
+                local Serialize = (Context and Context.AnySerialize or nil)
+
+                if (Serialize == nil) then
+                    Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)())
+                        Serialize = Any._Serialize
+
+                    Context = Merge(Context or {}, {
+                        AnySerialize = Serialize;
+                    })
                 end
 
-                AnySerialize(Buffer, Array, Cache)
+                Serialize(Buffer, Value, Context)
+
+                BufferContext()
             end;
+            _Deserialize = function(Buffer, Context)
+                local Deserialize = (Context and Context.AnyDeserialize or nil)
 
-            _Deserialize = function(Buffer, Array, Cache)
-                if (not AnyDeserialize) then
-                    local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                    AnyDeserialize = Any._Deserialize
-                    Any:Serialize(1) -- Initialize Any.
+                if (Deserialize == nil) then
+                    Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)())
+                        Deserialize = Any._Deserialize
+
+                    Context = Merge(Context or {}, {
+                        AnyDeserialize = Deserialize;
+                    })
                 end
 
-                local Value = AnyDeserialize(Buffer, Array, Cache)
-
-                if (IsFrozen) then
-                    table.freeze(Value)
-                end
-
-                return Value
+                return Deserialize(Buffer, Context)
             end;
         }
     end
@@ -363,17 +373,29 @@ function ArrayClass:_UpdateSerialize()
 
         if (MinLengthValue == MaxLengthValue) then
             return {
-                _Serialize = function(Buffer, Array, Cache)
+                _Serialize = function(Buffer, Array, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Array(OfType, FixedLength)")
+
                     for _, Value in Array do
-                        Serializer(Buffer, Value, Cache)
+                        Serializer(Buffer, Value, Context)
                     end
+
+                    BufferContext()
                 end;
 
-                _Deserialize = function(Buffer, Cache)
+                _Deserialize = function(Buffer, Context)
                     local Array = table.create(MaxLengthValue)
 
+                    local CaptureInto = (Context and Context.CaptureInto or nil)
+                    if (CaptureInto) then
+                        CaptureInto[Context.CaptureValue] = Array
+                        Context = table.clone(Context)
+                        Context.CaptureInto = nil
+                    end
+
                     for Index = 1, MaxLengthValue do
-                        Array[Index] = Deserializer(Buffer, Cache)
+                        Array[Index] = Deserializer(Buffer, Context)
                     end
 
                     if (IsFrozen) then
@@ -390,19 +412,31 @@ function ArrayClass:_UpdateSerialize()
             local NumberSerialize = NumberSerializer._Serialize
 
         return {
-            _Serialize = function(Buffer, Array, Cache)
-                NumberSerialize(Buffer, #Array, Cache)
+            _Serialize = function(Buffer, Array, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Array(OfType, MinLength, MaxLength)")
+
+                NumberSerialize(Buffer, #Array, Context)
 
                 for _, Value in Array do
-                    Serializer(Buffer, Value, Cache)
+                    Serializer(Buffer, Value, Context)
                 end
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                local Size = NumberDeserialize(Buffer, Cache)
+            _Deserialize = function(Buffer, Context)
+                local Size = NumberDeserialize(Buffer, Context)
                 local Array = table.create(Size)
 
+                local CaptureInto = (Context and Context.CaptureInto or nil)
+                if (CaptureInto) then
+                    CaptureInto[Context.CaptureValue] = Array
+                    Context = table.clone(Context)
+                    Context.CaptureInto = nil
+                end
+
                 for Index = 1, Size do
-                    Array[Index] = Deserializer(Buffer, Cache)
+                    Array[Index] = Deserializer(Buffer, Context)
                 end
 
                 if (IsFrozen) then
@@ -415,19 +449,31 @@ function ArrayClass:_UpdateSerialize()
     end
 
     return {
-        _Serialize = function(Buffer, Array, Cache)
-            DynamicUIntSerialize(Buffer, #Array, Cache)
+        _Serialize = function(Buffer, Array, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Array(OfType)")
+
+            DynamicUIntSerialize(Buffer, #Array, Context)
 
             for _, Value in Array do
-                Serializer(Buffer, Value, Cache)
+                Serializer(Buffer, Value, Context)
             end
+
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, Cache)
-            local Size = DynamicUIntDeserialize(Buffer, Cache)
+        _Deserialize = function(Buffer, Context)
+            local Size = DynamicUIntDeserialize(Buffer, Context)
             local Array = table.create(Size)
 
+            local CaptureInto = (Context and Context.CaptureInto or nil)
+            if (CaptureInto) then
+                CaptureInto[Context.CaptureValue] = Array
+                Context = table.clone(Context)
+                Context.CaptureInto = nil
+            end
+
             for Index = 1, Size do
-                Array[Index] = Deserializer(Buffer, Cache)
+                Array[Index] = Deserializer(Buffer, Context)
             end
 
             if (IsFrozen) then

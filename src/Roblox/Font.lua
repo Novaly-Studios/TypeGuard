@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Font
 end
 
@@ -15,11 +15,12 @@ type FontTypeChecker = TypeChecker<FontTypeChecker, Font> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Cacheable = require(Core.Cacheable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
     local Object = require(Core.Object)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
 
 local RbxEnum = require(script.Parent.Enum)
     local EnumFontWeight = RbxEnum(Enum.FontWeight)
@@ -27,7 +28,7 @@ local RbxEnum = require(script.Parent.Enum)
 
 local Checker = Object({
     Weight = EnumFontWeight;
-    Family = DefaultString;
+    Family = CacheableString;
     Style = EnumFontStyle;
     Bold = DefaultBoolean;
 }):Unmap(function(Value)
@@ -35,13 +36,13 @@ local Checker = Object({
     Result.Bold = Value.Bold
     return Result
 end):Strict():NoConstraints()
---[[ Checker.Type = "Font"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "Font";
+    Name = "Font";
     _TypeOf = {"Font"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

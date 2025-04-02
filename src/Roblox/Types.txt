@@ -22,8 +22,8 @@ PhysicalProperties [x]
 Ray [x]
 RaycastParams [x]
 RaycastResult [no constructor]
-RBXScriptConnection
-RBXScriptSignal
+RBXScriptConnection [x]
+RBXScriptSignal [x]
 Rect [x]
 Region3 [x]
 Region3int16

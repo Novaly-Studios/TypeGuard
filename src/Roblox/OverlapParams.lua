@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -15,13 +15,14 @@ type OverlapParamsTypeChecker = TypeChecker<OverlapParamsTypeChecker, OverlapPar
 };
 
 local Core = script.Parent.Parent.Core
-    local Number = require(Core.Number)
-        local Int32 = Number():Integer(32)
+    local Cacheable = require(Core.Cacheable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
+    local Number = require(Core.Number)
+        local Int32 = Number():Integer(32)
     local Object = require(Core.Object)
     local String = require(Core.String)
-        local DefaultString = String()
+        local CacheableString = Cacheable(String())
     local Array = require(Core.Array)
 
 local RbxEnum = require(script.Parent.Enum)
@@ -33,7 +34,7 @@ local Checker = Object({
     FilterDescendantsInstances = Array(RbxInstance);
     BruteForceAllSlow = DefaultBoolean;
     RespectCanCollide = DefaultBoolean;
-    CollisionGroup = DefaultString;
+    CollisionGroup = CacheableString;
     FilterType = EnumRaycastFilterType;
     MaxParts = Int32;
 }):Unmap(function(Value)
@@ -45,13 +46,13 @@ local Checker = Object({
 
     return Result
 end):Strict():NoConstraints()
---[[ Checker.Type = "OverlapParams"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "OverlapParams";
+    Name = "OverlapParams";
     _TypeOf = {"OverlapParams"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

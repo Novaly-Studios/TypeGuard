@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.NumberRange
 end
 
@@ -23,13 +23,13 @@ local Checker = Object({
 }):Unmap(function(Value)
     return NumberRange.new(Value.Min, Value.Max)
 end):Strict():NoConstraints()
---[[ Checker.Type = "NumberRange"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "NumberRange";
+    Name = "NumberRange";
     _TypeOf = {"NumberRange"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

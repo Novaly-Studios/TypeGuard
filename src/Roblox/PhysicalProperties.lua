@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.Ray
 end
 
@@ -33,13 +33,13 @@ local Checker = Object({
         Value.ElasticityWeight
     )
 end):Strict():NoConstraints()
---[[ Checker.Type = "PhysicalProperties"
-Checker._TypeOf = {Checker.Type} ]]
 
 Checker = Checker:Modify({
-    Type = "PhysicalProperties";
+    Name = "PhysicalProperties";
     _TypeOf = {"PhysicalProperties"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

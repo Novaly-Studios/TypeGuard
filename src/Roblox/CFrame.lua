@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Roblox.CFrame
 end
 
@@ -59,8 +59,6 @@ end):UnmapStructure(function(Value)
         Value.R20, Value.R21, Value.R22
     )
 end):Strict():NoConstraints()
---[[ Checker.Type = "CFrame"
-Checker._TypeOf = {Checker.Type} ]]
 
 function Checker:Compressed(Clicks)
     Clicks = Clicks or 256
@@ -105,9 +103,11 @@ function Checker:Compressed(Clicks)
 end
 
 Checker = Checker:Modify({
-    Type = "CFrame";
+    Name = "CFrame";
     _TypeOf = {"CFrame"};
 })
+
+table.freeze(Checker)
 
 return function()
     return Checker

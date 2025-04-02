@@ -2,7 +2,7 @@
 --!nonstrict
 --!optimize 2
 
-if (not script) then
+if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Object
 end
 
@@ -19,6 +19,7 @@ local Util = require(script.Parent.Parent.Util)
 
 local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
     local MergeDeep = TableUtil.Map.MergeDeep
+    local Merge = TableUtil.Map.Merge
 
 local Number = require(script.Parent.Number)
 
@@ -44,15 +45,19 @@ export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
 
 -- Todo: move arrays support into this?
 
-local Indexable: (<Structure>(Structure: Structure?) -> (IndexableTypeChecker)), IndexableClass = Template.Create("Structure")
+type Constructor = ((Structure: SignatureTypeChecker?) -> (IndexableTypeChecker)) & -- OfStructure
+                   ((KeyType: SignatureTypeChecker, ValueType: SignatureTypeChecker?) -> (IndexableTypeChecker)) -- OfKeyType, OfValueType
+
+local Indexable: Constructor, IndexableClass = Template.Create("Structure")
+IndexableClass._Indexable = true
 IndexableClass._TypeOf = {"table"}
-IndexableClass.Type = "table"
+IndexableClass.Name = "table"
 
 function IndexableClass:_Initial(TargetStructure)
     local Type = typeof(TargetStructure)
 
     -- Some structures are userdata & typeof will report their name directly. Serializers will overwrite 'Type' with the name.
-    local ExpectedType = self.Type
+    local ExpectedType = self.Name
 
     if (Type == ExpectedType) then
         return true
@@ -98,10 +103,10 @@ function IndexableClass:OfStructure(SubTypes)
     return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypes)
 end
 
-local function _OfValueType(_, TargetArray, SubType)
+local function _OfValueType(_, Target, SubType)
     local Check = SubType._Check
 
-    for Index, Value in TargetArray do
+    for Index, Value in Target do
         local Success, SubMessage = Check(SubType, Value)
         if (not Success) then
             return false, `[OfValueType: Key '{Index}'] {SubMessage}`
@@ -120,10 +125,10 @@ function IndexableClass:OfValueType(SubType)
     return self:_AddConstraint(true, "OfValueType", _OfValueType, SubType)
 end
 
-local function _OfKeyType(_, TargetArray, SubType)
+local function _OfKeyType(_, Target, SubType)
     local Check = SubType._Check
 
-    for Key in TargetArray do
+    for Key in Target do
         local Success, SubMessage = Check(SubType, Key)
 
         if (not Success) then
@@ -203,6 +208,14 @@ end
 --- Checks an object's metatable.
 function IndexableClass:CheckMetatable(Checker)
     AssertIsTypeBase(Checker, 1)
+    assert(
+        (
+            Checker:GetConstraint("IsAValueIn") or
+            Checker:GetConstraint("IsAKeyIn") or
+            Checker:GetConstraint("Equals")
+        ),
+        "Checker must have IsAValueIn, IsAKeyIn, or Equals defined"
+    )
 
     return self:_AddConstraint(false, "CheckMetatable", _CheckMetatable, Checker)
 end
@@ -297,13 +310,20 @@ function IndexableClass:MaxSize(MaxSize)
     return self:_AddConstraint(true, "MaxSize", _MaxSize, MaxSize)
 end
 
-local Original = IndexableClass._MapCheckers
-function IndexableClass:_MapCheckers(Type, Mapper, Recursive)
+local Original = IndexableClass.RemapDeep
+function IndexableClass:RemapDeep(Type, Mapper, Recursive)
     local Copy = Original(self, Type, Mapper, Recursive)
         local MapStructure = Copy._MapStructure
 
-    if (MapStructure and Recursive and MapStructure[1]._MapCheckers) then
-        MapStructure[1] = MapStructure[1]:_MapCheckers(Type, Mapper, true)
+    -- Todo: change to Modify?
+    if (MapStructure and Recursive and MapStructure[1].RemapDeep) then
+        Copy = Copy:Modify({
+            _MapStructure = {
+                [1] = function(Value)
+                    return Mapper(Value:RemapDeep(Type, Mapper, Recursive))
+                end;
+            }
+        })
     end
 
     return Copy
@@ -390,6 +410,9 @@ function IndexableClass:GroupKV()
     })
 end
 
+local function EmptyFunction()
+end
+
 function IndexableClass:_UpdateSerialize()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
 
@@ -407,66 +430,111 @@ function IndexableClass:_UpdateSerialize()
         return Value
     end)
 
-    local AnySerialize, AnyDeserialize
+    local CheckMetatable = self:GetConstraint("CheckMetatable")
+        local CheckMetatableValue = (CheckMetatable and CheckMetatable[1])
+            local CheckMetatableSerialize = (CheckMetatableValue and CheckMetatableValue._Serialize)
+            local CheckMetatableDeserialize = (CheckMetatableValue and CheckMetatableValue._Deserialize)
+
+    local function SerializeMetaProperties(Buffer, Value, Context)
+        -- 0 = not a table.
+        -- 1 = table + frozen.
+        -- 2 = table + not frozen.
+        -- 3 = hopefully Luau adds no more hidden table attributes but if it does, can be used to signify a forward-compatible extension. 
+        local IsTable = (type(Value) == "table")
+
+        if (IsTable) then
+            Buffer.WriteUInt(2, table.isfrozen(Value) and 1 or 2)
+
+            if (CheckMetatableSerialize) then
+                CheckMetatableSerialize(Buffer, getmetatable(Value), Context)
+            end
+        else
+            Buffer.WriteUInt(2, 0)
+        end
+    end
+
+    local function DeserializeMetaProperties(Buffer, Indexable, Context)
+        local Tag = Buffer.ReadUInt(2)
+
+        if (Tag > 0) then
+            local Metatable = (CheckMetatableDeserialize and CheckMetatableDeserialize(Buffer, Context, Indexable))
+    
+            if (Metatable) then
+                setmetatable(Indexable, Metatable)
+            end
+    
+            if (Tag == 1) then
+                table.freeze(Indexable)
+            end
+        end
+    end
+
+    local Any
+
     local AnySerializeDeserialize = {
-        _Serialize = function(Buffer, Value, Cache)
+        _Serialize = function(Buffer, Value, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Object(Any)")
+
             if (MapStructureFunction) then
                 Value = MapStructureFunction(Value)
             end
 
-            if (not AnySerialize) then
-                local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                AnySerialize = Any._Serialize
-                Any:Serialize(1) -- Initialize Any.
+            local Serialize = (Context and Context.AnySerialize or nil)
+
+            if (Serialize == nil) then
+                Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)(CheckMetatableValue or nil))
+                    Serialize = Any._Serialize
+
+                Context = Merge(Context or {}, {
+                    AnySerialize = Serialize;
+                })
             end
 
-            AnySerialize(Buffer, Value, Cache)
+            Serialize(Buffer, Value, Context)
+            SerializeMetaProperties(Buffer, Value, Context)
+
+            BufferContext()
         end;
+        _Deserialize = function(Buffer, Context)
+            local Deserialize = (Context and Context.AnyDeserialize or nil)
 
-        _Deserialize = function(Buffer, Value, Cache)
-            if (not AnyDeserialize) then
-                local Any = require(script.Parent.Parent.Roblox.Any) :: any
-                AnyDeserialize = Any._Deserialize
-                Any:Serialize(1) -- Initialize Any.
+            if (Deserialize == nil) then
+                Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)(CheckMetatableValue or nil))
+                    Deserialize = Any._Deserialize
+
+                Context = Merge(Context or {}, {
+                    AnyDeserialize = Deserialize;
+                })
             end
 
-            local Result = AnyDeserialize(Buffer, Value, Cache)
+            local Result
 
-            if (UnmapStructureFunction) then
-                Result = UnmapStructureFunction(Result)
+            if (Deserialize) then
+                local Temp = Deserialize(Buffer, Context)
+                Result = (UnmapStructureFunction and UnmapStructureFunction(Temp) or Temp)
             end
 
+            DeserializeMetaProperties(Buffer, Result, Context)
             return Result
         end;
     }
 
     if (HasFunctionalConstraints or not (((MapStructure and MapStructure[1] and MapStructure[1]._Strict)) or (OfStructure and Strict) or (OfValueType and OfKeyType))) then
+        DeserializeMetaProperties = EmptyFunction
+        SerializeMetaProperties = EmptyFunction
         return AnySerializeDeserialize
-    end
-
-    local OfClass = self:GetConstraint("OfClass")
-        local OfClassValue = OfClass and OfClass[1]
-
-    local function ApplyClass(Target)
-        if (not OfClassValue) then
-            return Target
-        end
-
-        return setmetatable(Target, OfClassValue)
     end
 
     if (OfStructure or MapStructure) then
         local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
-        local HasSingleType = true
-        local CommonType = typeof((next(StructureDefinition)))
+        local IndexToKey = {}
 
         for Key in StructureDefinition do
-            HasSingleType = (CommonType == typeof(Key))
-
-            if (not HasSingleType) then
-                break
-            end
+            table.insert(IndexToKey, Key)
         end
+
+        local KeysSortable = pcall(table.sort, IndexToKey)
 
         local KeyToSerializeFunction = table.clone(StructureDefinition)
         for Key, Value in StructureDefinition do
@@ -478,37 +546,44 @@ function IndexableClass:_UpdateSerialize()
             KeyToDeserializeFunction[Key] = Value._Deserialize
         end
 
-        if (HasSingleType and CommonType == "string") then
-            local IndexToKey = {}
-
-            for Key in StructureDefinition do
-                table.insert(IndexToKey, Key)
-            end
-
-            table.sort(IndexToKey)
-
+        if (KeysSortable) then
             return {
-                _Serialize = function(Buffer, Value, Cache)
+                _Serialize = function(Buffer, Value, Context)
+                    local BufferContext = Buffer.Context
+                    BufferContext("Object(Unambiguous)")
+
                     if (MapStructureFunction) then
                         Value = MapStructureFunction(Value)
                     end
 
                     for _, Key in IndexToKey do
-                        KeyToSerializeFunction[Key](Buffer, Value[Key], Cache)
+                        KeyToSerializeFunction[Key](Buffer, Value[Key], Context)
                     end
+
+                    SerializeMetaProperties(Buffer, Value, Context)
+
+                    BufferContext()
                 end;
-                _Deserialize = function(Buffer, Cache)
+                _Deserialize = function(Buffer, Context)
                     local Result = {}
 
+                    local CaptureInto = (Context and Context.CaptureInto or nil)
+                    if (CaptureInto) then
+                        CaptureInto[Context.CaptureValue] = Result
+                        Context = table.clone(Context)
+                        Context.CaptureInto = nil
+                    end
+
                     for _, Key in IndexToKey do
-                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Cache)
+                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Context)
                     end
 
                     if (UnmapStructureFunction) then
                         Result = UnmapStructureFunction(Result)
                     end
 
-                    return ApplyClass(Result)
+                    DeserializeMetaProperties(Buffer, Result, Context)
+                    return Result
                 end;
             }
         end
@@ -526,7 +601,7 @@ function IndexableClass:_UpdateSerialize()
         local KeySerialize = OfKeyTypeChecker._Serialize
 
     local MaxSize = self:GetConstraint("MaxSize")
-    local SizeSerializer = (MaxSize and Number(0, MaxSize[1]):Integer() or Number():Integer():Positive():Dynamic())
+    local SizeSerializer = (MaxSize and Number(0, MaxSize[1]):Integer() or Number():Integer(32, false):Positive():Dynamic())
         local SizeSerialize = SizeSerializer._Serialize
         local SizeDeserialize = SizeSerializer._Deserialize
 
@@ -534,7 +609,10 @@ function IndexableClass:_UpdateSerialize()
 
     if (GroupKV) then
         return {
-            _Serialize = function(Buffer, Value, Cache)
+            _Serialize = function(Buffer, Value, Context)
+                local BufferContext = Buffer.Context
+                BufferContext("Object(GroupKV, OfKeyType, OfValueType)")
+
                 if (MapStructureFunction) then
                     Value = MapStructureFunction(Value)
                 end
@@ -545,42 +623,58 @@ function IndexableClass:_UpdateSerialize()
                     Length += 1
                 end
 
-                SizeSerialize(Buffer, Length, Cache)
+                SizeSerialize(Buffer, Length, Context)
 
                 for Key in Value do
-                    KeySerialize(Buffer, Key, Cache)
+                    KeySerialize(Buffer, Key, Context)
                 end
 
                 for _, Value in Value do
-                    ValueSerialize(Buffer, Value, Cache)
+                    ValueSerialize(Buffer, Value, Context)
                 end
+
+                SerializeMetaProperties(Buffer, Value, Context)
+
+                BufferContext()
             end;
-            _Deserialize = function(Buffer, Cache)
-                local Size = SizeDeserialize(Buffer, Cache)
-                local IndexToKey = table.create(Size)
+            _Deserialize = function(Buffer, Context)
                 local Result = {}
 
+                local CaptureInto = (Context and Context.CaptureInto or nil)
+                if (CaptureInto) then
+                    CaptureInto[Context.CaptureValue] = Result
+                    Context = table.clone(Context)
+                    Context.CaptureInto = nil
+                end
+
+                local Size = SizeDeserialize(Buffer, Context)
+                local IndexToKey = table.create(Size)
+
                 for Index = 1, Size do
-                    local Key = KeyDeserialize(Buffer, Cache)
+                    local Key = KeyDeserialize(Buffer, Context)
                     IndexToKey[Index] = Key
                     Result[Key] = true
                 end
 
                 for Index = 1, Size do
-                    Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Cache)
+                    Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Context)
                 end
 
                 if (UnmapStructureFunction) then
                     Result = UnmapStructureFunction(Result)
                 end
 
-                return ApplyClass(Result)
+                DeserializeMetaProperties(Buffer, Result, Context)
+                return Result
             end;
         }
     end
 
     return {
-        _Serialize = function(Buffer, Value, Cache)
+        _Serialize = function(Buffer, Value, Context)
+            local BufferContext = Buffer.Context
+            BufferContext("Object(OfKeyType, OfValueType)")
+
             if (MapStructureFunction) then
                 Value = MapStructureFunction(Value)
             end
@@ -591,30 +685,98 @@ function IndexableClass:_UpdateSerialize()
                 Length += 1
             end
 
-            SizeSerialize(Buffer, Length, Cache)
+            SizeSerialize(Buffer, Length, Context)
 
             for Key, Value in Value do
-                KeySerialize(Buffer, Key, Cache)
-                ValueSerialize(Buffer, Value, Cache)
+                KeySerialize(Buffer, Key, Context)
+                ValueSerialize(Buffer, Value, Context)
             end
+
+            SerializeMetaProperties(Buffer, Value, Context)
+
+            BufferContext()
         end;
-        _Deserialize = function(Buffer, Cache)
+        _Deserialize = function(Buffer, Context)
             local Result = {}
-            local Length = SizeDeserialize(Buffer, Cache)
+
+            local CaptureInto = (Context and Context.CaptureInto or nil)
+            if (CaptureInto) then
+                CaptureInto[Context.CaptureValue] = Result
+                Context = table.clone(Context)
+                Context.CaptureInto = nil
+            end
+
+            local Length = SizeDeserialize(Buffer, Context)
 
             for Index = 1, Length do
-                Result[KeyDeserialize(Buffer, Cache)] = ValueDeserialize(Buffer, Cache)
+                Result[KeyDeserialize(Buffer, Context)] = ValueDeserialize(Buffer, Context)
             end
 
             if (UnmapStructureFunction) then
                 Result = UnmapStructureFunction(Result)
             end
 
-            return ApplyClass(Result)
+            DeserializeMetaProperties(Buffer, Result, Context)
+            return Result
         end;
     }
 end
 
-IndexableClass.InitialConstraint = IndexableClass.OfStructure
+function IndexableClass:InitialConstraint(X, Y)
+    if (Y) then
+        -- Use OfKeyType and OfValueType constraints.
+        return self:OfKeyType(X):OfValueType(Y)
+    end
+
+    if (X) then
+        -- Use OfStructure constraint.
+        return self:OfStructure(X)
+    end
+
+    -- Don't use any constraints.
+    return self
+end
+
+--[[ local function TestClass()
+    local Test = {}
+    Test.__index = Test
+    
+    function Test.new()
+        return setmetatable({
+            X = 1;
+            Y = 2;
+        }, Test)
+    end
+    
+    function Test:Change()
+        self.X *= 2
+        self.Y *= 2
+        return self
+    end
+
+    return Test
+end
+
+task.defer(function()
+    local Or = require(script.Parent.Or)
+
+    local Test1 = TestClass()
+    local Test2 = TestClass()
+
+    local TestInstance1 = Test1.new()
+    local TestInstance2 = table.freeze(Test2.new())
+
+    local Metatables = Or():IsAValueIn({Test1, Test2})
+
+    local AHHH = Indexable({
+        X = Number():Integer(8, false);
+        Y = Number():Integer(8, false);
+    }):CheckMetatable(Metatables)
+
+    local DS1 = AHHH:Deserialize(AHHH:Serialize(TestInstance1))
+    local DS2 = AHHH:Deserialize(AHHH:Serialize(TestInstance2))
+    print(getmetatable(DS1) == Test1, table.isfrozen(DS1))
+    print(getmetatable(DS2) == Test2, table.isfrozen(DS2))
+end) ]]
 
 return Indexable
