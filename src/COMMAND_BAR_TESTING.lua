@@ -17,8 +17,8 @@ local Test = {
         CFrame = CFrame.new(1, 2, 3) * CFrame.Angles(math.rad(20), math.rad(30), math.rad(40));
     };
 }
-Test.Roblox2 = Test.Roblox
 Test.Self = Test
+Test.Roblox2 = Test.Roblox
 Test.Roblox.Parent = Test
 Test.Roblox.Self = Test.Roblox
 Test.Roblox[Test.Roblox] = Test
@@ -35,5 +35,5 @@ print("Human:", buffer.tostring(Serializer:Serialize(Value, "Human")))
 print("Byte:", Serializer:Deserialize(Serializer:Serialize(Value, "Byte"), "Byte"))
 print("Bit:", Serializer:Deserialize(Serializer:Serialize(Value, "Bit"), "Bit")) ]]
 
-local Serializer = TypeGuard.Instance()
-Serializer:Deserialize(Serializer:Serialize(workspace.SpawnLocation, "Bit"), "Bit").Parent = workspace
+local Serializer = TypeGuard.ValueCache(TypeGuard.Any())
+print(Serializer:Deserialize(Serializer:Serialize(Test, "Bit", true), "Bit", true))

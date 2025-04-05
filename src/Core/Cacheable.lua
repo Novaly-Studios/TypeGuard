@@ -58,16 +58,18 @@ function CacheableCheckerClass:_UpdateSerialize()
         _TypeOf = Using._TypeOf;
         Name = Using.Name;
 
-        -- Idea here is we store the position of the value in the buffer on first encounter, and
-        -- if encountered again, we store a pointer to the position of the value in the buffer to
-        -- avoid duplication.
+        -- Idea here is for each value wrapped in a Cacheable, it will insert that value into
+        -- a value-to-index association and increment the index by 1, and serialize the index.
+        -- It'll also prefix with a single bit signifying if the value was encountered before
+        -- so deserialization knows whether to pull the next value from its inverse cache -
+        -- index-to-value - or deserialize the current value and store it in the inverse cache.
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
             BufferContext(CacheableOf)
 
-            local ValueToPosition = (Context and Context.ValueToPosition or nil)
+            local ValueToIndex = (Context and Context.ValueToIndex or nil)
 
-            if (ValueToPosition) then
+            if (ValueToIndex) then
                 -- ValueCache can define a "persistent cache" which can be updated between
                 -- multiple serializations. That allows for long term caching of values for
                 -- networking.
@@ -86,17 +88,19 @@ function CacheableCheckerClass:_UpdateSerialize()
                 end
 
                 -- No persistent cache -> store in local cache.
-                local FoundPosition = ValueToPosition[Value]
+                local FoundIndex = ValueToIndex[Value]
 
-                if (FoundPosition) then
+                if (FoundIndex) then
                     -- 1: value has been encountered before.
                     -- Todo: can use relative pointers in future to compress more?
                     Buffer.WriteUInt(2, 1)
-                    DynamicUIntSerialize(Buffer, FoundPosition, Context)
+                    DynamicUIntSerialize(Buffer, FoundIndex, Context)
                 else
                     -- 0: value has not been encountered before.
+                    local CacheIndex = Context.CacheIndex
+                    ValueToIndex[Value] = CacheIndex
+                    Context.CacheIndex = CacheIndex + 1
                     Buffer.WriteUInt(2, 0)
-                    ValueToPosition[Value] = Buffer.GetPosition()
                     UsingSerialize(Buffer, Value, Context)
                 end
             else
@@ -106,26 +110,28 @@ function CacheableCheckerClass:_UpdateSerialize()
             BufferContext()
         end;
         _Deserialize = function(Buffer, Context)
-            local PositionToValue = (Context and Context.PositionToValue or nil)
+            local IndexToValue = (Context and Context.IndexToValue or nil)
 
-            if (PositionToValue) then
+            if (IndexToValue) then
                 local Tag = Buffer.ReadUInt(2)
 
                 if (Tag == 0) then -- 0 will usually be most common condition so keep at top for performance.
-                    local Position = Buffer.GetPosition()
+                    local Position = Context.CacheIndex
+                    Context.CacheIndex = Position + 1
+
                     local Value = UsingDeserialize(Buffer, Merge(Context, {
-                        -- This immediately inserts the value into PositionToValue before recursing deeper,
+                        -- This immediately inserts the value into IndexToValue before recursing deeper,
                         -- solving cyclic references. Value is only initialized at this point, but it will
                         -- be filled during recursion while still being referenced in the cycle.
                         CaptureValue = Position;
-                        CaptureInto = PositionToValue;
+                        CaptureInto = IndexToValue;
                     }))
 
                     -- Not everything captures, so manually insert when finished too.
-                    PositionToValue[Position] = Value
+                    IndexToValue[Position] = Value
                     return Value
                 elseif (Tag == 1) then
-                    return PositionToValue[DynamicUIntDeserialize(Buffer, Context)]
+                    return IndexToValue[DynamicUIntDeserialize(Buffer, Context)]
                 else -- Tag == 2
                     return Context.GetValueFromIndex(DynamicUIntDeserialize(Buffer, Context))
                 end

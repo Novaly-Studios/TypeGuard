@@ -70,22 +70,27 @@ function ValueCacheCheckerClass:_UpdateSerialize()
 
     local ValueCacheOf = `ValueCache({Serializer.Name})`
 
+    local Deserialize = Serializer._Deserialize
+    local Serialize = Serializer._Serialize
+
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
             BufferContext(ValueCacheOf)
 
-            Serializer._Serialize(Buffer, Value, Merge(Context or {}, {
+            Serialize(Buffer, Value, Merge(Context or {}, {
                 GetIndexFromValue = GetIndexFromValue;
-                ValueToPosition = (Context and Context.ValueToPosition or {});
+                ValueToIndex = (Context and Context.ValueToIndex or {});
+                CacheIndex = 0;
             }))
 
             BufferContext()
         end;
         _Deserialize = function(Buffer, Context)
-            return Serializer._Deserialize(Buffer, Merge(Context or {}, {
+            return Deserialize(Buffer, Merge(Context or {}, {
                 GetValueFromIndex = GetValueFromIndex;
-                PositionToValue = (Context and Context.PositionToValue or {});
+                IndexToValue = (Context and Context.IndexToValue or {});
+                CacheIndex = 0;
             }))
         end;
     }
