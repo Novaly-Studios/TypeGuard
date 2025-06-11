@@ -474,7 +474,10 @@ function IndexableClass:_UpdateSerialize()
     local AnySerializeDeserialize = {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext("Object(Any)")
+
+            if (BufferContext) then
+                BufferContext("Object(Any)")
+            end
 
             if (MapStructureFunction) then
                 Value = MapStructureFunction(Value)
@@ -494,7 +497,9 @@ function IndexableClass:_UpdateSerialize()
             Serialize(Buffer, Value, Context)
             SerializeMetaProperties(Buffer, Value, Context)
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             local Deserialize = (Context and Context.AnyDeserialize or nil)
@@ -550,7 +555,10 @@ function IndexableClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Object(Unambiguous)")
+
+                    if (BufferContext) then
+                        BufferContext("Object(Unambiguous)")
+                    end
 
                     if (MapStructureFunction) then
                         Value = MapStructureFunction(Value)
@@ -562,15 +570,16 @@ function IndexableClass:_UpdateSerialize()
 
                     SerializeMetaProperties(Buffer, Value, Context)
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, Context)
                     local Result = {}
-
                     local CaptureInto = (Context and Context.CaptureInto or nil)
+
                     if (CaptureInto) then
                         CaptureInto[Context.CaptureValue] = Result
-                        Context = table.clone(Context)
                         Context.CaptureInto = nil
                     end
 
@@ -611,7 +620,10 @@ function IndexableClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Object(GroupKV, OfKeyType, OfValueType)")
+
+                if (BufferContext) then
+                    BufferContext("Object(GroupKV, OfKeyType, OfValueType)")
+                end
 
                 if (MapStructureFunction) then
                     Value = MapStructureFunction(Value)
@@ -635,15 +647,16 @@ function IndexableClass:_UpdateSerialize()
 
                 SerializeMetaProperties(Buffer, Value, Context)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 local Result = {}
-
                 local CaptureInto = (Context and Context.CaptureInto or nil)
+
                 if (CaptureInto) then
                     CaptureInto[Context.CaptureValue] = Result
-                    Context = table.clone(Context)
                     Context.CaptureInto = nil
                 end
 
@@ -673,7 +686,10 @@ function IndexableClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext("Object(OfKeyType, OfValueType)")
+
+            if (BufferContext) then
+                BufferContext("Object(OfKeyType, OfValueType)")
+            end
 
             if (MapStructureFunction) then
                 Value = MapStructureFunction(Value)
@@ -694,15 +710,16 @@ function IndexableClass:_UpdateSerialize()
 
             SerializeMetaProperties(Buffer, Value, Context)
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             local Result = {}
-
             local CaptureInto = (Context and Context.CaptureInto or nil)
+
             if (CaptureInto) then
                 CaptureInto[Context.CaptureValue] = Result
-                Context = table.clone(Context)
                 Context.CaptureInto = nil
             end
 

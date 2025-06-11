@@ -657,8 +657,11 @@ function InstanceCheckerClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, _Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Instance(NetSync)")
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext("Instance(NetSync)")
+                    BufferContext()
+                end
             end; 
             _Deserialize = function(_Buffer, _Context) end;
         }
@@ -705,7 +708,10 @@ function InstanceCheckerClass:_UpdateSerialize()
 
     local function Serialize(Buffer, Value: Instance, Context)
         local BufferContext = Buffer.Context
-        BufferContext("Instance")
+
+        if (BufferContext) then
+            BufferContext("Instance")
+        end
 
         Context = Init(Context)
 
@@ -751,7 +757,9 @@ function InstanceCheckerClass:_UpdateSerialize()
             ChildSerialize(Buffer, Child, Context)
         end
 
-        BufferContext()
+        if (BufferContext) then
+            BufferContext()
+        end
     end
 
     -- Protects against circular references being nil. See Cacheable.
@@ -759,9 +767,8 @@ function InstanceCheckerClass:_UpdateSerialize()
         local CaptureInto = (Context and Context.CaptureInto or nil)
 
         if (CaptureInto) then
-            local CaptureValue = Context.CaptureValue
-            CaptureInto[CaptureValue] = Result
-            Context = table.clone(Context)
+            CaptureInto[Context.CaptureValue] = Result
+            Context.CaptureValue = nil
             Context.CaptureInto = nil
         end
 

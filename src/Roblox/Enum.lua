@@ -103,11 +103,16 @@ function EnumCheckerClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Enum(IsA/Enum)")
+
+                    if (BufferContext) then
+                        BufferContext("Enum(IsA/Enum)")
+                    end
 
                     EnumItemSerializerSerialize(Buffer, Value.Value, Context)
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, Context)
                     return EnumClassToIDToEnumItem[IsAValue][EnumItemSerializerDeserialize(Buffer)]
@@ -119,8 +124,11 @@ function EnumCheckerClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, _Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Enum(IsA/EnumItem)")
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext("Enum(IsA/EnumItem)")
+                    BufferContext()
+                end
             end;
             _Deserialize = function(_Buffer, _Context)
                 return IsAValue
@@ -133,7 +141,10 @@ function EnumCheckerClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext("Enum")
+
+            if (BufferContext) then
+                BufferContext("Enum")
+            end
 
             local IsEnumItem = (typeof(Value) == "EnumItem")
             Buffer.WriteUInt(1, (IsEnumItem and 0 or 1)) -- 0 = EnumItem, 1 = Enum
@@ -141,12 +152,19 @@ function EnumCheckerClass:_UpdateSerialize()
             if (IsEnumItem) then
                 EnumSerializerSerialize(Buffer, tostring(Value.EnumType), Context)
                 EnumItemSerializerSerialize(Buffer, Value.Value, Context)
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext()
+                end
+
                 return
             end
 
             EnumSerializerSerialize(Buffer, tostring(Value), Context)
-            BufferContext()
+
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             local IsEnumItem = (Buffer.ReadUInt(1) == 0)

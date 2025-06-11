@@ -27,6 +27,7 @@ export type SignatureTypeChecker = Template.SignatureTypeChecker
 local TypeGuard = {
     CreateTemplate = Template.Create;
     Template = Template;
+    Util = Util;
 }
 
 --- This provides an easy way to create a type without any constraints, and just an initial check corresponding to Roblox's typeof.

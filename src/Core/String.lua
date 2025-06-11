@@ -27,6 +27,7 @@ type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
     MaxLength: ((self: StringTypeChecker, MaxLength: FunctionalArg<number>) -> (StringTypeChecker));
     Contains: ((self: StringTypeChecker, Search: FunctionalArg<string>) -> (StringTypeChecker));
     Pattern: ((self: StringTypeChecker, Pattern: FunctionalArg<string>) -> (StringTypeChecker));
+    Aligned: ((self: StringTypeChecker) -> (StringTypeChecker));
     IsUTF8: ((self: StringTypeChecker) -> (StringTypeChecker));
 };
 
@@ -146,6 +147,13 @@ function StringClass:NullTerminated()
     return self:_AddConstraint(true, "NullTerminated", _NullTerminated)
 end
 
+--- Ensures the string is aligned to the nearest byte for fast writes (for BitSerializer).
+function StringClass:Aligned()
+    return self:Modify({
+        _Aligned = true;
+    })
+end
+
 --[[ local function _GUID(_, Item, Dashes)
     local Length = #Item
     if (Length ~= 32 and Length ~= 36) then
@@ -197,7 +205,10 @@ function StringClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("String(GUID)")
+
+                if (BufferContext) then
+                    BufferContext("String(GUID)")
+                end
 
                 Value = Value:lower():gsub("%-", ""):gsub("%x%x", function(Pair)
                     return string.char(tonumber(Pair, 16) :: number)
@@ -209,7 +220,9 @@ function StringClass:_UpdateSerialize()
 
                 Buffer.WriteString(Value, #Value * 8)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 return Dashify(TryDecache(Buffer, Context) or Buffer.ReadString(16)):gsub(".", function(Char)
@@ -219,6 +232,7 @@ function StringClass:_UpdateSerialize()
         }
     end ]]
 
+    local Aligned = self._Aligned
     local UsingCharacters = self:GetConstraint("UsingCharacters")
 
     if (UsingCharacters) then
@@ -241,16 +255,21 @@ function StringClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("String(UsingCharacters)")
 
-                SizeSerialize(Buffer, #Value, Context)
+                if (BufferContext) then
+                    BufferContext("String(UsingCharacters)")
+                end
 
                 local WriteUInt = Buffer.WriteUInt
+                SizeSerialize(Buffer, #Value, Context)
+
                 for Character in Value:gmatch(".") do
                     WriteUInt(Bits, CharacterToIndex[Character])
                 end
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 local Size = SizeDeserialize(Buffer, Context)
@@ -272,12 +291,21 @@ function StringClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext("String(NullTerminated)")
+
+                if (BufferContext) then
+                    BufferContext("String(NullTerminated)")
+                end
+
+                if (Aligned) then
+                    Buffer.Align()
+                end
 
                 Buffer.WriteString(Value, #Value * 8)
                 Buffer.WriteUInt(1, 0)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, _Context)
                 local Result = ByteSerializer()
@@ -285,6 +313,11 @@ function StringClass:_UpdateSerialize()
                 local ReadUInt = Buffer.ReadUInt
                 local WriteUInt = Result.WriteUInt
 
+                if (Aligned) then
+                    Buffer.Align()
+                end
+
+                -- Needs optimization.
                 while (LastChar ~= 0) do
                     LastChar = ReadUInt(8)
                     WriteUInt(8, LastChar)
@@ -307,13 +340,26 @@ function StringClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, _Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("String(FixedLength)")
+
+                    if (BufferContext) then
+                        BufferContext("String(FixedLength)")
+                    end
+
+                    if (Aligned) then
+                        Buffer.Align()
+                    end
 
                     Buffer.WriteString(Value, #Value * 8)
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, _Context)
+                    if (Aligned) then
+                        Buffer.Align()
+                    end
+
                     return Buffer.ReadString(MaxLengthValue * 8)
                 end;
             }
@@ -327,16 +373,32 @@ function StringClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("String(MinLength, MaxLength)")
+
+                if (BufferContext) then
+                    BufferContext("String(MinLength, MaxLength)")
+                end
 
                 local Length = #Value
                 NumberSerialize(Buffer, Length, Context)
+
+                if (Aligned) then
+                    Buffer.Align()
+                end
+
                 Buffer.WriteString(Value, Length * 8)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
-                return Buffer.ReadString(NumberDeserialize(Buffer, Context) * 8)
+                local Length = NumberDeserialize(Buffer, Context) * 8
+
+                if (Aligned) then
+                    Buffer.Align()
+                end
+
+                return Buffer.ReadString(Length)
             end;
         }
     end
@@ -345,16 +407,32 @@ function StringClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext("String(DynamicLength)")
+
+            if (BufferContext) then
+                BufferContext("String(DynamicLength)")
+            end
 
             local Length = #Value
             DynamicUIntSerialize(Buffer, Length)
+
+            if (Aligned) then
+                Buffer.Align()
+            end
+
             Buffer.WriteString(Value, Length * 8)
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
-            return Buffer.ReadString(DynamicUIntDeserialize(Buffer) * 8)
+            local Length = DynamicUIntDeserialize(Buffer) * 8
+
+            if (Aligned) then
+                Buffer.Align()
+            end
+
+            return Buffer.ReadString(Length)
         end;
     }
 end

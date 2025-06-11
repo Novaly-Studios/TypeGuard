@@ -15,7 +15,6 @@ return function()
         it("should serialize a repeated field table smaller than the captured sub-serializer", function()
             local Serialized1 = ValueCache:Serialize(Test)
             local Serialized2 = Array:Serialize(Test)
-            print(">>>>>>>>>", buffer.len(Serialized1), buffer.len(Serialized2))
             expect(buffer.len(Serialized1) < buffer.len(Serialized2)).to.equal(true)
         end)
 

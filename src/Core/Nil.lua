@@ -25,8 +25,11 @@ function NilCheckerClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, _, _)
             local BufferContext = Buffer.Context
-            BufferContext("Nil")
-            BufferContext()
+
+            if (BufferContext) then
+                BufferContext("Nil")
+                BufferContext()
+            end
         end;
         _Deserialize = function(_, _)
             return nil

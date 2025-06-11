@@ -60,12 +60,17 @@ function VersionedCheckerClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext(VersionedString)
+
+            if (BufferContext) then
+                BufferContext(VersionedString)
+            end
 
             Buffer.WriteUInt(16, VersionsCount)
             LatestVersionSerialize(Buffer, Value, Context)
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             return Versions[Buffer.ReadUInt(16)]._Deserialize(Buffer, Context)

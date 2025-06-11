@@ -25,10 +25,10 @@ type ValueCacheTypeChecker = TypeChecker<ValueCacheTypeChecker, nil> & {
 
 --- This is used to quickly cache hashable values which might occur more than one time during serialization and deserialization
 --- like commonly re-used strings for field names. Or to cache the first encounter with objects referenced multiple times.
-local ValueCache: ((Serializer: SignatureTypeChecker?) -> (ValueCacheTypeChecker)), ValueCacheCheckerClass = Template.Create("ValueCache")
-ValueCacheCheckerClass._Initial = CreateStandardInitial("ValueCache")
+local ValueCache: ((Serializer: SignatureTypeChecker?) -> (ValueCacheTypeChecker)), ValueCacheClass = Template.Create("ValueCache")
+ValueCacheClass._Initial = CreateStandardInitial("ValueCache")
 
-function ValueCacheCheckerClass:Using(Serializer)
+function ValueCacheClass:Using(Serializer)
     AssertIsTypeBase(Serializer, 1)
 
     return self:Modify({
@@ -36,7 +36,7 @@ function ValueCacheCheckerClass:Using(Serializer)
     })
 end
 
-function ValueCacheCheckerClass:PersistentCache(GetIndexFromValue, GetValueFromIndex)
+function ValueCacheClass:PersistentCache(GetIndexFromValue, GetValueFromIndex)
     ExpectType(GetIndexFromValue, Expect.FUNCTION, 1)
     ExpectType(GetValueFromIndex, Expect.FUNCTION, 2)
 
@@ -50,15 +50,11 @@ function ValueCacheCheckerClass:PersistentCache(GetIndexFromValue, GetValueFromI
     })
 end
 
-function ValueCacheCheckerClass:GetCaches()
-    return self._GetIndexFromValue, self._GetValueFromIndex
-end
-
-function ValueCacheCheckerClass:_Initial(Value)
+function ValueCacheClass:_Initial(Value)
     return self._Using:Check(Value)
 end
 
-function ValueCacheCheckerClass:_UpdateSerialize()
+function ValueCacheClass:_UpdateSerialize()
     local Serializer = self._Using
 
     if (not Serializer) then
@@ -76,25 +72,30 @@ function ValueCacheCheckerClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext(ValueCacheOf)
+
+            if (BufferContext) then
+                BufferContext(ValueCacheOf)
+            end
 
             Serialize(Buffer, Value, Merge(Context or {}, {
                 GetIndexFromValue = GetIndexFromValue;
-                ValueToIndex = (Context and Context.ValueToIndex or {});
+                ValueToIndex = {};
                 CacheIndex = 0;
             }))
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             return Deserialize(Buffer, Merge(Context or {}, {
                 GetValueFromIndex = GetValueFromIndex;
-                IndexToValue = (Context and Context.IndexToValue or {});
+                IndexToValue = {};
                 CacheIndex = 0;
             }))
         end;
     }
 end
 
-ValueCacheCheckerClass.InitialConstraint = ValueCacheCheckerClass.Using
+ValueCacheClass.InitialConstraint = ValueCacheClass.Using
 return ValueCache

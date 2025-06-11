@@ -284,9 +284,16 @@ function OrClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Or(IsAValueIn)")
+
+                if (BufferContext) then
+                    BufferContext("Or(IsAValueIn)")
+                end
+
                 NumberSerialize(Buffer, table.find(Values, Value), Context)
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 return Values[NumberDeserialize(Buffer, Context)]
@@ -325,9 +332,16 @@ function OrClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Or(IsAKeyIn)")
+
+                if (BufferContext) then
+                    BufferContext("Or(IsAKeyIn)")
+                end
+
                 NumberSerialize(Buffer, table.find(AsArray, Value), Context)
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 return AsArray[NumberDeserialize(Buffer, Context)]
@@ -355,7 +369,10 @@ function OrClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Or(IsATypeIn, GetTypeIndexFromValue)")
+
+                    if (BufferContext) then
+                        BufferContext("Or(IsATypeIn, GetTypeIndexFromValue)")
+                    end
 
                     local Index = GetTypeIndexFromValue(Value)
                     local Serializer = KeyToSerializeFunction[Index]
@@ -368,7 +385,10 @@ function OrClass:_UpdateSerialize()
                             Divider()
                         end
 
-                        BufferContext()
+                        if (BufferContext) then
+                            BufferContext()
+                        end
+
                         return
                     end
 
@@ -389,7 +409,10 @@ function OrClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Or(IsATypeIn)")
+
+                if (BufferContext) then
+                    BufferContext("Or(IsATypeIn)")
+                end
 
                 for Index, SubType in Types do
                     if (SubType:_Check(Value)) then
@@ -401,7 +424,10 @@ function OrClass:_UpdateSerialize()
                             Divider()
                         end
 
-                        BufferContext()
+                        if (BufferContext) then
+                            BufferContext()
+                        end
+
                         return
                     end
                 end

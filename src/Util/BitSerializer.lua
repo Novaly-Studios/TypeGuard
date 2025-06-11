@@ -5,6 +5,8 @@ if (not script) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Util.BitSerializer
 end
 
+local bwritestring = buffer.writestring
+local breadstring = buffer.readstring
 local bwritebits = buffer.writebits
 local breadbits = buffer.readbits
 local btostring = buffer.tostring
@@ -28,40 +30,41 @@ local mlog = math.log
 
 local sbyte = string.byte
 
-local SampleBuffer = bcreate(8) -- This is used to capture the raw binary output of Luau's fast implementation of buffer write functions.
+local SampleBuffer = bcreate(8) -- This is used to capture the raw binary output of Luau's (faster) implementation of buffer write functions.
 
 local DEFAULT_MIN_SIZE = 16
-
-local function EmptyFunction() end
 
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
 --- between byte-level and bit-level buffers. Intended for long duration
 --- lifetime.
-local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
+local function BitSerializer(Buffer: buffer?, Size: number?)
     Size = Size or (Buffer and blen(Buffer :: buffer)) or DEFAULT_MIN_SIZE -- Size represented in bytes.
     Buffer = Buffer or bcreate(Size :: number)
 
     -- Position represented in bits.
     local Position = 0
 
-    --- Only works for up to 32 bits at a time. No assertion for performance.
-    --- Same as ReadBits.
-    local function WriteBits(Bits: number, Value: number)
-        if (Bits == 0) then
-            return
-        end
+    local function CheckResize(AdditionalBits: number)
+        local Sum = Position + AdditionalBits
+        local AsBytes = mceil(Sum / 8)
 
-        local NewPosition = Position + Bits
-        local NewPositionBytes = mceil(NewPosition / 8)
-
-        if (NewPositionBytes >= Size) then
-            Size = 2 ^ mceil(mlog(NewPositionBytes, 2))
+        if (AsBytes >= Size) then
+            Size = 2 ^ mceil(mlog(AsBytes, 2))
             local NewBuffer = bcreate(Size)
             bcopy(NewBuffer, 0, Buffer :: buffer)
             Buffer = NewBuffer
         end
 
+        return Sum
+    end
+
+    local function WriteBits(Bits: number, Value: number)
+        if (Bits == 0) then
+            return
+        end
+
+        local NewPosition = CheckResize(Bits)
         bwritebits(Buffer :: buffer, Position, Bits, Value)
         Position = NewPosition
     end
@@ -77,10 +80,14 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
     end
 
     local function GetClippedBuffer(): buffer
-        local SizeBytes = math.ceil(Position / 8)
+        local SizeBytes = mceil(Position / 8)
         local New = bcreate(SizeBytes)
         bcopy(New, 0, Buffer :: any, 0, SizeBytes)
         return New
+    end
+
+    local function Align()
+        Position += (8 - Position) % 8
     end
 
     --[[ local function GetChunks(ChunkSize: number): {buffer}
@@ -89,8 +96,6 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
     end ]]
 
     local Result = {
-        Context = EmptyFunction;
-
         WriteUInt = WriteBits;
         ReadUInt = ReadBits;
 
@@ -249,8 +254,85 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
             return Sign * mldexp(MantissaValue, UnbiasedExp)
         end; ]]
 
+        WriteBuffer = function(Subject: buffer, Length: number)
+            if (Length == 0) then
+                return
+            end
+
+            -- Buffer is byte-aligned from start to end, copy it directly using inbuilt copy (faster).
+            -- BitSerializer only does this for writes which are generally large (buffer, string) as it
+            -- would otherwise be slower for realistic usages.
+            if (Position % 8 == 0 and Length % 8 == 0) then
+                local NewPosition = CheckResize(Length)
+                bcopy(Buffer, Position // 8, Subject, 0, Length // 8)
+                Position = NewPosition
+                return
+            end
+
+            local CurrentPos = 0
+            local To1 = Length - 32
+            local To2 = Length - 8
+
+            while (CurrentPos < To1) do
+                WriteBits(32, breadbits(Subject, CurrentPos, 32))
+                CurrentPos += 32
+            end
+
+            while (CurrentPos < To2) do
+                WriteBits(8, breadbits(Subject, CurrentPos, 8))
+                CurrentPos += 8
+            end
+
+            if (CurrentPos < Length) then
+                local Remaining = Length - CurrentPos
+                WriteBits(Remaining, breadbits(Subject, CurrentPos, Remaining))
+            end
+        end;
+        ReadBuffer = function(Length: number): buffer
+            if (Length == 0) then
+                return bcreate(0)
+            end
+
+            if (Position % 8 == 0 and Length % 8 == 0) then
+                local Temp = bcreate(Length)
+                local NewPosition = CheckResize(Length)
+                bcopy(Temp, 0, Buffer, Position // 8, Length // 8)
+                Position = NewPosition
+                return Temp
+            end
+
+            local Result = bcreate(mceil(Length / 8))
+            local CurrentPos = 0
+            local To1 = Length - 32
+            local To2 = Length - 8
+
+            while (CurrentPos < To1) do
+                bwritebits(Result, CurrentPos, 32, ReadBits(32))
+                CurrentPos += 32
+            end
+
+            while (CurrentPos < To2) do
+                bwritebits(Result, CurrentPos, 8, ReadBits(8))
+                CurrentPos += 8
+            end
+
+            if (CurrentPos < Length) then
+                local Remaining = Length - CurrentPos
+                bwritebits(Result, CurrentPos, Remaining, ReadBits(Remaining))
+            end
+
+            return Result
+        end;
+
         WriteString = function(String: string, Length: number)
             if (Length == 0) then
+                return
+            end
+
+            if (Position % 8 == 0 and Length % 8 == 0) then
+                local NewPosition = CheckResize(Length)
+                bwritestring(Buffer, Position // 8, String)
+                Position = NewPosition
                 return
             end
 
@@ -288,6 +370,13 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
                 return ""
             end
 
+            if (Position % 8 == 0 and Length % 8 == 0) then
+                local NewPosition = CheckResize(Length)
+                local Result = breadstring(Buffer, Position // 8, Length // 8)
+                Position = NewPosition
+                return Result
+            end
+
             local Bytes = Length // 8
             local FinalBits = (Length and b32band(Length, 7) or 0)
 
@@ -319,11 +408,12 @@ local function BitSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
         GetPosition = function()
             return Position
         end;
+        Align = Align;
 
+        GetClippedBuffer = GetClippedBuffer;
         GetBuffer = function()
             return Buffer :: buffer
         end;
-        GetClippedBuffer = GetClippedBuffer;
 
         Type = "Bit";
     }
@@ -346,9 +436,11 @@ Test.WriteUInt(1, 0b0)
 Test.WriteUInt(17, 0b11111111111111111)
 Test.WriteUInt(2, 0b10)
 Test.WriteFloat(64, 1.2)
+Test.Align()
 Test.WriteString("Mraow", 8 * 5)
 Test.WriteInt(8, -128)
-Test.WriteString("AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", 8 * 38)
+Test.Align()
+Test.WriteBuffer(buffer.fromstring("AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"), 8 * 38)
 
 Test.SetPosition(0)
 
@@ -356,9 +448,10 @@ print(Test.ReadUInt(1))
 print(Test.ReadUInt(17))
 print(Test.ReadUInt(2))
 print(Test.ReadFloat(64))
+Test.Align()
 print(Test.ReadString(8 * 5))
 print(Test.ReadInt(8))
-print(Test.ReadString(0))
-print(Test.ReadString(8 * 38)) ]]
+Test.Align()
+print(buffer.tostring(Test.ReadBuffer(8 * 38))) ]]
 
 return BitSerializer

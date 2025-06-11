@@ -35,5 +35,12 @@ print("Human:", buffer.tostring(Serializer:Serialize(Value, "Human")))
 print("Byte:", Serializer:Deserialize(Serializer:Serialize(Value, "Byte"), "Byte"))
 print("Bit:", Serializer:Deserialize(Serializer:Serialize(Value, "Bit"), "Bit")) ]]
 
-local Serializer = TypeGuard.ValueCache(TypeGuard.Any())
-print(Serializer:Deserialize(Serializer:Serialize(Test, "Bit", true), "Bit", true))
+--[[ local Serializer = TypeGuard.ValueCache(TypeGuard.Any())
+local Serialized = Serializer:Serialize(Test, "Byte", true)
+print(Serializer:Deserialize(Serialized, "Byte", true)) ]]
+
+local CacheableString = TypeGuard.Cacheable(TypeGuard.String())
+local Array = TypeGuard.ValueCache(TypeGuard.Array(TypeGuard.Cacheable(TypeGuard.Object(CacheableString, CacheableString))))
+
+local Serialized = Array:Serialize(table.create(100, {RepeatibleField = "RepeatibleField"}))
+print(">>>", buffer.len(Serialized), Array:Deserialize(Serialized))

@@ -130,13 +130,21 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
 
         Any._Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
-            BufferContext(AnyID)
+
+            if (BufferContext) then
+                BufferContext(AnyID)
+            end
+
             Context = Context or {}
             Setup()
 
             if (Context.UseAny == Any) then
                 AnySerialize(Buffer, Value, Context)
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext()
+                end
+
                 return
             end
 
@@ -144,7 +152,10 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
                 AnySerialize = AnySerialize;
                 UseAny = Any;
             }))
-            BufferContext()
+
+            if (BufferContext) then
+                BufferContext()
+            end
 
             return
         end

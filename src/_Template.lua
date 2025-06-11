@@ -27,7 +27,9 @@ local TableUtil = require(script.Parent.Parent.TableUtil).WithFeatures()
 export type AnyMethod = (...any) -> (...any)
 
 export type SignatureTypeChecker = {
-    _TC: true;
+    Deserialize: AnyMethod;
+    Serialize: AnyMethod;
+    Check: AnyMethod;
 }
 
 export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Luau from complaining in the main script.
@@ -573,8 +575,11 @@ local function CreateTemplate(Name: string)
             return {
                 _Serialize = function(Buffer, _, _)
                     local BufferContext = Buffer.Context
-                    BufferContext("Template(Equals)")
-                    BufferContext()
+
+                    if (BufferContext) then
+                        BufferContext("Template(Equals)")
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(_, _)
                     return Value
@@ -596,9 +601,16 @@ local function CreateTemplate(Name: string)
             return {
                 _Serialize = function(Buffer, Value, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Template(IsAValueIn)")
+
+                    if (BufferContext) then
+                        BufferContext("Template(IsAValueIn)")
+                    end
+
                     DoSerialize(Buffer, Value, Context)
-                    BufferContext()
+
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, Context)
                     return DoDeserialize(Buffer, Context)
@@ -618,9 +630,16 @@ local function CreateTemplate(Name: string)
             return {
                 _Serialize = function(Buffer, Value, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Template(IsAKeyIn)")
+
+                    if (BufferContext) then
+                        BufferContext("Template(IsAKeyIn)")
+                    end
+
                     DoSerialize(Buffer, Value, Context)
-                    BufferContext()
+
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, Context)
                     return DoDeserialize(Buffer, Context)

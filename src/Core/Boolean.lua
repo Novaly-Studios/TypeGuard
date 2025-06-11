@@ -25,9 +25,16 @@ function BooleanClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Value, _Context)
             local BufferContext = Buffer.Context
-            BufferContext("Boolean")
+
+            if (BufferContext) then
+                BufferContext("Boolean")
+            end
+
             Buffer.WriteUInt(1, Value and 1 or 0)
-            BufferContext()
+
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, _Context)
             return (Buffer.ReadUInt(1) == 1)

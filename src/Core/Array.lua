@@ -326,7 +326,10 @@ function ArrayClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Array(Any)")
+
+                if (BufferContext) then
+                    BufferContext("Array(Any)")
+                end
 
                 local Serialize = (Context and Context.AnySerialize or nil)
 
@@ -341,7 +344,9 @@ function ArrayClass:_UpdateSerialize()
 
                 Serialize(Buffer, Value, Context)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 local Deserialize = (Context and Context.AnyDeserialize or nil)
@@ -375,22 +380,26 @@ function ArrayClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Array, Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Array(OfType, FixedLength)")
+
+                    if (BufferContext) then
+                        BufferContext("Array(OfType, FixedLength)")
+                    end
 
                     for _, Value in Array do
                         Serializer(Buffer, Value, Context)
                     end
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
 
                 _Deserialize = function(Buffer, Context)
                     local Array = table.create(MaxLengthValue)
-
                     local CaptureInto = (Context and Context.CaptureInto or nil)
+
                     if (CaptureInto) then
                         CaptureInto[Context.CaptureValue] = Array
-                        Context = table.clone(Context)
                         Context.CaptureInto = nil
                     end
 
@@ -414,7 +423,10 @@ function ArrayClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Array, Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Array(OfType, MinLength, MaxLength)")
+
+                if (BufferContext) then
+                    BufferContext("Array(OfType, MinLength, MaxLength)")
+                end
 
                 NumberSerialize(Buffer, #Array, Context)
 
@@ -422,16 +434,17 @@ function ArrayClass:_UpdateSerialize()
                     Serializer(Buffer, Value, Context)
                 end
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, Context)
                 local Size = NumberDeserialize(Buffer, Context)
                 local Array = table.create(Size)
-
                 local CaptureInto = (Context and Context.CaptureInto or nil)
+
                 if (CaptureInto) then
                     CaptureInto[Context.CaptureValue] = Array
-                    Context = table.clone(Context)
                     Context.CaptureInto = nil
                 end
 
@@ -451,7 +464,10 @@ function ArrayClass:_UpdateSerialize()
     return {
         _Serialize = function(Buffer, Array, Context)
             local BufferContext = Buffer.Context
-            BufferContext("Array(OfType)")
+
+            if (BufferContext) then
+                BufferContext("Array(OfType)")
+            end
 
             DynamicUIntSerialize(Buffer, #Array, Context)
 
@@ -459,16 +475,17 @@ function ArrayClass:_UpdateSerialize()
                 Serializer(Buffer, Value, Context)
             end
 
-            BufferContext()
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, Context)
             local Size = DynamicUIntDeserialize(Buffer, Context)
             local Array = table.create(Size)
-
             local CaptureInto = (Context and Context.CaptureInto or nil)
+
             if (CaptureInto) then
                 CaptureInto[Context.CaptureValue] = Array
-                Context = table.clone(Context)
                 Context.CaptureInto = nil
             end
 

@@ -32,17 +32,13 @@ local mlog = math.log
 
 local DEFAULT_MIN_SIZE = 16
 
-local function WriteError()
-    error("Attempt to write to read-only ByteSerializer")
-end
-
 local function EmptyFunction() end
 
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
 --- between byte-level and bit-level buffers. Intended for long duration
 --- lifetime.
-local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?)
+local function ByteSerializer(Buffer: buffer?, Size: number?)
     Size = Size or (Buffer and blen(Buffer :: buffer)) or DEFAULT_MIN_SIZE
     Buffer = Buffer or bcreate(Size :: number)
 
@@ -51,14 +47,16 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
     local function CheckResize(AdditionalBytes: number)
         -- As soon as we are about to hit the size limit, allocate a new buffer with double the size.
         local Sum = Position + AdditionalBytes
+
         if (Sum < Size) then
-            return
+            return Sum
         end
 
         Size = 2 ^ mceil(mlog(Sum, 2))
         local NewBuffer = bcreate(Size)
         bcopy(NewBuffer, 0, Buffer :: buffer)
         Buffer = NewBuffer
+        return Sum
     end
 
     local function GetClippedBuffer(): buffer
@@ -73,18 +71,16 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
     end ]]
 
     local Result = {
-        Context = EmptyFunction;
-
-        WriteUInt = ReadOnly and WriteError or function(Bits: number, Value: number)
+        WriteUInt = function(Bits: number, Value: number)
             if (Bits == 0) then
                 return
             end
 
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
-            CheckResize(Bytes)
+            local NewPosition = CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwriteu8 or Bytes == 2 and bwriteu16 or bwriteu32)
             Writer(Buffer, Position, Value)
-            Position += Bytes
+            Position = NewPosition
         end;
         ReadUInt = function(Bits: number): number
             if (Bits == 0) then
@@ -98,16 +94,16 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             return Value
         end;
 
-        WriteInt = ReadOnly and WriteError or function(Bits: number, Value: number)
+        WriteInt = function(Bits: number, Value: number)
             if (Bits == 0) then
                 return
             end
 
             local Bytes = (Bits < 9 and 1 or Bits < 17 and 2 or 4)
-            CheckResize(Bytes)
+            local NewPosition = CheckResize(Bytes)
             local Writer = (Bytes == 1 and bwritei8 or Bytes == 2 and bwritei16 or bwritei32)
             Writer(Buffer, Position, Value)
-            Position += Bytes
+            Position = NewPosition
         end;
         ReadInt = function(Bits: number): number
             if (Bits == 0) then
@@ -121,16 +117,16 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             return Value
         end;
 
-        WriteFloat = ReadOnly and WriteError or function(Bits: number, Value: number)
+        WriteFloat = function(Bits: number, Value: number)
             if (Bits == 0) then
                 return
             end
 
             local Bytes = (Bits < 33 and 4 or 8)
-            CheckResize(Bytes)
+            local NewPosition = CheckResize(Bytes)
             local Writer = (Bytes == 4 and bwritef32 or bwritef64)
             Writer(Buffer, Position, Value)
-            Position += Bytes
+            Position = NewPosition
         end;
         ReadFloat = function(Bits: number): number
             if (Bits == 0) then
@@ -144,15 +140,36 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
             return Result
         end;
 
-        WriteString = ReadOnly and WriteError or function(String: string, Length: number)
+        WriteBuffer = function(Subject: buffer, Length: number)
+            if (Length == 0) then
+                return
+            end
+
+            local NewPosition = CheckResize(Length)
+            bcopy(Buffer, Position, Subject, 0, mceil(Length / 8))
+            Position = NewPosition
+        end;
+        ReadBuffer = function(Length: number): buffer
+            if (Length == 0) then
+                return bcreate(0)
+            end
+
+            local Bytes = mceil(Length / 8)
+            local Result = bcreate(Bytes)
+            bcopy(Result, 0, Buffer, Position, Bytes)
+            Position += Length
+            return Result
+        end;
+
+        WriteString = function(String: string, Length: number)
             if (Length == 0) then
                 return
             end
 
             local Bytes = mceil(Length / 8)
-            CheckResize(Bytes)
+            local NewPosition = CheckResize(Bytes)
             bwritestring(Buffer :: buffer, Position, String, Bytes)
-            Position += Bytes
+            Position = NewPosition
         end;
         ReadString = function(Length: number): string
             if (Length == 0) then
@@ -175,10 +192,12 @@ local function ByteSerializer(Buffer: buffer?, Size: number?, ReadOnly: boolean?
         GetPosition = function(): number
             return Position * 8
         end;
+        Align = EmptyFunction;
+
+        GetClippedBuffer = GetClippedBuffer;
         GetBuffer = function()
             return Buffer :: buffer
         end;
-        GetClippedBuffer = GetClippedBuffer;
 
         Type = "Byte";
     }

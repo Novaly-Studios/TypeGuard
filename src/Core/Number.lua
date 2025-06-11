@@ -223,9 +223,16 @@ function NumberClass:_UpdateSerialize()
     local MysteriousNumber = { -- Default to double if we don't know many details about the number. Largest number type in Luau.
         _Serialize = function(Buffer, Value, _Context)
             local BufferContext = Buffer.Context
-            BufferContext("Number")
+
+            if (BufferContext) then
+                BufferContext("Number")
+            end
+
             Buffer.WriteFloat(64, Value)
-            BufferContext()
+
+            if (BufferContext) then
+                BufferContext()
+            end
         end;
         _Deserialize = function(Buffer, _Context)
             return Buffer.ReadFloat(64)
@@ -240,9 +247,16 @@ function NumberClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext("Number(IsInfinite)")
+
+                if (BufferContext) then
+                    BufferContext("Number(IsInfinite)")
+                end
+
                 Buffer.WriteUInt(1, Value == math.huge and 1 or 0)
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, _Context)
                 return (Buffer.ReadUInt(1) == 1 and math.huge or -math.huge)
@@ -254,8 +268,11 @@ function NumberClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, _, _)
                 local BufferContext = Buffer.Context
-                BufferContext("Number(IsNaN)")
-                BufferContext()
+
+                if (BufferContext) then
+                    BufferContext("Number(IsNaN)")
+                    BufferContext()
+                end
             end;
             _Deserialize = function(_, _)
                 return NaN
@@ -272,11 +289,16 @@ function NumberClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext(ContextString)
+
+                if (BufferContext) then
+                    BufferContext(ContextString)
+                end
 
                 Buffer.WriteFloat(Bits, Value)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, _Context)
                 return Buffer.ReadFloat(Bits)
@@ -316,7 +338,10 @@ function NumberClass:_UpdateSerialize()
                 return {
                     _Serialize = function(Buffer, Value, _Context)
                         local BufferContext = Buffer.Context
-                        BufferContext(ContextString)
+
+                        if (BufferContext) then
+                            BufferContext(ContextString)
+                        end
 
                         Value = (Negative and (-Value - 1) or Value)
 
@@ -325,7 +350,9 @@ function NumberClass:_UpdateSerialize()
                         WriteUInt(6, Bits)
                         WriteUInt(Bits, Value)
 
-                        BufferContext()
+                        if (BufferContext) then
+                            BufferContext()
+                        end
                     end;
                     _Deserialize = function(Buffer, _Context)
                         local ReadUInt = Buffer.ReadUInt
@@ -340,7 +367,10 @@ function NumberClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, _Context)
                     local BufferContext = Buffer.Context
-                    BufferContext("Number(Dynamic, Integer)")
+
+                    if (BufferContext) then
+                        BufferContext("Number(Dynamic, Integer)")
+                    end
 
                     local IsNegative = (Value < 0)
                     Value = (IsNegative and (-Value - 1) or Value)
@@ -354,7 +384,9 @@ function NumberClass:_UpdateSerialize()
                         WriteUInt(Bits, Value)
                     end
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, _Context)
                     local ReadUInt = Buffer.ReadUInt
@@ -377,9 +409,16 @@ function NumberClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, _Context)
                     local BufferContext = Buffer.Context
-                    BufferContext(ContextString)
+
+                    if (BufferContext) then
+                        BufferContext(ContextString)
+                    end
+
                     Buffer.WriteUInt(Bits, Value - Min)
-                    BufferContext()
+
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, _Context)
                     return Buffer.ReadUInt(Bits) + Min
@@ -395,11 +434,16 @@ function NumberClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, _Context)
                     local BufferContext = Buffer.Context
-                    BufferContext(ContextString)
+
+                    if (BufferContext) then
+                        BufferContext(ContextString)
+                    end
 
                     Buffer.WriteUInt(DefinedBits, Value)
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, _Context)
                     return Buffer.ReadUInt(DefinedBits)
@@ -415,11 +459,16 @@ function NumberClass:_UpdateSerialize()
             return {
                 _Serialize = function(Buffer, Value, _Context)
                     local BufferContext = Buffer.Context
-                    BufferContext(ContextString)
+
+                    if (BufferContext) then
+                        BufferContext(ContextString)
+                    end
 
                     Buffer.WriteUInt(DefinedBits, -Value - 1)
 
-                    BufferContext()
+                    if (BufferContext) then
+                        BufferContext()
+                    end
                 end;
                 _Deserialize = function(Buffer, _Context)
                     return -Buffer.ReadUInt(DefinedBits) - 1
@@ -434,11 +483,16 @@ function NumberClass:_UpdateSerialize()
         return {
             _Serialize = function(Buffer, Value, _Context)
                 local BufferContext = Buffer.Context
-                BufferContext(ContextString)
+
+                if (BufferContext) then
+                    BufferContext(ContextString)
+                end
 
                 Buffer.WriteInt(DefinedBits, Value)
 
-                BufferContext()
+                if (BufferContext) then
+                    BufferContext()
+                end
             end;
             _Deserialize = function(Buffer, _Context)
                 return Buffer.ReadInt(DefinedBits)
