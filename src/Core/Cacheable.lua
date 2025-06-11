@@ -147,16 +147,7 @@ function CacheableClass:_UpdateSerialize()
 
                     return Value
                 elseif (Tag == 1) then
-                    local Position = DynamicUIntDeserialize(Buffer, Context)
-                    if (type(IndexToValue[Position]) == "table" and not _G.Test) then
-                        _G.Test = true
-                        warn(debug.traceback())
-                        task.defer(function()
-                            _G.Test = nil
-                        end)
-                    end
-
-                    return IndexToValue[Position]
+                    return IndexToValue[DynamicUIntDeserialize(Buffer, Context)]
                 else -- Tag == 2
                     return GetValueFromIndex(DynamicUIntDeserialize(Buffer, Context))
                 end

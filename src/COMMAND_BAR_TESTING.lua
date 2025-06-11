@@ -43,4 +43,4 @@ local CacheableString = TypeGuard.Cacheable(TypeGuard.String())
 local Array = TypeGuard.ValueCache(TypeGuard.Array(TypeGuard.Cacheable(TypeGuard.Object(CacheableString, CacheableString))))
 
 local Serialized = Array:Serialize(table.create(100, {RepeatibleField = "RepeatibleField"}))
-print(">>>", buffer.len(Serialized), Array:Deserialize(Serialized))
+print(">>>", buffer.tostring(Serialized), Array:Deserialize(Serialized))
