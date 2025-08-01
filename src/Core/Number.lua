@@ -32,6 +32,10 @@ export type NumberTypeChecker = TypeChecker<NumberTypeChecker, number> & {
 local FLOAT_MAX_32 = 3.402823466e+38
 local FLOAT_MAX_64 = 1.7976931348623157e+308
 
+local b32countlz = bit32.countlz
+local b32band = bit32.band
+local b32bor = bit32.bor
+
 local Number: ((Min: FunctionalArg<number?>, Max: FunctionalArg<number?>) -> (NumberTypeChecker)), NumberClass = Template.Create("Number")
 NumberClass._CacheConstruction = true
 NumberClass._Initial = CreateStandardInitial("number")
@@ -199,7 +203,7 @@ end
 --- Checks if the number has a range fit for floats of the precision given.
 function NumberClass:Float(Precision)
     local MaxValue = ((Precision or 64) > 33 and FLOAT_MAX_64 or FLOAT_MAX_32)
-    return self:_AddConstraint(true, "Float", _Float, MaxValue):RangeInclusive(-MaxValue, MaxValue)
+    return self:_AddConstraint(true, "Float", _Float, Precision):RangeInclusive(-MaxValue, MaxValue)
 end
 
 local function _IsCloseTo(_, NumberValue, CloseTo, Tolerance)
@@ -345,7 +349,7 @@ function NumberClass:_UpdateSerialize()
 
                         Value = (Negative and (-Value - 1) or Value)
 
-                        local Bits = 32 - bit32.countlz(Value)
+                        local Bits = 32 - b32countlz(Value)
                         local WriteUInt = Buffer.WriteUInt
                         WriteUInt(6, Bits)
                         WriteUInt(Bits, Value)
@@ -357,7 +361,6 @@ function NumberClass:_UpdateSerialize()
                     _Deserialize = function(Buffer, _Context)
                         local ReadUInt = Buffer.ReadUInt
                         local Value = ReadUInt(ReadUInt(6))
-
                         return (Negative and (-Value - 1) or Value)
                     end;
                 }
@@ -375,8 +378,8 @@ function NumberClass:_UpdateSerialize()
                     local IsNegative = (Value < 0)
                     Value = (IsNegative and (-Value - 1) or Value)
 
-                    local Bits = 32 - bit32.countlz(Value)
-                    local Metadata = bit32.bor(Bits, IsNegative and 0b1000000 or 0)
+                    local Bits = 32 - b32countlz(Value)
+                    local Metadata = b32bor(Bits, IsNegative and 0b1000000 or 0)
                     local WriteUInt = Buffer.WriteUInt
                     WriteUInt(7, Metadata)
 
@@ -391,8 +394,8 @@ function NumberClass:_UpdateSerialize()
                 _Deserialize = function(Buffer, _Context)
                     local ReadUInt = Buffer.ReadUInt
                     local Metadata = ReadUInt(7)
-                    local Bits = bit32.band(Metadata, 0b0111111)
-                    local Positive = (bit32.band(Metadata, 0b1000000) == 0)
+                    local Bits = b32band(Metadata, 0b0111111)
+                    local Positive = (b32band(Metadata, 0b1000000) == 0)
                     local Value = ReadUInt(Bits)
 
                     return (Positive and Value or (-Value - 1))

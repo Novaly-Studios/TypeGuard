@@ -15,16 +15,16 @@ type TweenInfoTypeChecker = TypeChecker<TweenInfoTypeChecker, TweenInfo> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
         local UInt32 = Number():Integer(32, true)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-    local Object = require(Core.Object)
 
 local EnumChecker = require(script.Parent.Enum)
 
-local Checker = Object({
+local Checker = Indexable({
     EasingDirection = EnumChecker(Enum.EasingDirection);
     EasingStyle = EnumChecker(Enum.EasingStyle);
     RepeatCount = UInt32;

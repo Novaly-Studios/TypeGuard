@@ -13,11 +13,11 @@ local Template = require(script.Parent.Parent._Template)
 type NumberRangeTypeChecker = TypeChecker<NumberRangeTypeChecker, NumberRange> & {};
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     Min = Float32;
     Max = Float32;
 }):Unmap(function(Value)

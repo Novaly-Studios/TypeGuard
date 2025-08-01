@@ -15,11 +15,11 @@ type Vector2TypeChecker = TypeChecker<Vector2TypeChecker, Vector2> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     X = Float32;
     Y = Float32;
 }):Unmap(function(Value)

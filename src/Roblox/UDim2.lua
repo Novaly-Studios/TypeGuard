@@ -14,12 +14,12 @@ type UDim2TypeChecker = TypeChecker<UDim2TypeChecker, UDim2> & {
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local UDim = require(script.Parent.UDim)
     local DefaultUDim = UDim()
 
-local Checker = Object({
+local Checker = Indexable({
     X = DefaultUDim;
     Y = DefaultUDim;
 }):Unmap(function(Value)

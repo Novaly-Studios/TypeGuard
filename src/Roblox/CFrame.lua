@@ -15,11 +15,11 @@ type CFrameTypeChecker = TypeChecker<CFrameTypeChecker, CFrame> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
-local Intermediary = Object({
+local Intermediary = Indexable({
     X = Float32;
     Y = Float32;
     Z = Float32;
@@ -34,7 +34,7 @@ local Intermediary = Object({
     R22 = Float32;
 }):Strict():NoCheck()
 
-local Checker = Object():MapStructure(Intermediary, function(Value)
+local Checker = Indexable():MapStructure(Intermediary, function(Value)
     local X, Y, Z, R00, R01, R02, R10, R11, R12, R20, R21, R22 = Value:GetComponents()
 
     return {
@@ -70,7 +70,7 @@ function Checker:Compressed(Clicks)
     local Fill = 2 ^ Bits - 1
     local Tau = math.pi * 2
 
-    local CompressedIntermediary = Object({
+    local CompressedIntermediary = Indexable({
         X = Float32;
         Y = Float32;
         Z = Float32;

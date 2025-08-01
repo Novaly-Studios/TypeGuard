@@ -15,12 +15,12 @@ type OverlapParamsTypeChecker = TypeChecker<OverlapParamsTypeChecker, OverlapPar
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
     local Number = require(Core.Number)
         local Int32 = Number():Integer(32)
-    local Object = require(Core.Object)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
     local Array = require(Core.Array)
@@ -30,8 +30,8 @@ local RbxEnum = require(script.Parent.Enum)
 
 local RbxInstance = require(script.Parent.Instance)
 
-local Checker = Object({
-    FilterDescendantsInstances = Array(RbxInstance);
+local Checker = Indexable({
+    FilterDescendantsInstances = Array(Cacheable(RbxInstance()));
     BruteForceAllSlow = DefaultBoolean;
     RespectCanCollide = DefaultBoolean;
     CollisionGroup = CacheableString;

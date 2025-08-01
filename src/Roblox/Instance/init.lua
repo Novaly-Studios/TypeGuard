@@ -32,7 +32,7 @@ local API = require(script.API) :: any
 
 local Core = script.Parent.Parent.Core
     local Cacheable = require(Core.Cacheable)
-    local Indexable = require(Core.Object)
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
     local String = require(Core.String)
     local Array = require(Core.Array)

@@ -15,12 +15,12 @@ type Path2DControlPointTypeChecker = TypeChecker<Path2DControlPointTypeChecker, 
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local RbxUDim2 = require(script.Parent.UDim2)
     local DefaultUDim2 = RbxUDim2()
 
-local Checker = Object({
+local Checker = Indexable({
     RightTangent = DefaultUDim2;
     LeftTangent = DefaultUDim2;
     Position = DefaultUDim2;

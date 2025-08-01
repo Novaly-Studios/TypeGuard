@@ -15,13 +15,13 @@ type CatalogSearchParamsTypeChecker = TypeChecker<CatalogSearchParamsTypeChecker
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
     local Number = require(Core.Number)
         local Float = Number()
         local Int32 = Number():Integer(32)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-    local Object = require(Core.Object)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
     local Array = require(Core.Array)
@@ -35,7 +35,7 @@ local RbxEnum = require(script.Parent.Enum)
     local EnumAvatarAssetType = RbxEnum(Enum.AvatarAssetType)
     local EnumCreatorTypeFilter = RbxEnum(Enum.CreatorTypeFilter)
 
-local Checker = Object({
+local Checker = Indexable({
     SearchKeyword = CacheableString;
     MinPrice = Int32;
     MaxPrice = Int32;

@@ -15,8 +15,8 @@ type PathWaypointTypeChecker = TypeChecker<PathWaypointTypeChecker, PathWaypoint
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
-    local Object = require(Core.Object)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
 
@@ -26,7 +26,7 @@ local RbxEnum = require(script.Parent.Enum)
 local RbxVector3 = require(script.Parent.Vector3)
     local DefaultVector3 = RbxVector3()
 
-local Checker = Object({
+local Checker = Indexable({
     Position = DefaultVector3;
     Action = EnumPathWaypointAction;
     Label = CacheableString;

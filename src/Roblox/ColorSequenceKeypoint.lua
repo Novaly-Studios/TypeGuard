@@ -16,11 +16,11 @@ type ColorSequenceKeypointTypeChecker = TypeChecker<ColorSequenceKeypointTypeChe
 local Core = script.Parent.Parent.Core
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local DefaultColor3 = require(script.Parent.Color3)()
 
-local Checker = Object({
+local Checker = Indexable({
     Value = DefaultColor3;
     Time = Float32:RangeInclusive(0, 1);
 }):Unmap(function(Value)

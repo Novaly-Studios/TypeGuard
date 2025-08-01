@@ -15,15 +15,15 @@ type FloatCurveKeyTypeChecker = TypeChecker<FloatCurveKeyTypeChecker, FloatCurve
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Optional = require(Core.Optional)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
 local RbxEnum = require(script.Parent.Enum)
     local EnumKeyInterpolationMode = RbxEnum(Enum.KeyInterpolationMode)
 
-local Checker = Object({
+local Checker = Indexable({
     Interpolation = EnumKeyInterpolationMode;
     RightTangent = Optional(Float32);
     LeftTangent = Optional(Float32);

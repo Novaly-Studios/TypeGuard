@@ -15,10 +15,10 @@ type BrickColorTypeChecker = TypeChecker<BrickColorTypeChecker, BrickColor> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     Number = Number(0, 1032):Integer();
 }):Unmap(function(Value)
     return BrickColor.new(Value.Number)

@@ -3,7 +3,7 @@
 --!optimize 2
 
 if (not script and Instance) then
-    script = game:GetService("ReplicatedFirst").TypeGuard.Core.Object
+    script = game:GetService("ReplicatedFirst").TypeGuard.Core.Indexable
 end
 
 local Template = require(script.Parent.Parent._Template)
@@ -18,10 +18,17 @@ local Util = require(script.Parent.Parent.Util)
     local Expect = Util.Expect
 
 local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
+    local IsPureArray = TableUtil.Array.IsPureArray
+    local IsOrdered = TableUtil.Array.IsOrdered
+    local IsPureMap = TableUtil.Map.IsPureMap
     local MergeDeep = TableUtil.Map.MergeDeep
     local Merge = TableUtil.Map.Merge
 
 local Number = require(script.Parent.Number)
+    local DynamicUInt = Number():Integer(32, false):Positive():Dynamic()
+    local DynamicIndex = Number(1, 0xFFFFFFFF):Integer():Dynamic()
+
+local ValueCache = require(script.Parent.ValueCache)
 
 export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
     ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
@@ -31,8 +38,11 @@ export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
     MapStructure: ((self: IndexableTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
     OfValueType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     OfStructure: ((self: IndexableTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (IndexableTypeChecker));
+    IsOrdered: ((self: IndexableTypeChecker, AscendingOrDescendingOrEither: FunctionalArg<boolean>?) -> (IndexableTypeChecker));
+    PureArray: ((self: IndexableTypeChecker, ValueType: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     OfKeyType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     IsFrozen: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    PureMap: ((self: IndexableTypeChecker, KeyType: FunctionalArg<SignatureTypeChecker>?, ValueType: FunctionalArg<SignatureTypeChecker>?) -> (IndexableTypeChecker));
     MinSize: ((self: IndexableTypeChecker, MinSize: FunctionalArg<number>) -> (IndexableTypeChecker));
     MaxSize: ((self: IndexableTypeChecker, MaxSize: FunctionalArg<number>) -> (IndexableTypeChecker));
     OfClass: ((self: IndexableTypeChecker, Class: FunctionalArg<{[string]: any}>) -> (IndexableTypeChecker));
@@ -41,17 +51,45 @@ export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
 
     Similarity: ((self: IndexableTypeChecker, Value: any) -> (number));
     GroupKV: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
-};
+}
 
 -- Todo: move arrays support into this?
 
-type Constructor = ((Structure: SignatureTypeChecker?) -> (IndexableTypeChecker)) & -- OfStructure
+type Constructor = ((Structure: {SignatureTypeChecker}?) -> (IndexableTypeChecker)) & -- OfStructure
                    ((KeyType: SignatureTypeChecker, ValueType: SignatureTypeChecker?) -> (IndexableTypeChecker)) -- OfKeyType, OfValueType
+
+local function _SupportsArrayIndex(Type)
+    return (Type:Check(1) and not Type:Check(1.1) and not Type:Check(0))
+end
+
+local function _SupportsNonArrayIndex(Type)
+    if (Type.Name == "Or") then
+        local IsATypeIn = Type:GetConstraint("IsATypeIn")
+
+        if (IsATypeIn) then
+            for _, SubType in IsATypeIn[1] do
+                if (not _SupportsArrayIndex(SubType)) then
+                    return true
+                end
+            end
+        end
+
+        return false
+    end
+
+    return (not _SupportsArrayIndex(Type))
+end
 
 local Indexable: Constructor, IndexableClass = Template.Create("Structure")
 IndexableClass._Indexable = true
 IndexableClass._TypeOf = {"table"}
 IndexableClass.Name = "table"
+
+local Any
+
+local function _InitAny()
+    Any = Any or ValueCache((require(script.Parent.Parent.Roblox.Any) :: any)())
+end
 
 function IndexableClass:_Initial(TargetStructure)
     local Type = typeof(TargetStructure)
@@ -100,6 +138,10 @@ function IndexableClass:OfStructure(SubTypes)
         table.freeze(SubTypes)
     end
 
+    if (SubTypes[1] and next(SubTypes, #SubTypes) ~= nil) then
+        error("Mix of array and map definition not supported in OfStructure", 2)
+    end
+
     return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypes)
 end
 
@@ -125,6 +167,71 @@ function IndexableClass:OfValueType(SubType)
     return self:_AddConstraint(true, "OfValueType", _OfValueType, SubType)
 end
 
+local function _PureArray(_, Target)
+    if (IsPureArray(Target) or next(Target) == nil) then
+        return true
+    end
+
+    return false, "Expected a pure array"
+end
+
+--- Ensures the indexable is a pure array, i.e. contiguous positive integers starting at 1 as keys.
+function IndexableClass:PureArray(ValueType)
+    if (ValueType) then
+        AssertIsTypeBase(ValueType, 1)
+    end
+
+    if (self:GetConstraint("PureMap")) then
+        error("Cannot use PureArray on an Indexable already defined as a PureMap", 2)
+    end
+
+    if (ValueType == nil) then
+        _InitAny()
+        ValueType = Any
+    end
+
+    return self:_AddConstraint(true, "PureArray", _PureArray)
+            :OfKeyType(DynamicIndex)
+            :OfValueType(ValueType)
+end
+
+local function _PureMap(_, Target)
+    if (IsPureMap(Target) or next(Target) == nil) then
+        return true
+    end
+
+    return false, "Expected a pure map"
+end
+
+--- Ensures the indexable is a pure map, i.e. no array keys are present.
+function IndexableClass:PureMap(KeyType, ValueType)
+    if (ValueType) then
+        AssertIsTypeBase(ValueType, 1)
+    end
+
+    if (KeyType) then
+        AssertIsTypeBase(KeyType, 1)
+    end
+
+    if (self:GetConstraint("PureArray")) then
+        error("Cannot use PureMap on an Indexable already defined as a PureArray", 2)
+    end
+
+    if (ValueType == nil) then
+        _InitAny()
+        ValueType = Any
+    end
+
+    if (KeyType == nil) then
+        _InitAny()
+        KeyType = DynamicIndex
+    end
+
+    return self:_AddConstraint(true, "PureMap", _PureMap)
+            :OfKeyType(KeyType)
+            :OfValueType(ValueType)
+end
+
 local function _OfKeyType(_, Target, SubType)
     local Check = SubType._Check
 
@@ -146,6 +253,25 @@ function IndexableClass:OfKeyType(SubType)
     end
 
     return self:_AddConstraint(true, "OfKeyType", _OfKeyType, SubType)
+end
+
+local function _IsOrdered(_, Target, AscendingOrDescendingOrEither)
+    if (IsOrdered(Target, AscendingOrDescendingOrEither)) then
+        return true
+    end
+
+    return false, "Array values were not ordered"
+end
+
+--- Checks if an array is ordered.
+function IndexableClass:IsOrdered(AscendingOrDescendingOrEither)
+    assert(self:GetConstraint("PureArray"), "IsOrdered can only be used on pure arrays")
+
+    if (AscendingOrDescendingOrEither ~= nil) then
+        ExpectType(AscendingOrDescendingOrEither, Expect.BOOLEAN_OR_FUNCTION, 1)
+    end
+
+    return self:_AddConstraint(true, "IsOrdered", _IsOrdered, AscendingOrDescendingOrEither)
 end
 
 --- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
@@ -177,6 +303,8 @@ end
 
 --- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure.
 function IndexableClass:Strict()
+    assert(self:GetConstraint("OfStructure") or self._MapStructure, "Strict can only be used on Indexables with OfStructure or MapStructure defined")
+
     return self:Modify({
         _Strict = true;
     })
@@ -270,7 +398,15 @@ function IndexableClass:ContainsKeyOfType(Checker)
     return self:_AddConstraint(false, "ContainsKeyOfType", _ContainsKeyOfType, Checker)
 end
 
-local function _MinSize(_, Target, MinSize)
+local function _MinSize(self, Target, MinSize)
+    if (self:GetConstraint("PureArray")) then
+        if (#Target < MinSize) then
+            return false, `[MinSize] expected at least {MinSize} elements, got {#Target}`
+        end
+
+        return true
+    end
+
     local Count = 0
 
     for _ in Target do
@@ -290,7 +426,15 @@ function IndexableClass:MinSize(MinSize)
     return self:_AddConstraint(true, "MinSize", _MinSize, MinSize)
 end
 
-local function _MaxSize(_, Target, MaxSize)
+local function _MaxSize(self, Target, MaxSize)
+    if (self:GetConstraint("PureArray")) then
+        if (#Target > MaxSize) then
+            return false, `[MaxSize] expected at most {MaxSize} elements, got {Target}`
+        end
+
+        return true
+    end
+
     local Count = 0
 
     for _ in Target do
@@ -308,6 +452,12 @@ function IndexableClass:MaxSize(MaxSize)
     ExpectType(MaxSize, Expect.NUMBER_OR_FUNCTION, 1)
 
     return self:_AddConstraint(true, "MaxSize", _MaxSize, MaxSize)
+end
+
+function IndexableClass:OfLength(Length: number)
+    ExpectType(Length, Expect.NUMBER, 1)
+
+    return self:MinSize(Length):MaxSize(Length)
 end
 
 local Original = IndexableClass.RemapDeep
@@ -400,24 +550,12 @@ function IndexableClass:Similarity(Value)
     return Similarity
 end
 
---- Serializes keys first, then values second. Not utilized
---- currently, but when Disjunction / Or supports leading
---- serialization via NoLeads tag, this will help save space
---- because the types will be less fragmented.
-function IndexableClass:GroupKV()
-    return self:Modify({
-        _GroupKV = true;
-    })
-end
-
 local function EmptyFunction()
 end
 
 function IndexableClass:_UpdateSerialize()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
-
     local MapStructure = self._MapStructure
-    local Strict = self._Strict
 
     local OfStructure = self:GetConstraint("OfStructure")
     local OfValueType = self:GetConstraint("OfValueType")
@@ -426,6 +564,7 @@ function IndexableClass:_UpdateSerialize()
     local MapStructureFunction = (MapStructure and MapStructure[2] or function(Value)
         return Value
     end)
+
     local UnmapStructureFunction = (self._Unmap or self._UnmapStructure or function(Value)
         return Value
     end)
@@ -440,9 +579,8 @@ function IndexableClass:_UpdateSerialize()
         -- 1 = table + frozen.
         -- 2 = table + not frozen.
         -- 3 = hopefully Luau adds no more hidden table attributes but if it does, can be used to signify a forward-compatible extension. 
-        local IsTable = (type(Value) == "table")
 
-        if (IsTable) then
+        if (type(Value) == "table") then
             Buffer.WriteUInt(2, table.isfrozen(Value) and 1 or 2)
 
             if (CheckMetatableSerialize) then
@@ -469,8 +607,6 @@ function IndexableClass:_UpdateSerialize()
         end
     end
 
-    local Any
-
     local AnySerializeDeserialize = {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
@@ -486,8 +622,8 @@ function IndexableClass:_UpdateSerialize()
             local Serialize = (Context and Context.AnySerialize or nil)
 
             if (Serialize == nil) then
-                Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)(CheckMetatableValue or nil))
-                    Serialize = Any._Serialize
+                _InitAny()
+                Serialize = Any._Serialize
 
                 Context = Merge(Context or {}, {
                     AnySerialize = Serialize;
@@ -505,8 +641,8 @@ function IndexableClass:_UpdateSerialize()
             local Deserialize = (Context and Context.AnyDeserialize or nil)
 
             if (Deserialize == nil) then
-                Any = Any or require(script.Parent.ValueCache)((require(script.Parent.Parent.Roblox.Any) :: any)(CheckMetatableValue or nil))
-                    Deserialize = Any._Deserialize
+                _InitAny()
+                Deserialize = Any._Deserialize
 
                 Context = Merge(Context or {}, {
                     AnyDeserialize = Deserialize;
@@ -525,187 +661,187 @@ function IndexableClass:_UpdateSerialize()
         end;
     }
 
-    if (HasFunctionalConstraints or not (((MapStructure and MapStructure[1] and MapStructure[1]._Strict)) or (OfStructure and Strict) or (OfValueType and OfKeyType))) then
+    if (HasFunctionalConstraints) then
         DeserializeMetaProperties = EmptyFunction
         SerializeMetaProperties = EmptyFunction
         return AnySerializeDeserialize
     end
 
-    if (OfStructure or MapStructure) then
-        local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
-        local IndexToKey = {}
+    local OfValueTypeChecker = (OfValueType and OfValueType[1] or nil)
+        local ValueDeserialize = (OfValueTypeChecker and OfValueTypeChecker._Deserialize or nil)
+        local ValueSerialize = (OfValueTypeChecker and OfValueTypeChecker._Serialize or nil)
 
-        for Key in StructureDefinition do
-            table.insert(IndexToKey, Key)
-        end
+    local OfKeyTypeChecker = (OfKeyType and OfKeyType[1] or nil)
+        local KeyDeserialize = (OfKeyTypeChecker and OfKeyTypeChecker._Deserialize or nil)
+        local KeySerialize = (OfKeyTypeChecker and OfKeyTypeChecker._Serialize or nil)
 
-        local KeysSortable = pcall(table.sort, IndexToKey)
+    local MaxSize = self:GetConstraint("MaxSize")
+    local MinSize = self:GetConstraint("MinSize")
 
-        local KeyToSerializeFunction = table.clone(StructureDefinition)
+    local SizeSerializer = (
+        (MaxSize or MinSize) and
+        Number(MinSize and MinSize[1] or 0, MaxSize and MaxSize[1] or 0xFFFFFFFF):Integer() or
+        DynamicUInt
+    )
+    local SizeDeserialize = SizeSerializer._Deserialize
+    local SizeSerialize = SizeSerializer._Serialize
+
+    local StructureDefinition = (MapStructure and MapStructure[1] and MapStructure[1]:GetConstraint("OfStructure") and MapStructure[1]:GetConstraint("OfStructure")[1]) or (OfStructure and OfStructure[1])
+
+    if (StructureDefinition) then
+        StructureDefinition = table.clone(StructureDefinition)
+    end
+
+    local HasArrayKeys = (OfKeyTypeChecker ~= nil and _SupportsArrayIndex(OfKeyTypeChecker))
+    local HasAmbiguousMapKeys = ((self:GetConstraint("PureMap") or (HasArrayKeys or (OfKeyTypeChecker ~= nil and _SupportsNonArrayIndex(OfKeyTypeChecker)))) and not self:GetConstraint("PureArray") and not self._Strict)
+    local HasUnambiguousMapKeys = pcall(table.sort, StructureDefinition)
+
+    local UnambiguousKeyToDeserializeFunction
+    local UnambiguousKeyToSerializeFunction
+    local UnambiguousIndexToKey = {}
+
+    if (HasUnambiguousMapKeys) then
+        UnambiguousKeyToSerializeFunction = table.clone(StructureDefinition)
+        UnambiguousKeyToDeserializeFunction = table.clone(StructureDefinition)
+
         for Key, Value in StructureDefinition do
-            KeyToSerializeFunction[Key] = Value._Serialize
+            table.insert(UnambiguousIndexToKey, Key)
+            UnambiguousKeyToSerializeFunction[Key] = Value._Serialize
+            UnambiguousKeyToDeserializeFunction[Key] = Value._Deserialize
         end
+    end
 
-        local KeyToDeserializeFunction = table.clone(StructureDefinition)
-        for Key, Value in StructureDefinition do
-            KeyToDeserializeFunction[Key] = Value._Deserialize
-        end
-
-        if (KeysSortable) then
-            return {
-                _Serialize = function(Buffer, Value, Context)
-                    local BufferContext = Buffer.Context
-
-                    if (BufferContext) then
-                        BufferContext("Object(Unambiguous)")
-                    end
-
-                    if (MapStructureFunction) then
-                        Value = MapStructureFunction(Value)
-                    end
-
-                    for _, Key in IndexToKey do
-                        KeyToSerializeFunction[Key](Buffer, Value[Key], Context)
-                    end
-
-                    SerializeMetaProperties(Buffer, Value, Context)
-
-                    if (BufferContext) then
-                        BufferContext()
-                    end
-                end;
-                _Deserialize = function(Buffer, Context)
-                    local Result = {}
-                    local CaptureInto = (Context and Context.CaptureInto or nil)
-
-                    if (CaptureInto) then
-                        CaptureInto[Context.CaptureValue] = Result
-                        Context.CaptureInto = nil
-                    end
-
-                    for _, Key in IndexToKey do
-                        Result[Key] = KeyToDeserializeFunction[Key](Buffer, Context)
-                    end
-
-                    if (UnmapStructureFunction) then
-                        Result = UnmapStructureFunction(Result)
-                    end
-
-                    DeserializeMetaProperties(Buffer, Result, Context)
-                    return Result
-                end;
-            }
-        end
-
-        -- Todo: support for known keys part + any part.
+    if (StructureDefinition == nil and (OfKeyTypeChecker == nil or OfValueTypeChecker == nil)) then
+        DeserializeMetaProperties = EmptyFunction
+        SerializeMetaProperties = EmptyFunction
         return AnySerializeDeserialize
     end
 
-    local OfValueTypeChecker = OfValueType[1]
-        local ValueDeserialize = OfValueTypeChecker._Deserialize
-        local ValueSerialize = OfValueTypeChecker._Serialize
+    --[[ print(
+        "Construction:\n",
+        `\tArray Part: {HasArrayKeys}\n`,
+        `\tUnambiguous Map Part: {HasUnambiguousMapKeys}\n`,
+        `\tAmbiguous Map Part: {HasAmbiguousMapKeys}\n`
+    ) ]]
 
-    local OfKeyTypeChecker = OfKeyType[1]
-        local KeyDeserialize = OfKeyTypeChecker._Deserialize
-        local KeySerialize = OfKeyTypeChecker._Serialize
-
-    local MaxSize = self:GetConstraint("MaxSize")
-    local SizeSerializer = (MaxSize and Number(0, MaxSize[1]):Integer() or Number():Integer(32, false):Positive():Dynamic())
-        local SizeSerialize = SizeSerializer._Serialize
-        local SizeDeserialize = SizeSerializer._Deserialize
-
-    local GroupKV = self._GroupKV
-
-    if (GroupKV) then
-        return {
-            _Serialize = function(Buffer, Value, Context)
-                local BufferContext = Buffer.Context
-
-                if (BufferContext) then
-                    BufferContext("Object(GroupKV, OfKeyType, OfValueType)")
-                end
-
-                if (MapStructureFunction) then
-                    Value = MapStructureFunction(Value)
-                end
-
-                local Length = 0
-
-                for _ in Value do
-                    Length += 1
-                end
-
-                SizeSerialize(Buffer, Length, Context)
-
-                for Key in Value do
-                    KeySerialize(Buffer, Key, Context)
-                end
-
-                for _, Value in Value do
-                    ValueSerialize(Buffer, Value, Context)
-                end
-
-                SerializeMetaProperties(Buffer, Value, Context)
-
-                if (BufferContext) then
-                    BufferContext()
-                end
-            end;
-            _Deserialize = function(Buffer, Context)
-                local Result = {}
-                local CaptureInto = (Context and Context.CaptureInto or nil)
-
-                if (CaptureInto) then
-                    CaptureInto[Context.CaptureValue] = Result
-                    Context.CaptureInto = nil
-                end
-
-                local Size = SizeDeserialize(Buffer, Context)
-                local IndexToKey = table.create(Size)
-
-                for Index = 1, Size do
-                    local Key = KeyDeserialize(Buffer, Context)
-                    IndexToKey[Index] = Key
-                    Result[Key] = true
-                end
-
-                for Index = 1, Size do
-                    Result[IndexToKey[Index]] = ValueDeserialize(Buffer, Context)
-                end
-
-                if (UnmapStructureFunction) then
-                    Result = UnmapStructureFunction(Result)
-                end
-
-                DeserializeMetaProperties(Buffer, Result, Context)
-                return Result
-            end;
-        }
-    end
+    -- This library considers three non-mutually-exclusive serialization categories to an indexable:
+    -- 1. Array part (the Luau array / non-hashmap part of a table).
+    -- 2. Unambiguous map part (the Luau hashmap part of a table where keys are known and sortable).
+    -- 3. Ambiguous map part (the Luau hashmap part of a table where keys are not known).
+    -- Each has a different optimization approach during serialization and deserialization.
 
     return {
         _Serialize = function(Buffer, Value, Context)
             local BufferContext = Buffer.Context
 
             if (BufferContext) then
-                BufferContext("Object(OfKeyType, OfValueType)")
+                BufferContext("Indexable")
             end
 
             if (MapStructureFunction) then
                 Value = MapStructureFunction(Value)
             end
 
-            local Length = 0
+            local ArraySize
 
-            for _ in Value do
-                Length += 1
+            if (HasArrayKeys) then
+                if (BufferContext) then
+                    BufferContext("Indexable(Array)")
+                end
+
+                ArraySize = #Value
+                SizeSerialize(Buffer, ArraySize, Context)
+
+                for Index = 1, ArraySize do
+                    -- print("\tArray Key", Index)
+                    ValueSerialize(Buffer, Value[Index], Context)
+                end
+
+                if (BufferContext) then
+                    BufferContext()
+                end
             end
 
-            SizeSerialize(Buffer, Length, Context)
+            if (HasUnambiguousMapKeys) then
+                if (BufferContext) then
+                    BufferContext("Indexable(Unambiguous)")
+                end
 
-            for Key, Value in Value do
-                KeySerialize(Buffer, Key, Context)
-                ValueSerialize(Buffer, Value, Context)
+                if (ArraySize) then
+                    for _, Key in UnambiguousIndexToKey do
+                        if (type(Key) == "number" and (Key >= 1 and Key <= ArraySize)) then
+                            continue
+                        end
+
+                        -- print("\tUnambiguous Key[2]", Key)
+                        UnambiguousKeyToSerializeFunction[Key](Buffer, Value[Key], Context)
+                    end
+                else
+                    for _, Key in UnambiguousIndexToKey do
+                        -- print("\tUnambiguous Key[1]", Key)
+                        UnambiguousKeyToSerializeFunction[Key](Buffer, Value[Key], Context)
+                    end
+                end
+
+                if (BufferContext) then
+                    BufferContext()
+                end
+            end
+
+            if (HasAmbiguousMapKeys) then
+                if (BufferContext) then
+                    BufferContext("Indexable(Ambiguous)")
+                end
+
+                if (StructureDefinition or ArraySize) then
+                    local Length = 0
+
+                    for Key in Value do
+                        if (ArraySize and type(Key) == "number" and (Key >= 1 and Key <= ArraySize)) then
+                            continue
+                        end
+
+                        if (StructureDefinition and StructureDefinition[Key] ~= nil) then
+                            continue
+                        end
+
+                        Length += 1
+                    end
+
+                    SizeSerialize(Buffer, Length, Context)
+
+                    for Key, Value in Value do
+                        if (ArraySize and type(Key) == "number" and (Key >= 1 and Key <= ArraySize)) then
+                            continue
+                        end
+
+                        if (StructureDefinition and StructureDefinition[Key] ~= nil) then
+                            continue
+                        end
+
+                        -- print("\tAmbiguous Key[2]", StructureDefinition, Key)
+                        KeySerialize(Buffer, Key, Context)
+                        ValueSerialize(Buffer, Value, Context)
+                    end
+                else
+                    local Length = 0
+
+                    for Key in Value do
+                        Length += 1
+                    end
+
+                    SizeSerialize(Buffer, Length, Context)
+
+                    for Key, Value in Value do
+                        -- print("\tAmbiguous Key[1]", Key)
+                        KeySerialize(Buffer, Key, Context)
+                        ValueSerialize(Buffer, Value, Context)
+                    end
+                end
+
+                if (BufferContext) then
+                    BufferContext()
+                end
             end
 
             SerializeMetaProperties(Buffer, Value, Context)
@@ -715,18 +851,55 @@ function IndexableClass:_UpdateSerialize()
             end
         end;
         _Deserialize = function(Buffer, Context)
-            local Result = {}
-            local CaptureInto = (Context and Context.CaptureInto or nil)
+            local Result
 
-            if (CaptureInto) then
-                CaptureInto[Context.CaptureValue] = Result
-                Context.CaptureInto = nil
+            if (HasArrayKeys) then
+                local Size = SizeDeserialize(Buffer, Context)
+                Result = table.create(Size)
+                local CaptureInto = (Context and Context.CaptureInto or nil)
+
+                if (CaptureInto) then
+                    CaptureInto[Context.CaptureValue] = Result
+                    Context.CaptureInto = nil
+                end
+
+                for Index = 1, Size do
+                    Result[Index] = ValueDeserialize(Buffer, Context)
+                end
             end
 
-            local Length = SizeDeserialize(Buffer, Context)
+            if (HasUnambiguousMapKeys) then
+                if (Result == nil) then
+                    Result = {}
+                    local CaptureInto = (Context and Context.CaptureInto or nil)
 
-            for Index = 1, Length do
-                Result[KeyDeserialize(Buffer, Context)] = ValueDeserialize(Buffer, Context)
+                    if (CaptureInto) then
+                        CaptureInto[Context.CaptureValue] = Result
+                        Context.CaptureInto = nil
+                    end
+                end
+
+                for _, Key in UnambiguousIndexToKey do
+                    Result[Key] = UnambiguousKeyToDeserializeFunction[Key](Buffer, Context)
+                end
+            end
+
+            if (HasAmbiguousMapKeys) then
+                if (Result == nil) then
+                    Result = {}
+                    local CaptureInto = (Context and Context.CaptureInto or nil)
+
+                    if (CaptureInto) then
+                        CaptureInto[Context.CaptureValue] = Result
+                        Context.CaptureInto = nil
+                    end
+                end
+
+                local Length = SizeDeserialize(Buffer, Context)
+
+                for Index = 1, Length do
+                    Result[KeyDeserialize(Buffer, Context)] = ValueDeserialize(Buffer, Context)
+                end
             end
 
             if (UnmapStructureFunction) then
@@ -794,6 +967,80 @@ task.defer(function()
     local DS2 = AHHH:Deserialize(AHHH:Serialize(TestInstance2))
     print(getmetatable(DS1) == Test1, table.isfrozen(DS1))
     print(getmetatable(DS2) == Test2, table.isfrozen(DS2))
+end) ]]
+
+--[[ task.defer(function()
+    local String = require(script.Parent.String)
+    local Or = require(script.Parent.Or)
+
+    local ArrayIndex = Number(1, 0xFFFFFFFF):Integer():Dynamic()
+
+    -- Array Part: true
+    -- Unambiguous Map Part: false
+    -- Ambiguous Map Part: false
+    print("-------------------Array")
+    local Serializer = Indexable(ArrayIndex, String()):PureArray()
+    local Serialized = Serializer:Serialize({"Hello", "World"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: false
+    -- Unambiguous Map Part: true
+    -- Ambiguous Map Part: false
+    print("-------------------Unambiguous")
+    Serializer = Indexable():OfStructure({X = String(), Y = String()})
+    Serialized = Serializer:Serialize({X = "Hello", Y = "World"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: true
+    -- Unambiguous Map Part: true
+    -- Ambiguous Map Part: false
+    print("-------------------Array, Unambiguous")
+    Serializer = Indexable(ArrayIndex, String()):OfStructure({[300] = String()}):PureArray()
+    Serialized = Serializer:Serialize({"X", "Y", "Z", [300] = "Hello"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: false
+    -- Unambiguous Map Part: false
+    -- Ambiguous Map Part: true
+    print("-------------------Ambiguous")
+    Serializer = Indexable(String(), String())
+    Serialized = Serializer:Serialize({X = "X", Y = "Y"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: true
+    -- Unambiguous Map Part: false
+    -- Ambiguous Map Part: true
+    print("-------------------Array, Ambiguous")
+    Serializer = Indexable(Or(ArrayIndex, String()), String())
+    Serialized = Serializer:Serialize({X = "X", [1] = "Y", [5] = "Z"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: false
+    -- Unambiguous Map Part: true
+    -- Ambiguous Map Part: true
+    -- *i.e. must contain X and Y, but can also contain ambiguous key-value pairs.
+    print("-------------------Unambiguous, Ambiguous")
+    Serializer = Indexable(Or(String(), Number()), String()):OfStructure({X = String(), Y = String()})
+    Serialized = Serializer:Serialize({X = "X", Y = "Y", PQR = "PQR", [1.23] = "Ok"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    -- Array Part: true
+    -- Unambiguous Map Part: true
+    -- Ambiguous Map Part: true
+    -- *i.e. must contain X and Y, but can also contain ambiguous key-value pairs and array key-value pairs.
+    print("-------------------Array, Unambiguous, Ambiguous")
+    Serializer = Indexable(Or(ArrayIndex, String()), String()):OfStructure({X = String(), Y = String()})
+    Serialized = Serializer:Serialize({X = "X", Y = "Y", PQR = "PQR", [1] = "Ok"})
+    print("Serialized:", buffer.tostring(Serialized))
+    print("Deserialized:", Serializer:Deserialize(Serialized))
+
+    print("-------------------")
 end) ]]
 
 return Indexable

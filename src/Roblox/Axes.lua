@@ -15,11 +15,11 @@ type AxesTypeChecker = TypeChecker<AxesTypeChecker, Axes> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     Front = DefaultBoolean;
     Right = DefaultBoolean;
     Top = DefaultBoolean;

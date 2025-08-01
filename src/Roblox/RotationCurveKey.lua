@@ -15,9 +15,9 @@ type RotationCurveKeyTypeChecker = TypeChecker<RotationCurveKeyTypeChecker, Rota
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local DefaultNumber = Number()
-    local Object = require(Core.Object)
 
 local RbxEnum = require(script.Parent.Enum)
     local EnumKeyInterpolationMode = RbxEnum(Enum.KeyInterpolationMode)
@@ -25,7 +25,7 @@ local RbxEnum = require(script.Parent.Enum)
 local RbxCFrame = require(script.Parent.CFrame)
     local DefaultCFrame = RbxCFrame()
 
-local Checker = Object({
+local Checker = Indexable({
     Interpolation = EnumKeyInterpolationMode;
     RightTangent = DefaultNumber;
     LeftTangent = DefaultNumber;

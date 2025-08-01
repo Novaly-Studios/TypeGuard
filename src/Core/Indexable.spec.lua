@@ -10,7 +10,7 @@ return function()
 
     describe("Init", function()
         it("should reject non-table values", function()
-            for _, Value in GetValues("Object", "Array") do
+            for _, Value in GetValues("Map", "Array", "Mixed") do
                 expect(Base:Check(Value)).to.equal(false)
             end
         end)

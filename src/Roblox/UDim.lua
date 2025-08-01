@@ -14,12 +14,12 @@ type UDimTypeChecker = TypeChecker<UDimTypeChecker, UDim> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local DynamicInt32 = Number():Integer(32, true):Dynamic()
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     Offset = DynamicInt32;
     Scale = Float32;
 }):Unmap(function(Value)

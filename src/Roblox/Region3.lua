@@ -15,7 +15,7 @@ type Region3TypeChecker = TypeChecker<Region3TypeChecker, Region3> & {
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local RbxVector3 = require(script.Parent.Vector3)
     local DefaultVector3 = RbxVector3()
@@ -23,7 +23,7 @@ local RbxVector3 = require(script.Parent.Vector3)
 local RbxCFrame = require(script.Parent.CFrame)
     local DefaultCFrame = RbxCFrame()
 
-local Checker = Object({
+local Checker = Indexable({
     CFrame = DefaultCFrame;
     Size = DefaultVector3;
 }):Unmap(function(Value)

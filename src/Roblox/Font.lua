@@ -15,10 +15,10 @@ type FontTypeChecker = TypeChecker<FontTypeChecker, Font> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-    local Object = require(Core.Object)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
 
@@ -26,7 +26,7 @@ local RbxEnum = require(script.Parent.Enum)
     local EnumFontWeight = RbxEnum(Enum.FontWeight)
     local EnumFontStyle = RbxEnum(Enum.FontStyle)
 
-local Checker = Object({
+local Checker = Indexable({
     Weight = EnumFontWeight;
     Family = CacheableString;
     Style = EnumFontStyle;

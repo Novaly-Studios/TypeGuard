@@ -43,8 +43,9 @@ local FullTypes = table.clone(Types)
 
 for TypeName1, Value1 in Types do
     for TypeName2, Value2 in Types do
-        FullTypes[`Object-{TypeName1}-{TypeName2}`] = {[Value1] = Value2, [Value2] = Value1}
+        FullTypes[`Map-{TypeName1}-{TypeName2}`] = {[Value1] = Value2, [Value2] = Value1}
         FullTypes[`Array-{TypeName1}-{TypeName2}`] = {Value1, Value2}
+        --[[ FullTypes[`Mixed-{TypeName1}-{TypeName2}`] = {[0] = Value1, [1] = Value2, Other = Value1, [Value2] = Value2} ]]
     end
 end
 

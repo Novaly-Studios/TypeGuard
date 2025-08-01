@@ -15,9 +15,9 @@ type RBXScriptConnectionTypeChecker = TypeChecker<RBXScriptConnectionTypeChecker
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
-local Checker = Object()
+local Checker = Indexable()
 
 Checker = Checker:Modify({
     Name = "RBXScriptConnection";

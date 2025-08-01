@@ -10,12 +10,6 @@ local Or
 
 local Util = require(script.Parent.Util)
     local ConcatWithToString = Util.ConcatWithToString
-    local HumanReadableSerializer = Util.HumanReadableSerializer
-        type HumanReadableSerializer = typeof(HumanReadableSerializer)
-    local ByteSerializer = Util.ByteSerializer
-        type ByteSerializer = typeof(ByteSerializer)
-    local BitSerializer = Util.BitSerializer
-        type BitSerializer = typeof(BitSerializer)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
@@ -23,6 +17,10 @@ local TableUtil = require(script.Parent.Parent.TableUtil).WithFeatures()
     local MergeDeep = TableUtil.Map.MergeDeep
     local Insert = TableUtil.Array.Insert
     local Merge = TableUtil.Map.Merge
+
+local Serializers = require(script.Parent.Util.Serializers)
+    local ByteSerializer = Serializers.Byte
+    type Serializer = Serializers.Serializer
 
 export type AnyMethod = (...any) -> (...any)
 
@@ -64,10 +62,10 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     FailMessage: ((self: ExtensionClass, Message: FunctionalArg<string>) -> (ExtensionClass));
     AsAssertion: ((self: ExtensionClass) -> ((Input: SampleType) -> ()));
     AsPredicate: ((self: ExtensionClass) -> ((Input: SampleType) -> (boolean, string?)));
-    Deserialize: ((self: ExtensionClass, Buffer: buffer, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (SampleType));
+    Deserialize: ((self: ExtensionClass, Buffer: buffer, Serializer: Serializer?, BypassCheck: boolean?, Context: any?) -> (SampleType));
     WithContext: ((self: ExtensionClass, Context: any?) -> (ExtensionClass));
     RemapDeep: ((self: ExtensionClass, Mapper: ((any?) -> (any?)), Recursive: boolean?) -> (ExtensionClass));
-    Serialize: ((self: ExtensionClass, Value: SampleType, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (buffer));
+    Serialize: ((self: ExtensionClass, Value: SampleType, Serializer: Serializer?, BypassCheck: boolean?, Context: any?) -> (buffer));
     NoCheck: ((self: ExtensionClass) -> (ExtensionClass));
     Assert: ((self: ExtensionClass, Value: any) -> ());
     Negate: ((self: ExtensionClass) -> (ExtensionClass));
@@ -84,12 +82,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     GreaterThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
-}
-
-local SerializerIDToConstructor = {
-    Human = HumanReadableSerializer;
-    Byte = ByteSerializer;
-    Bit = BitSerializer;
 }
 
 local InitForbiddenKeys = false
@@ -136,7 +128,7 @@ local function _MemorizeSerialize(Target, Buffer, Level)
 end
 
 local function MemorizeSerialize(Target)
-    local Buffer = BitSerializer(nil, 8192)
+    local Buffer = Serializers.Byte(nil, 8192)
     Buffer.WriteString("\n", 8)
     _MemorizeSerialize(Target, Buffer, 0)
     return buffer.tostring(Buffer.GetClippedBuffer())
@@ -278,7 +270,7 @@ local function CreateTemplate(Name: string)
                 self[Key] = Value
             end
 
-            setmetatable(self, {__tostring = TemplateClass.__tostring})
+            setmetatable(self, {__tostring = (TemplateClass :: any).__tostring})
         end
 
         -- Make sure we generate initial serialization & deserialization functions.
@@ -841,8 +833,13 @@ local function CreateTemplate(Name: string)
         error(`Deserialization not implemented for '{Name}'`)
     end
 
-    function TemplateClass:Serialize(Value, Atom, BypassCheck, Context)
+    function TemplateClass:Serialize(Value, Serializer, BypassCheck, Context)
         local InitSerialize = self._InitSerialize
+        Context = Context or {}
+
+        if (Context.BypassCheck == nil) then
+            Context.BypassCheck = BypassCheck
+        end
 
         if (InitSerialize) then
             local NewContext = InitSerialize(self, Context)
@@ -856,13 +853,18 @@ local function CreateTemplate(Name: string)
             self:Assert(Value)
         end
 
-        local Serializer = SerializerIDToConstructor[Atom or "Byte"](buffer.create(16))
+        Serializer = Serializer or ByteSerializer()
         self._Serialize(Serializer, Value, Context)
         return Serializer.GetClippedBuffer()
     end
 
-    function TemplateClass:Deserialize(Buffer, Atom, BypassCheck, Context)
+    function TemplateClass:Deserialize(Buffer, Serializer, BypassCheck, Context)
         local InitDeserialize = self._InitDeserialize
+        Context = Context or {}
+
+        if (Context.BypassCheck == nil) then
+            Context.BypassCheck = BypassCheck
+        end
 
         if (InitDeserialize) then
             local NewContext = InitDeserialize(self, Context)
@@ -872,7 +874,10 @@ local function CreateTemplate(Name: string)
             end
         end
 
-        local Value = self._Deserialize(SerializerIDToConstructor[Atom or "Byte"](Buffer), Context)
+        Serializer = Serializer or ByteSerializer(Buffer)
+        Serializer.SetBuffer(Buffer)
+
+        local Value = self._Deserialize(Serializer, Context)
 
         if (not BypassCheck) then
             self:Assert(Value)

@@ -16,6 +16,9 @@ local Test = {
         Color3 = Color3.new(1, 0.5, 0);
         CFrame = CFrame.new(1, 2, 3) * CFrame.Angles(math.rad(20), math.rad(30), math.rad(40));
     };
+    Roblox1 = true;
+    Roblox2 = true;
+    Roblox3 = true;
 }
 Test.Self = Test
 Test.Roblox2 = Test.Roblox
@@ -24,23 +27,23 @@ Test.Roblox.Self = Test.Roblox
 Test.Roblox[Test.Roblox] = Test
 
 --[[ local BaseAny = TypeGuard.BaseAny()
-print(BaseAny:Deserialize(BaseAny:Serialize(Test, "Bit", false), "Bit", false)) ]]
+print(BaseAny:Deserialize(BaseAny:Serialize(Test, TypeGuard.Serializers.Bit(), true), TypeGuard.Serializers.Bit(), true)) ]]
 
---[[ local Any = TypeGuard.Any()
-print(Any:Deserialize(Any:Serialize(Test, "Byte", false), "Byte", false)) ]]
+--[[ local Any = TypeGuard.Compressible(TypeGuard.ValueCache(TypeGuard.Any()))
+print(Any:Deserialize(Any:Serialize(Test, TypeGuard.Serializers.Bit(), true), TypeGuard.Serializers.Bit(), true)) ]]
 
 --[[ local Serializer = TypeGuard.Any()
 local Value = 1234
 print("Human:", buffer.tostring(Serializer:Serialize(Value, "Human")))
-print("Byte:", Serializer:Deserialize(Serializer:Serialize(Value, "Byte"), "Byte"))
-print("Bit:", Serializer:Deserialize(Serializer:Serialize(Value, "Bit"), "Bit")) ]]
+print("Byte:", Serializer:Deserialize(Serializer:Serialize(Value, TypeGuard.Serializers.Byte()), TypeGuard.Serializers.Byte()))
+print("Bit:", Serializer:Deserialize(Serializer:Serialize(Value, TypeGuard.Serializers.Bit()), TypeGuard.Serializers.Bit())) ]]
 
---[[ local Serializer = TypeGuard.ValueCache(TypeGuard.Any())
-local Serialized = Serializer:Serialize(Test, "Byte", true)
-print(Serializer:Deserialize(Serialized, "Byte", true)) ]]
-
-local CacheableString = TypeGuard.Cacheable(TypeGuard.String())
-local Array = TypeGuard.ValueCache(TypeGuard.Array(TypeGuard.Cacheable(TypeGuard.Object(CacheableString, CacheableString))))
-
-local Serialized = Array:Serialize(table.create(100, {RepeatibleField = "RepeatibleField"}))
-print(">>>", buffer.tostring(Serialized), Array:Deserialize(Serialized))
+--[[ for _ = 1, 100 do
+    debug.profilebegin("Serialize")
+    local Serialized = Serializer:Serialize(Test, "Byte", true)
+    debug.profileend()
+    debug.profilebegin("Deserialize")
+    Serializer:Deserialize(Serialized, "Byte", true)
+    debug.profileend()
+    task.wait()
+end ]]

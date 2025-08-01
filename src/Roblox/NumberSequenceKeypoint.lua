@@ -14,14 +14,14 @@ type NumberSequenceKeypointTypeChecker = TypeChecker<NumberSequenceKeypointTypeC
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
     local Nil = require(Core.Nil)
         local DefaultNil = Nil()
     local Or = require(Core.Or)
 
-local Checker = Object({
+local Checker = Indexable({
     Envelope = Or(Float32, DefaultNil);
     Value = Float32;
     Time = Float32:RangeInclusive(0, 1);

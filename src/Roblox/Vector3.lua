@@ -15,11 +15,11 @@ type Vector3TypeChecker = TypeChecker<Vector3TypeChecker, Vector3> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
         local Float32 = Number():Float(32)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     X = Float32;
     Y = Float32;
     Z = Float32;

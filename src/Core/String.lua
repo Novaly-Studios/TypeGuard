@@ -12,13 +12,20 @@ local Template = require(script.Parent.Parent._Template)
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
-    local ByteSerializer = Util.ByteSerializer
+    local ByteSerializer = Util.Serializers.Byte
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
 local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
 
 local Number = require(script.Parent.Number)
+
+local b32lshift = bit32.lshift
+local strbyte = string.byte
+
+local buftostring = buffer.tostring
+local bufwriteu8 = buffer.writeu8
+local bufcreate = buffer.create
 
 type StringTypeChecker = TypeChecker<StringTypeChecker, string> & {
     UsingCharacters: ((self: StringTypeChecker, CharacterSet: FunctionalArg<string?>) -> (StringTypeChecker));
@@ -248,10 +255,6 @@ function StringClass:_UpdateSerialize()
             return Index, Character
         end)
 
-        local Serializer = Number(0, 2^16-1):Integer()
-            local SizeDeserialize = Serializer._Deserialize
-            local SizeSerialize = Serializer._Serialize
-
         return {
             _Serialize = function(Buffer, Value, Context)
                 local BufferContext = Buffer.Context
@@ -261,26 +264,47 @@ function StringClass:_UpdateSerialize()
                 end
 
                 local WriteUInt = Buffer.WriteUInt
-                SizeSerialize(Buffer, #Value, Context)
+                DynamicUIntSerialize(Buffer, #Value, Context)
 
                 for Character in Value:gmatch(".") do
                     WriteUInt(Bits, CharacterToIndex[Character])
                 end
+
+                --[[ for Index = 1, #Value, 4 do
+                    local Char1, Char2, Char3, Char4 = strbyte(String, Index, Index + 3)
+
+                    if (Char4) then
+                        WriteUInt(32, b32lshift(Char4, 24) + b32lshift(Char3, 16) + b32lshift(Char2, 8) + Char1)
+                        continue
+                    end
+
+                    if (Char3) then
+                        WriteUInt(24, b32lshift(Char3, 16) + b32lshift(Char2, 8) + Char1)
+                        continue
+                    end
+
+                    if (Char2) then
+                        WriteUInt(16, b32lshift(Char2, 8) + Char1)
+                        continue
+                    end
+
+                    WriteUInt(8, Char1)
+                end ]]
 
                 if (BufferContext) then
                     BufferContext()
                 end
             end;
             _Deserialize = function(Buffer, Context)
-                local Size = SizeDeserialize(Buffer, Context)
-                local Result = buffer.create(Size)
+                local Size = DynamicUIntDeserialize(Buffer, Context)
+                local Result = bufcreate(Size)
                 local ReadUInt = Buffer.ReadUInt
 
                 for Index = 0, Size - 1 do
-                    buffer.writeu8(Result, Index, IndexToCharacterByte[ReadUInt(Bits)])
+                    bufwriteu8(Result, Index, IndexToCharacterByte[ReadUInt(Bits)])
                 end
 
-                return buffer.tostring(Result)
+                return buftostring(Result)
             end;
         }
     end

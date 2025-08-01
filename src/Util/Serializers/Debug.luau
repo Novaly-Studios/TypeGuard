@@ -19,6 +19,8 @@ local function ReadError()
     error("HumanReadableSerializer only for serialization, not deserialization")
 end
 
+local function EmptyFunction() end
+
 --- Abstracts over buffers with an auto-resize mechanism. All lengths are
 --- represented in bits as a standard to allow forward-compatible switches
 --- between byte-level and bit-level buffers. Intended for long duration
@@ -63,16 +65,12 @@ local function HumanReadableSerializer(Buffer: buffer?, Size: number?)
         Position += Bytes
     end
 
-    local function EndContext()
-        Indentation = Indentation:sub(1, #Indentation - 2)
-
-        local Write = `{Indentation}End\n`
-        RawWriteString(Write, #Write * 8)
-    end
-
     local function Context(Name: string?)
         if (Name == nil) then
-            EndContext()
+            Indentation = Indentation:sub(1, #Indentation - 2)
+
+            local Write = `{Indentation}End\n`
+            RawWriteString(Write, #Write * 8)
             return
         end
 
@@ -108,14 +106,25 @@ local function HumanReadableSerializer(Buffer: buffer?, Size: number?)
         end;
         ReadString = ReadError;
 
+        WriteBuffer = function(Subject: buffer, From: number, To: number)
+            local Write = `{Indentation}[BUFFER] Buffer: [{From} -> {To}] {buffer.tostring(Subject)}\n`
+            RawWriteString(Write, #Write * 8)
+        end;
+        ReadBuffer = ReadError;
+
         SetPosition = ReadError;
         GetPosition = function(): number
             return Position * 8
         end;
+        Extend = CheckResize;
+        Align = EmptyFunction;
+
         GetBuffer = function()
             return Buffer :: buffer
         end;
         GetClippedBuffer = GetClippedBuffer;
+
+        Constructor = HumanReadableSerializer;
 
         Type = "Human";
     }

@@ -15,12 +15,12 @@ type RectTypeChecker = TypeChecker<RectTypeChecker, Rect> & {
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local Vector2Serializer = require(script.Parent.Vector2)
     local DefaultVector2 = Vector2Serializer()
 
-local Checker = Object({
+local Checker = Indexable({
     Min = DefaultVector2;
     Max = DefaultVector2;
 }):Unmap(function(Value)

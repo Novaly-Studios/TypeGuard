@@ -14,12 +14,12 @@ type NumberSequenceTypeChecker = TypeChecker<NumberSequenceTypeChecker, NumberSe
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
     local Array = require(Core.Array)
 
 local NumberSequenceKeypointChecker = require(script.Parent.NumberSequenceKeypoint)
 
-local Checker = Object({
+local Checker = Indexable({
     Keypoints = Array(NumberSequenceKeypointChecker());
 }):Unmap(function(Value)
     return NumberSequence.new(Value.Keypoints)

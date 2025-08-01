@@ -14,12 +14,12 @@ type ColorSequenceTypeChecker = TypeChecker<ColorSequenceTypeChecker, ColorSeque
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
     local Array = require(Core.Array)
 
 local ColorSequenceKeypointChecker = require(script.Parent.ColorSequenceKeypoint)
 
-local Checker = Object({
+local Checker = Indexable({
     Keypoints = Array(ColorSequenceKeypointChecker());
 }):Unmap(function(Value)
     local Keypoints = Value.Keypoints

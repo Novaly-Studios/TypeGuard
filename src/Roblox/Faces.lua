@@ -17,9 +17,9 @@ type FacesTypeChecker = TypeChecker<FacesTypeChecker, Faces> & {
 local Core = script.Parent.Parent.Core
     local Boolean = require(Core.Boolean)
         local DefaultBoolean = Boolean()
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
-local Checker = Object({
+local Checker = Indexable({
     Front = DefaultBoolean;
     Back = DefaultBoolean;
     Right = DefaultBoolean;

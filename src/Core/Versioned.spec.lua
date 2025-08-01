@@ -10,12 +10,11 @@ return function()
 
     describe("DefineVersions", function()
         it("should deserialize and reserialize the same value with a newer version", function()
-            local Object = require(script.Parent.Object)
-            local Object1 = Object({
+            local Object1 = TypeGuard.Object({
                 X = Number;
                 Y = Number;
             }):Strict()
-            local Object2 = Object({
+            local Object2 = TypeGuard.Object({
                 X = Number:Integer(8, true);
                 Y = Number:Integer(8, true);
             }):Strict()

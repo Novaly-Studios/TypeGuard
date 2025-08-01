@@ -15,16 +15,16 @@ type ContentTypeChecker = TypeChecker<ContentTypeChecker, Content> & {
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
     local Optional = require(Core.Optional)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
-    local Object = require(Core.Object)
 
 local RbxInstance = require(script.Parent.Instance)
     local CacheableInstance = Cacheable(RbxInstance())
 
-local Checker = Object({
+local Checker = Indexable({
     Object = Optional(CacheableInstance);
     Uri = Optional(CacheableString);
 }):Unmap(function(Value)

@@ -10,7 +10,6 @@ end
 local Util = require(script.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
     local AssertIsTypeBase = Util.AssertIsTypeBase
-    local ByteSerializer = Util.ByteSerializer
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
@@ -50,7 +49,7 @@ local FromTypeSample = function(TypeName, Sample, Serialize, Deserialize)
 
     return CheckerFunction
 end ::
-    (<T>(TypeName: string, Sample: T, Serialize: ((typeof(ByteSerializer()), T) -> ()), Deserialize: ((typeof(ByteSerializer())) -> T)) -> (TypeCheckerConstructor<TypeChecker<any, T>>)) &
+    (<T>(TypeName: string, Sample: T, Serialize: ((Util.Serializer, T) -> ()), Deserialize: ((Util.Serializer) -> T)) -> (TypeCheckerConstructor<TypeChecker<any, T>>)) &
     (<T>(TypeName: string, Sample: T, Serialize: TypeChecker<any, T>) -> (TypeCheckerConstructor<TypeChecker<any, T>>)) &
     (<T>(TypeName: string, Sample: T) -> (TypeCheckerConstructor<TypeChecker<any, T>>))
 
@@ -58,17 +57,20 @@ TypeGuard.FromTypeSample = FromTypeSample
 
 -- Complex type checker imports...
 do
+    TypeGuard.CompressibleCache = require(Core.CompressibleCache)
+    TypeGuard.Compressible = require(Core.Compressible)
     TypeGuard.ValueCache = require(Core.ValueCache)
     TypeGuard.Versioned = require(Core.Versioned)
     TypeGuard.Cacheable = require(Core.Cacheable)
+    TypeGuard.Indexable = require(Core.Indexable)
     TypeGuard.Function = require(Core.Function)
     TypeGuard.Userdata = require(Core.Userdata)
     TypeGuard.Optional = require(Core.Optional)
     TypeGuard.Boolean = require(Core.Boolean)
     TypeGuard.BaseAny = require(Core.BaseAny)
+    TypeGuard.Object = require(Core.Indexable)
     TypeGuard.Number = require(Core.Number)
     TypeGuard.String = require(Core.String)
-    TypeGuard.Object = require(Core.Object)
     TypeGuard.Thread = require(Core.Thread)
     TypeGuard.Buffer = require(Core.Buffer)
     TypeGuard.Array = require(Core.Array)
@@ -123,6 +125,8 @@ do
         -- _Check = TypeGuard.Function();
         _TC = TypeGuard.Boolean();
     })
+
+    TypeGuard.Serializers = Util.Serializers
 
     --- Creates a function which checks params as if they were a strict Array checker.
     function TypeGuard.Params(...: SignatureTypeChecker)

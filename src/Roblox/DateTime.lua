@@ -17,9 +17,9 @@ type DateTimeTypeChecker = TypeChecker<DateTimeTypeChecker, DateTime> & {
 local Core = script.Parent.Parent.Core
     local Number = require(Core.Number)
         local DefaultNumber = Number()
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
-local Checker = Object({
+local Checker = Indexable({
     UnixTimestamp = DefaultNumber;
 }):Unmap(function(Value)
     return DateTime.fromUnixTimestamp(Value.UnixTimestamp)

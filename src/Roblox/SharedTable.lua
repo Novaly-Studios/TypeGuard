@@ -11,12 +11,12 @@ local Template = require(script.Parent.Parent._Template)
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local TypeOf = {"SharedTable"}
 
 return function(...)
-    local Checker = Object(...):UnmapStructure(SharedTable.new)
+    local Checker = Indexable(...):UnmapStructure(SharedTable.new)
     Checker = Checker:Modify({
         Name = TypeOf[1];
         _TypeOf = TypeOf;

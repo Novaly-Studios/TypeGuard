@@ -20,8 +20,8 @@ local TableUtil = require(Root.Parent.TableUtil).WithFeatures()
     local Merge = TableUtil.Map.Merge
 
 local Core = Root.Core
+    local Indexable = require(Core.Indexable)
     local Cacheable = require(Core.Cacheable)
-    local Object = require(Core.Object)
     local Array = require(Core.Array)
     local Nil = require(Core.Nil)
     local Or = require(Core.Or)
@@ -33,8 +33,9 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
 
     local AnyToString = `{AnyID}()`
 
-    local DefaultObjectIndex
-    local DefaultArrayIndex
+    local DefaultPureMapIndex
+    local DefaultPureArrayIndex
+    local DefaultMixedIndex
     local DefaultNilIndex = -1
     local TypeToIndex = {}
 
@@ -52,12 +53,23 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
             return CustomIndex
         end
 
-        if (ValueType == "table" or ValueType == "SharedTable") then
-            if (Value[1] == nil) then
-                return DefaultObjectIndex
+        if (ValueType == "table") then
+            local Size = #Value
+
+            if (Size == 0) then
+                -- Size = 0 -> has no array component, write as map.
+                return DefaultPureMapIndex
             end
 
-            return DefaultArrayIndex
+            if (next(Value, Size) == nil) then
+                -- Size =/= 0 and next value after Size is nil -> has array component, write as array.
+                return DefaultPureArrayIndex
+            end
+
+            -- Size =/= 0 and next value after Size is not nil -> has both array and map component, write as mixed.
+            return DefaultMixedIndex
+        elseif (ValueType == "SharedTable") then
+            return DefaultPureMapIndex
         end
 
         local Index = TypeToIndex[ValueType]
@@ -73,7 +85,7 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
         error(`Unhandled type: {ValueType}`)
     end
 
-    local function Create(MetatablesSerializer: Or.OrTypeChecker?, IncludeNil: boolean?, TypeMapper: ((SignatureTypeChecker) -> (SignatureTypeChecker))?)
+    local function Create(MetatablesSerializer: Or.OrTypeChecker?, IncludeNil: boolean?, TypeMapper: ((SignatureTypeChecker) -> (SignatureTypeChecker))?, Step: (() -> ())?)
         local Any
         local DidSetup = false
 
@@ -85,39 +97,46 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
 
             DidSetup = true
 
-            local DefaultObject = Object():OfKeyType(Any):OfValueType(Any)
-            local DefaultArray = Array(Any)
+            local DefaultPureArray = Array(Any)
+            local DefaultPureMap = Indexable():PureMap(Any, Any)
+            local DefaultMixed = Indexable(Any, Any)
             local DefaultNil
 
             if (MetatablesSerializer) then
-                DefaultObject = DefaultObject:CheckMetatable(MetatablesSerializer)
+                DefaultPureArray = DefaultPureArray:CheckMetatable(MetatablesSerializer)
+                DefaultPureMap = DefaultPureMap:CheckMetatable(MetatablesSerializer)
+                DefaultMixed = DefaultMixed:CheckMetatable(MetatablesSerializer)
             end
 
-            DefaultObject = Cacheable(DefaultObject)
-            DefaultArray = Cacheable(DefaultArray)
+            DefaultPureArray = Cacheable(DefaultPureArray)
+            DefaultPureMap = Cacheable(DefaultPureMap)
+            DefaultMixed = Cacheable(DefaultMixed)
 
             if (IncludeNil) then
                 DefaultNil = Nil()
             end
 
             local _, Index = Any:GetConstraint("IsATypeIn")
-            Any._ActiveConstraints = MergeDeep(Any._ActiveConstraints, {
+            local NewActiveConstraints = MergeDeep(Any._ActiveConstraints, {
                 [Index] = {
                     Args = {
                         [1] = function(ExistingArgs)
-                            return ArrayMerge(ExistingArgs, {DefaultArray, DefaultObject, DefaultNil})
+                            return ArrayMerge(ExistingArgs, {DefaultPureArray, DefaultPureMap, DefaultMixed, DefaultNil})
                         end;
                     };
                 };
             }, true)
+            Any._ActiveConstraints = NewActiveConstraints
 
-            local IsATypeIn = Any._ActiveConstraints[Index].Args[1]
-            DefaultObjectIndex = table.find(IsATypeIn, DefaultObject)
-            DefaultArrayIndex = table.find(IsATypeIn, DefaultArray)
+            local IsATypeIn = NewActiveConstraints[Index].Args[1]
+            DefaultPureArrayIndex = table.find(IsATypeIn, DefaultPureArray)
+            DefaultPureMapIndex = table.find(IsATypeIn, DefaultPureMap)
+            DefaultMixedIndex = table.find(IsATypeIn, DefaultMixed)
             DefaultNilIndex = (IncludeNil and table.find(IsATypeIn, DefaultNil) or nil)
             Any:_UpdateSerializeFunctionCache()
-
             table.freeze(Any)
+
+            return
         end
 
         local Temp = Or(unpack(Types)):DefineGetType(GetType)
@@ -137,6 +156,10 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
 
             Context = Context or {}
             Setup()
+
+            if (Step) then
+                Step()
+            end
 
             if (Context.UseAny == Any) then
                 AnySerialize(Buffer, Value, Context)
@@ -163,6 +186,10 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
         Any._Deserialize = function(Buffer, Context)
             Context = Context or {}
             Setup()
+
+            if (Step) then
+                Step()
+            end
 
             if (Context.UseAny == Any) then
                 return AnyDeserialize(Buffer, Context)
@@ -200,9 +227,9 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
         end
 
         return Any :: {
-            Deserialize: ((self: any, Buffer: buffer, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (any));
+            Deserialize: ((self: any, Buffer: buffer, Atom: Util.Serializer?, BypassCheck: boolean?, Context: any?) -> (any));
             AsPredicate: ((self: any) -> ((Value: any) -> (boolean)));
-            Serialize: ((self: any, Value: any, Atom: ("Bit" | "Byte" | "Human")?, BypassCheck: boolean?, Context: any?) -> (buffer));
+            Serialize: ((self: any, Value: any, Atom: Util.Serializer?, BypassCheck: boolean?, Context: any?) -> (buffer));
             AsAssert: ((self: any) -> ((Value: any) -> ()));
             Assert: ((self: any, Value: any) -> ());
             Check: ((self: any, Value: any) -> (boolean));

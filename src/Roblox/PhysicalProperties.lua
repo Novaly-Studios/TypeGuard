@@ -15,10 +15,10 @@ type PhysicalPropertiesTypeChecker = TypeChecker<PhysicalPropertiesTypeChecker, 
 };
 
 local Core = script.Parent.Parent.Core
+    local Indexable = require(Core.Indexable)
     local Number = require(Core.Number)
-    local Object = require(Core.Object)
 
-local Checker = Object({
+local Checker = Indexable({
     ElasticityWeight = Number(0, 100):Float(32);
     FrictionWeight = Number(0, 100):Float(32);
     Elasticity = Number(0, 1):Float(32);

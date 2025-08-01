@@ -456,19 +456,4 @@ function OrClass:_UpdateSerialize()
     }
 end
 
---[[ local Test = Or(
-    Or(
-        Number(0, 1),
-        Number(5, 6),
-        Or(
-            Number(100, 200),
-            Number(300, 400),
-            Or("X", "Y", "Z")
-        )
-    ),
-    Number(9, 10)
-)
-print("////", Test._ActiveConstraints)
-print(">>>", Test:Check(900)) ]]
-
 return Or

@@ -17,9 +17,9 @@ type Color3TypeChecker = TypeChecker<Color3TypeChecker, Color3> & {
 local Core = script.Parent.Parent.Core
     local Number = require(Core.Number)
         local StandardRange = Number(0, 1)
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
-local Checker = Object({
+local Checker = Indexable({
     R = StandardRange;
     G = StandardRange;
     B = StandardRange;

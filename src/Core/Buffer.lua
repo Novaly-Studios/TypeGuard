@@ -53,20 +53,20 @@ function BufferClass:_UpdateSerialize()
                 Buffer.Align()
             end
 
-            Buffer.WriteBuffer(Value, Length * 8)
+            Buffer.WriteBuffer(Value, 0, Length * 8)
 
             if (BufferContext) then
                 BufferContext()
             end
         end;
         _Deserialize = function(Buffer, Context)
-            local Length = DynamicUIntDeserialize(Buffer, Context) * 8
+            local Length = DynamicUIntDeserialize(Buffer, Context)
 
             if (Aligned) then
                 Buffer.Align()
             end
 
-            return Buffer.ReadBuffer(Length)
+            return Buffer.ReadBuffer(Length * 8)
         end;
     }
 end

@@ -15,12 +15,12 @@ type RayTypeChecker = TypeChecker<RayTypeChecker, Ray> & {
 };
 
 local Core = script.Parent.Parent.Core
-    local Object = require(Core.Object)
+    local Indexable = require(Core.Indexable)
 
 local Vector3Serializer = require(script.Parent.Vector3)
     local DefaultVector3 = Vector3Serializer()
 
-local Checker = Object({
+local Checker = Indexable({
     Direction = DefaultVector3;
     Origin = DefaultVector3;
 }):Unmap(function(Value)
