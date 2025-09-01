@@ -42,7 +42,7 @@ local String: ((PossibleValue: FunctionalArg<string?>, ...FunctionalArg<string?>
 StringClass._Initial = CreateStandardInitial("string")
 StringClass._TypeOf = {"string"}
 
-local function _MinLength(_, Item, MinLength)
+local function _MinLength(_, Item, _, MinLength)
     if (#Item < MinLength) then
         return false, `Length must be at least {MinLength}, got {#Item}`
     end
@@ -57,7 +57,7 @@ function StringClass:MinLength(MinLength)
     return self:_AddConstraint(true, "MinLength", _MinLength, MinLength)
 end
 
-local function _MaxLength(_, Item, MaxLength)
+local function _MaxLength(_, Item, _, MaxLength)
     if (#Item > MaxLength) then
         return false, `Length must be at most {MaxLength}, got {#Item}`
     end
@@ -72,7 +72,7 @@ function StringClass:MaxLength(MaxLength)
     return self:_AddConstraint(true, "MaxLength", _MaxLength, MaxLength)
 end
 
-local function _Pattern(_, Item, Pattern)
+local function _Pattern(_, Item, _, Pattern)
     if (string.match(Item, Pattern) == Item) then
         return true
     end
@@ -87,7 +87,7 @@ function StringClass:Pattern(PatternString)
     return self:_AddConstraint(false, "Pattern", _Pattern, PatternString)
 end
 
-local function _IsUTF8(_, Item)
+local function _IsUTF8(_, Item, _)
     if (utf8.len(Item) ~= nil) then
         return true
     end
@@ -100,7 +100,7 @@ function StringClass:IsUTF8()
     return self:_AddConstraint(true, "IsUTF8", _IsUTF8)
 end
 
-local function _Contains(_, Item, Substring)
+local function _Contains(_, Item, _, Substring)
     if (string.match(Item, Substring)) then
         return true
     end
@@ -115,7 +115,7 @@ function StringClass:Contains(SubstringValue)
     return self:_AddConstraint(false, "Contains", _Contains, SubstringValue)
 end
 
-local function _UsingCharacters(_, Item, CharacterSet, Match)
+local function _UsingCharacters(_, Item, _, CharacterSet, Match)
     if (string.match(Item, Match)) then
         return true
     end
@@ -141,7 +141,7 @@ function StringClass:UsingCharacters(CharacterSet: string?)
     return self:_AddConstraint(true, "UsingCharacters", _UsingCharacters, CharacterSet, Match)
 end
 
-local function _NullTerminated(_, Item)
+local function _NullTerminated(_, Item, _)
     if (Item:match("\0") == nil) then
         return true
     end

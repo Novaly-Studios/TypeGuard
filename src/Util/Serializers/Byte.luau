@@ -232,15 +232,6 @@ local ByteSerializer: Types.SerializerConstructor = function(Buffer, Size, Profi
         end
     end
 
-    --[[ for Key, Value in Result do
-        Result[Key] = function(...)
-            debug.profilebegin(Key)
-            local Result = Value(...)
-            debug.profileend()
-            return Result
-        end
-    end ]]
-
     return Result
 end
 

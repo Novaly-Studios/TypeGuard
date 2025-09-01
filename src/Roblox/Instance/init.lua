@@ -396,11 +396,11 @@ local InstanceChecker: TypeCheckerConstructor<InstanceTypeChecker, string? | ((a
 InstanceCheckerClass._Initial = CreateStandardInitial("Instance")
 InstanceCheckerClass._TypeOf = {"Instance"}
 
-local function _OfStructure(SelfRef, InstanceRoot, SubTypes)
+local function _OfStructure(SelfRef, InstanceRoot, Context, SubTypes)
     -- Check all properties and children which should be in the Instance exist and the type check for each passes.
     for Key, Checker in SubTypes do
         local Value = TryGet(InstanceRoot, Key)
-        local Success, SubMessage = Checker:_Check(Value)
+        local Success, SubMessage = Checker:_Check(Value, Context)
 
         if (not Success) then
             return false, `{(typeof(Value) == "Instance" and "[Instance '" or "[Property '")}{Key}'] {SubMessage}`
@@ -439,7 +439,7 @@ function InstanceCheckerClass:OfStructure(OriginalSubTypes)
     return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypesCopy)
 end
 
-local function _IsA(_, InstanceRoot, InstanceIsA)
+local function _IsA(_, InstanceRoot, _, InstanceIsA)
     if (not InstanceRoot:IsA(InstanceIsA)) then
         return false, `Expected {InstanceIsA}, got {InstanceRoot.ClassName}`
     end
@@ -454,9 +454,9 @@ function InstanceCheckerClass:IsA(InstanceIsA)
     return self:_AddConstraint(true, "IsA", _IsA, InstanceIsA)
 end
 
-local function _OfChildType(_, InstanceRoot, Checker)
+local function _OfChildType(_, InstanceRoot, Context, Checker)
     for _, Child in InstanceRoot:GetChildren() do
-        local Success, Result = Checker:_Check(Child)
+        local Success, Result = Checker:_Check(Child, Context)
 
         if (not Success) then
             return false, `Child {Child.Name} did not satisfy the given TypeChecker - {Result}`
@@ -487,7 +487,7 @@ function InstanceCheckerClass:Strict()
     })
 end
 
-local function _HasTag(_, InstanceRoot, Tag)
+local function _HasTag(_, InstanceRoot, _, Tag)
     if (CollectionService:HasTag(InstanceRoot, Tag)) then
         return true
     end
@@ -502,7 +502,7 @@ function InstanceCheckerClass:HasTag(Tag: string)
     return self:_AddConstraint(false, "HasTag", _HasTag, Tag)
 end
 
-local function _HasAttribute(_, InstanceRoot, Attribute)
+local function _HasAttribute(_, InstanceRoot, _, Attribute)
     if (InstanceRoot:GetAttribute(Attribute) ~= nil) then
         return true
     end
@@ -517,8 +517,8 @@ function InstanceCheckerClass:HasAttribute(Attribute: string)
     return self:_AddConstraint(false, "HasAttribute", _HasAttribute, Attribute)
 end
 
-local function _CheckAttribute(_, InstanceRoot, Attribute, Checker)
-    local Success, SubMessage = (Checker :: any):_Check(InstanceRoot:GetAttribute(Attribute))
+local function _CheckAttribute(_, InstanceRoot, Context, Attribute, Checker)
+    local Success, SubMessage = (Checker :: any):_Check(InstanceRoot:GetAttribute(Attribute), Context)
 
     if (not Success) then
         return false, `Attribute '{Attribute}' not satisfied on Instance {InstanceRoot:GetFullName()}: {SubMessage}`
@@ -535,7 +535,7 @@ function InstanceCheckerClass:CheckAttribute(Attribute: string, Checker: Signatu
     return self:_AddConstraint(false, "CheckAttribute", _CheckAttribute, Attribute, Checker)
 end
 
-local function _HasTags(_, InstanceRoot, Tags)
+local function _HasTags(_, InstanceRoot, _, Tags)
     for _, Tag in Tags do
         if (not CollectionService:HasTag(InstanceRoot, Tag)) then
             return false, `Expected tag '{Tag}' on Instance {InstanceRoot:GetFullName()}`
@@ -558,7 +558,7 @@ function InstanceCheckerClass:HasTags(Tags: {string})
     return self:_AddConstraint(false, "HasTags", _HasTags, Tags)
 end
 
-local function _HasAttributes(_, InstanceRoot, Attributes)
+local function _HasAttributes(_, InstanceRoot, _, Attributes)
     for _, Attribute in Attributes do
         if (InstanceRoot:GetAttribute(Attribute) == nil) then
             return false, `Expected attribute '{Attribute}' to exist on Instance {InstanceRoot:GetFullName()}`
@@ -581,9 +581,9 @@ function InstanceCheckerClass:HasAttributes(Attributes: {string})
     return self:_AddConstraint(false, "HasAttributes", _HasAttributes, Attributes)
 end
 
-local function _CheckAttributes(_, InstanceRoot, AttributeCheckers)
+local function _CheckAttributes(_, InstanceRoot, Context, AttributeCheckers)
     for Attribute, Checker in AttributeCheckers do
-        local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute))
+        local Success, SubMessage = Checker:_Check(InstanceRoot:GetAttribute(Attribute), Context)
 
         if (not Success) then
             return false, `Attribute '{Attribute}' not satisfied on Instance {InstanceRoot:GetFullName()}: {SubMessage}`
@@ -605,7 +605,7 @@ function InstanceCheckerClass:CheckAttributes(AttributeCheckers: {SignatureTypeC
     return self:_AddConstraint(false, "CheckAttributes", _CheckAttributes, AttributeCheckers)
 end
 
-local function _IsDescendantOf(_, SubjectInstance, Instance)
+local function _IsDescendantOf(_, SubjectInstance, _, Instance)
     if (SubjectInstance:IsDescendantOf(Instance)) then
         return true
     end
@@ -620,7 +620,7 @@ function InstanceCheckerClass:IsDescendantOf(Instance)
     return self:_AddConstraint(true, "IsDescendantOf", _IsDescendantOf, Instance)
 end
 
-local function _IsAncestorOf(_, SubjectInstance, Instance)
+local function _IsAncestorOf(_, SubjectInstance, _, Instance)
     if (SubjectInstance:IsAncestorOf(Instance)) then
         return true
     end
@@ -635,7 +635,7 @@ function InstanceCheckerClass:IsAncestorOf(Instance)
     return self:_AddConstraint(false, "IsAncestorOf", _IsAncestorOf, Instance)
 end
 
-local function _HasChild(_, InstanceRoot, Name)
+local function _HasChild(_, InstanceRoot, _, Name)
     if (InstanceRoot:FindFirstChild(Name)) then
         return true
     end

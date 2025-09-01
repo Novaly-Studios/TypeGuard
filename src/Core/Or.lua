@@ -55,7 +55,7 @@ function OrClass:DefineDivide(Divider)
     })
 end
 
-local function _IsAValueIn(_self, TargetValue, Options)
+local function _IsAValueIn(_self, TargetValue, _, Options)
     for _, Value in Options do
         if (Value == TargetValue) then
             return true
@@ -75,7 +75,7 @@ function OrClass:IsAValueIn(Options)
     return self:_AddConstraint(false, "IsAValueIn", _IsAValueIn, Options)
 end
 
-local function _IsAKeyIn(_self, Key, Options)
+local function _IsAKeyIn(_self, Key, _, Options)
     if (Options[Key] == nil) then
         local Keys = {}
 
@@ -105,7 +105,7 @@ function OrClass:IsAKeyIn(Options)
     return self:_AddConstraint(false, "IsAKeyIn", _IsAKeyIn, Options)
 end
 
-local function _IsATypeIn(self, Value, Options)
+local function _IsATypeIn(self, Value, Context, Options)
     -- Check the value against its intended type checker. This will use the function to get
     -- a checker from the value if prodived, otherwise iterate through all types.
     local GetTypeIndexFromValue = self._GetTypeIndexFromValue
@@ -115,11 +115,11 @@ local function _IsATypeIn(self, Value, Options)
         local Found = GetTypeIndexFromValue(Value)
 
         if (Found and IsATypeIn) then
-            return IsATypeIn[1][Found]:_Check(Value)
+            return IsATypeIn[1][Found]:_Check(Value, Context)
         end
     else
         for _, TypeChecker in Options do
-            if (TypeChecker:_Check(Value)) then
+            if (TypeChecker:_Check(Value, Context)) then
                 return true
             end
         end

@@ -82,7 +82,7 @@ local function BaseNSerializer(Serializer: Types.Serializer, Base: number)
             dbgprofileend()
         end
     else
-        error("BaseNSerializer only supports bases which are powers of 2 for performance reasons.")
+        error("BaseNSerializer only supports bases which are powers of 2 for performance reasons")
     end
 
     return Result

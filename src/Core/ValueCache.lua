@@ -50,8 +50,10 @@ function ValueCacheClass:PersistentCache(GetIndexFromValue, GetValueFromIndex)
     })
 end
 
-function ValueCacheClass:_Initial(Value)
-    return self._Using:Check(Value)
+function ValueCacheClass:_Initial(Value, Context)
+    return self._Using:_Check(Value, Merge(Context or {}, {
+        Visited = {};
+    }))
 end
 
 function ValueCacheClass:_UpdateSerialize()

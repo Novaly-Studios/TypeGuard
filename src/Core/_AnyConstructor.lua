@@ -201,9 +201,9 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
             }))
         end
 
-        Any._Check = function(self, Value)
+        Any._Check = function(self, Value, Context)
             Setup()
-            return AnyCheck(self, Value)
+            return AnyCheck(self, Value, Context)
         end
 
         -- Avoid recursive tostring weirdness.

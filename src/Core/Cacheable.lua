@@ -5,12 +5,12 @@ if (not script and Instance) then
     script = game:GetService("ReplicatedFirst").TypeGuard.Core.Cacheable
 end
 
+local TableUtil = require(script.Parent.Parent.Parent.TableUtil)
+    local Merge = TableUtil.Map.Merge
+
 local Template = require(script.Parent.Parent._Template)
     type SignatureTypeChecker = Template.SignatureTypeChecker
     type TypeChecker<ExtensionClass, Primitive> = Template.TypeChecker<ExtensionClass, Primitive>
-
-local TableUtil = require(script.Parent.Parent.Parent.TableUtil).WithFeatures()
-    local Merge = TableUtil.Map.Merge
 
 local Util = require(script.Parent.Parent.Util)
     local CreateStandardInitial = Util.CreateStandardInitial
@@ -34,8 +34,24 @@ function CacheableClass:Using(Serializer)
     })
 end
 
-function CacheableClass:_Initial(Value)
-    return self._Using:Check(Value)
+function CacheableClass:_Initial(Value, Context)
+    local Using = self._Using
+
+    if (Context) then
+        -- Context and Visited will be set up by ValueCache.
+        local Visited = Context.Visited
+
+        if (Visited) then
+            if (Visited[Value]) then
+                return true
+            end
+
+            Visited[Value] = true
+            return Using:_Check(Value, Context)
+        end
+    end
+
+    return Using:_Check(Value, Context)
 end
 
 function CacheableClass:_UpdateSerialize()
@@ -158,9 +174,10 @@ function CacheableClass:_UpdateSerialize()
     }
 end
 
-local Original = CacheableClass.RemapDeep
+local OriginalRemapDeep = CacheableClass.RemapDeep
+
 function CacheableClass:RemapDeep(Type, Mapper, Recursive)
-    local Copy = Original(self, Type, Mapper, Recursive)
+    local Copy = OriginalRemapDeep(self, Type, Mapper, Recursive)
         local Using = Copy._Using
 
     if (Using and Using.RemapDeep) then

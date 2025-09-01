@@ -18,7 +18,7 @@ local Util = require(script.Parent.Parent.Util)
     local AssertIsTypeBase = Util.AssertIsTypeBase
 
 type FunctionTypeChecker = TypeChecker<FunctionTypeChecker, ((...any) -> (...any))> & {
-    CheckParamCount: ((self: FunctionTypeChecker, Checker: FunctionalArg<NumberTypeChecker>) -> (FunctionTypeChecker));
+    CheckParamCount: (<Self>(self: FunctionTypeChecker & Self, Checker: FunctionalArg<NumberTypeChecker>) -> (FunctionTypeChecker));
 };
 
 local FunctionChecker: (() -> (FunctionTypeChecker)), FunctionCheckerClass = Template.Create("Function")
@@ -26,10 +26,10 @@ FunctionCheckerClass._CacheConstruction = true
 FunctionCheckerClass._Initial = CreateStandardInitial("function")
 FunctionCheckerClass._TypeOf = {"function"}
 
-local function _CheckParamCount(_, Function, Checker)
+local function _CheckParamCount(_, Function, Context, Checker)
     local ParamCount, Variadic = debug.info(Function, "a")
     ParamCount = Variadic and math.huge or ParamCount
-    local Success = Checker:_Check(ParamCount)
+    local Success = Checker:_Check(ParamCount, Context)
 
     if (Success) then
         return true

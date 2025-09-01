@@ -41,7 +41,7 @@ NumberClass._CacheConstruction = true
 NumberClass._Initial = CreateStandardInitial("number")
 NumberClass._TypeOf = {"number"}
 
-local function _Whole(_, Item)
+local function _Whole(_, Item, _)
     if (Item % 1 == 0) then
         return true
     end
@@ -61,7 +61,7 @@ local function _ConstrainToRange(Value, Min, Max)
     return true
 end
 
-local function _Integer(self, Value, Bits, Signed)
+local function _Integer(self, Value, _, Bits, Signed)
     local Positive = self:HasConstraint("Positive")
     local Negative = self:HasConstraint("Negative")
     local Dynamic = self._Dynamic
@@ -102,7 +102,7 @@ function NumberClass:Integer(Bits, Signed)
     return self:_AddConstraint(true, "Whole", _Whole):_AddConstraint(true, "Integer", _Integer, Bits, Signed)
 end
 
-local function _Decimal(_, Item)
+local function _Decimal(_, Item, _)
     if (Item % 1 ~= 0) then
         return true
     end
@@ -144,7 +144,7 @@ function NumberClass:RangeExclusive(Min, Max)
     return self:GreaterThan(Min):LessThan(Max)
 end
 
-local function _Positive(_, Item)
+local function _Positive(_, Item, _)
     if (Item < 0) then
         return false, `Expected positive number, got {Item}`
     end
@@ -157,7 +157,7 @@ function NumberClass:Positive()
     return self:_AddConstraint(true, "Positive", _Positive)
 end
 
-local function _Negative(_, Item)
+local function _Negative(_, Item, _)
     if (Item >= 0) then
         return false, `Expected negative number, got {Item}`
     end
@@ -170,7 +170,7 @@ function NumberClass:Negative()
     return self:_AddConstraint(true, "Negative", _Negative)
 end
 
-local function _IsNaN(_, Item)
+local function _IsNaN(_, Item, _)
     if (Item ~= Item) then
         return true
     end
@@ -183,7 +183,7 @@ function NumberClass:IsNaN()
     return self:_AddConstraint(true, "IsNaN", _IsNaN)
 end
 
-local function _IsInfinite(_, Item)
+local function _IsInfinite(_, Item, _)
     if (Item == math.huge or Item == -math.huge) then
         return true
     end
@@ -196,7 +196,7 @@ function NumberClass:IsInfinite()
     return self:_AddConstraint(true, "IsInfinite", _IsInfinite)
 end
 
-local function _Float()
+local function _Float(_, _, _)
     return true
 end
 
@@ -206,7 +206,7 @@ function NumberClass:Float(Precision)
     return self:_AddConstraint(true, "Float", _Float, Precision):RangeInclusive(-MaxValue, MaxValue)
 end
 
-local function _IsCloseTo(_, NumberValue, CloseTo, Tolerance)
+local function _IsCloseTo(_, NumberValue, _, CloseTo, Tolerance)
     if (math.abs(NumberValue - CloseTo) < Tolerance) then
         return true
     end
@@ -223,6 +223,7 @@ function NumberClass:IsClose(CloseTo, Tolerance)
 end
 
 local NaN = 0 / 0
+
 function NumberClass:_UpdateSerialize()
     local MysteriousNumber = { -- Default to double if we don't know many details about the number. Largest number type in Luau.
         _Serialize = function(Buffer, Value, _Context)

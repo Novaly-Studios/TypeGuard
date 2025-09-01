@@ -44,7 +44,6 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
     NoCheck: AnyMethod;
     Equals: AnyMethod;
     Assert: AnyMethod;
-    Cached: AnyMethod;
     Negate: AnyMethod;
     Check: AnyMethod;
     Copy: AnyMethod;
@@ -55,6 +54,7 @@ export type FunctionalArg<T> = (T | ((any?) -> T))
 
 export type TypeChecker<ExtensionClass, SampleType> = {
     _TC: true;
+    _C: {any};
     _P: SampleType;
 
     -- Methods available in all TypeCheckers.
@@ -69,7 +69,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     NoCheck: ((self: ExtensionClass) -> (ExtensionClass));
     Assert: ((self: ExtensionClass, Value: any) -> ());
     Negate: ((self: ExtensionClass) -> (ExtensionClass));
-    Cached: ((self: ExtensionClass) -> (ExtensionClass));
     Modify: ((self: ExtensionClass, Modifications: {[any]: any}, ForceUpdate: boolean?) -> (ExtensionClass));
     Check: ((self: ExtensionClass, Value: any) -> (boolean, string?));
     Unmap: ((self: ExtensionClass, Unmapper: ((any?) -> (SampleType))) -> (ExtensionClass));
@@ -83,6 +82,10 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
 }
+
+export type function AddConstraint(self: TypeChecker<any>, ID: string, Check: ((Type: any) -> ()))
+    table.insert(self._C, {ID, Check})
+end
 
 local InitForbiddenKeys = false
 local TemplateCache = {}
@@ -134,7 +137,7 @@ local function MemorizeSerialize(Target)
     return buffer.tostring(Buffer.GetClippedBuffer())
 end
 
-local function _Equals(_, Value, ExpectedValue)
+local function _Equals(_, Value, _, ExpectedValue)
     if (Value == ExpectedValue) then
         return true
     end
@@ -146,7 +149,7 @@ local function Equals(self, ExpectedValue)
     return self:_AddConstraint(true, "Equals", _Equals, ExpectedValue)
 end
 
-local function _GreaterThan(_, Value, GTValue)
+local function _GreaterThan(_, Value, _, GTValue)
     if (Value > GTValue) then
         return true
     end
@@ -158,7 +161,7 @@ local function GreaterThan(self, GTValue)
     return self:_AddConstraint(false, "GreaterThan", _GreaterThan, GTValue)
 end
 
-local function _LessThan(_, Value, LTValue)
+local function _LessThan(_, Value, _, LTValue)
     if (Value < LTValue) then
         return true
     end
@@ -170,7 +173,7 @@ local function LessThan(self, LTValue)
     return self:_AddConstraint(false, "LessThan", _LessThan, LTValue)
 end
 
-local function _GreaterThanOrEqualTo(_, Value, GTEValue)
+local function _GreaterThanOrEqualTo(_, Value, _, GTEValue)
     if (Value >= GTEValue) then
         return true
     end
@@ -182,7 +185,7 @@ local function GreaterThanOrEqualTo(self, GTEValue)
     return self:_AddConstraint(false, "GreaterThanOrEqualTo", _GreaterThanOrEqualTo, GTEValue)
 end
 
-local function _LessThanOrEqualTo(_, Value, LTEValue)
+local function _LessThanOrEqualTo(_, Value, _, LTEValue)
     if (Value <= LTEValue) then
         return true
     end
@@ -194,7 +197,7 @@ local function LessThanOrEqualTo(self, LTEValue)
     return self:_AddConstraint(false, "LessThanOrEqualTo", _LessThanOrEqualTo, LTEValue)
 end
 
-local function _IsAValueIn(_, TargetValue, Table)
+local function _IsAValueIn(_, TargetValue, _, Table)
     for _, Value in Table do
         if (Value == TargetValue) then
             return true
@@ -210,7 +213,7 @@ local function IsAValueIn(self, Table)
     return self:_AddConstraint(false, "IsAValueIn", _IsAValueIn, Table)
 end
 
-local function _IsAKeyIn(_, TargetValue, Table)
+local function _IsAKeyIn(_, TargetValue, _, Table)
     if (Table[TargetValue] == nil) then
         return false, `Key {TargetValue} was not found in table ({ConcatWithToString(Table, ", ")})`
     end
@@ -224,11 +227,7 @@ local function IsAKeyIn(self, Table)
     return self:_AddConstraint(false, "IsAKeyIn", _IsAKeyIn, Table)
 end
 
-local WEAK_KEY_MT = {__mode = "ks"}
 local USE_INDEX = false
-
-local NegativeCacheValue = {} -- Exists for Cached() because nil causes problems.
-local RootContext = nil -- Faster & easier just using one high scope variable which all TypeCheckers can access during checking time, than propogating the context downwards.
 
 --- Creates a template TypeChecker object that can be used to extend behaviors via constraints.
 local function CreateTemplate(Name: string)
@@ -249,8 +248,7 @@ local function CreateTemplate(Name: string)
             _ActiveConstraints = {};
 
             --[[
-                _Cache = nil;
-                _Context = nil;
+                _UserContext = nil;
                 _FailMessage = nil;
             ]]
             _LastConstraint = 0;
@@ -338,13 +336,6 @@ local function CreateTemplate(Name: string)
 
         return self:Modify({
             _FailMessage = Message;
-        })
-    end
-
-    --- Sets a flag which caches the result of the last Check() call.
-    function TemplateClass:Cached()
-        return self:Modify({
-            _Cached = true;
         })
     end
 
@@ -465,10 +456,9 @@ local function CreateTemplate(Name: string)
     end
 
     --- Passes down a "context" value to constraints with functional values.
-    --- We don't copy here because performance is important at the checking phase.
     function TemplateClass:WithContext(Context)
         return self:Modify({
-            _Context = Context;
+            _UserContext = Context;
         })
     end
 
@@ -489,14 +479,13 @@ local function CreateTemplate(Name: string)
     --- Check (like above) except sets a universal context for the duration of the check.
     function TemplateClass:Check(Value)
         local InitCheck = self._InitCheck
+
         if (InitCheck) then
             InitCheck()
         end
 
-        RootContext = self._Context
-        local Success, Result = self:_Check(Value)
-        RootContext = nil
-        return Success, Result
+        local UserContext = self._UserContext
+        return self:_Check(Value, UserContext and {UserContext = UserContext} or nil)
     end
 
     --- Throws an error if the check is unsatisfied.
@@ -733,42 +722,19 @@ local function CreateTemplate(Name: string)
     end
 
     --- Checks if the value is of the correct type.
-    function TemplateClass:_Check(Value)
+    function TemplateClass:_Check(Value, Context)
         if (self._NoCheck) then
             return true
         end
 
-        local CacheTag = self._Cached
-        local Cache
-
         local Processor = self._Map
         Value = (Processor and Processor(Value) or Value)
 
-        -- Handle any cached value.
-        if (CacheTag) then
-            Cache = self._Cache
-
-            if (not Cache) then
-                Cache = setmetatable({}, WEAK_KEY_MT); -- Weak keys because we don't want to leak Instances or tables.
-                self._Cache = Cache
-            end
-
-            local CacheValue = Cache[Value or NegativeCacheValue]
-
-            if (CacheValue) then
-                return CacheValue[1], CacheValue[2]
-            end
-        end
-
         -- Handle initial type check.
-        local Success, Message = self:_Initial(Value)
+        local Success, Message = self:_Initial(Value, Context)
+
         if (not Success) then
             Message = self._FailMessage or Message
-
-            if (CacheTag) then
-                Cache[Value or NegativeCacheValue] = {false, Message}
-            end
-
             return false, Message
         end
 
@@ -779,25 +745,26 @@ local function CreateTemplate(Name: string)
 
         -- Handle active constraints.
         for _, Constraint in self._ActiveConstraints do
-            local HasFunctionalParams = Constraint.HasFunctions
+            local HasFunctions = Constraint.HasFunctions
             local Negated = Constraint.Negated
             local Call = Constraint.Function
             local Args = Constraint.Args
             local Name = Constraint.Name
 
             -- Functional params -> transform into values when type checking.
-            if (HasFunctionalParams) then
+            if (HasFunctions) then
+                local UserContext = (Context and Context.UserContext or nil)
                 Args = table.clone(Args)
 
                 for Index, Arg in Args do
                     if (type(Arg) == "function") then
-                        Args[Index] = Arg(RootContext)
+                        Args[Index] = Arg(UserContext)
                     end
                 end
             end
 
             -- Call the constraint to verify it is satisfied.
-            local SubSuccess, SubMessage = Call(self, Value, unpack(Args))
+            local SubSuccess, SubMessage = Call(self, Value, Context, unpack(Args))
 
             if (Negated) then
                 SubMessage = if (SubSuccess) then
@@ -809,17 +776,8 @@ local function CreateTemplate(Name: string)
 
             if (not SubSuccess) then
                 SubMessage = self._FailMessage or SubMessage
-
-                if (CacheTag) then
-                    Cache[Value or NegativeCacheValue] = {false, SubMessage}
-                end
-
                 return false, SubMessage
             end
-        end
-
-        if (CacheTag) then
-            Cache[Value or NegativeCacheValue] = {true}
         end
 
         return true
@@ -901,9 +859,9 @@ local function CreateTemplate(Name: string)
             table.insert(Fields, "Constraints = {" .. ConcatWithToString(InnerConstraints, ", ") .. "}")
         end
 
-        local Context = self._Context
-        if (Context) then
-            table.insert(Fields, "Context = " .. tostring(Context))
+        local UserContext = self._UserContext
+        if (UserContext) then
+            table.insert(Fields, "UserContext = " .. tostring(UserContext))
         end
 
         return self.Name .. "(" .. ConcatWithToString(Fields, ", ") .. ")"

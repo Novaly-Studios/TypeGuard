@@ -25,7 +25,7 @@ ThreadCheckerClass._CacheConstruction = true
 ThreadCheckerClass._Initial = CreateStandardInitial("thread")
 ThreadCheckerClass._TypeOf = {"thread"}
 
-local function _HasStatus(_, Thread, Status)
+local function _HasStatus(_, Thread, _, Status)
     local CurrentStatus = coroutine.status(Thread)
 
     if (CurrentStatus == Status) then

@@ -1,7 +1,7 @@
 --!optimize 2
 --!native
 
---[[ local Buffer = buffer.create(1000000)
+local Buffer = buffer.create(1000000)
 
 for Index = 0, buffer.len(Buffer) - 1 do
     buffer.writei8(Buffer, Index, (math.random(0, 7) == 0 and math.random(0, 255) or 100))
@@ -42,4 +42,4 @@ print("\tProjected Bytes/s:", buffer.len(Buffer) / Median(DecompressTimes))
 local Compressed = Test.Compress(Buffer)
 local Decompressed = Test.Decompress(Compressed)
 print("Correct:", buffer.tostring(Decompressed) == buffer.tostring(Buffer))
-print("Ratio:", buffer.len(Buffer) / buffer.len(Compressed)) ]]
+print("Ratio:", buffer.len(Buffer) / buffer.len(Compressed))

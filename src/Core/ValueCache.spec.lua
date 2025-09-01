@@ -21,5 +21,19 @@ return function()
         it("should deserialize correctly", function()
             expect(DeepEquals(ValueCache:Deserialize(ValueCache:Serialize(Test)), Test)).to.equal(true)
         end)
+
+        it("should allow cyclic tables", function()
+            local Temp = TypeGuard.ValueCache(TypeGuard.BaseAny())
+            local Value = {}
+            Value.X = {}
+            Value.X.Y = {}
+            Value.X.Y.Z = Value
+            _G.Test = true
+            print(">>>>>>>>>", pcall(function()
+                Temp:Check(Value)
+            end))
+            _G.Test = false
+            expect(Temp:Check(Value)).to.equal(true)
+        end)
     end)
 end

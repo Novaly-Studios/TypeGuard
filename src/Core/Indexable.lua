@@ -30,12 +30,17 @@ local Number = require(script.Parent.Number)
 
 local ValueCache = require(script.Parent.ValueCache)
 
-export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {any}> & {
+--[[ type function OfValueType(Self)
+    return Self
+end ]]
+
+export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {[any]: any}> & {
     ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     ContainsKeyOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     CheckMetatable: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     UnmapStructure: ((self: IndexableTypeChecker, Unmapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
     MapStructure: ((self: IndexableTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
+    -- OfValueType: (<Self, _, SubType>(self: Self, Checker: TypeChecker<_, SubType>) -> (Self));
     OfValueType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
     OfStructure: ((self: IndexableTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (IndexableTypeChecker));
     IsOrdered: ((self: IndexableTypeChecker, AscendingOrDescendingOrEither: FunctionalArg<boolean>?) -> (IndexableTypeChecker));
@@ -104,10 +109,10 @@ function IndexableClass:_Initial(TargetStructure)
     return false, `Expected {ExpectedType}, got {Type}`
 end
 
-local function _OfStructure(SelfRef, StructureToCheck, SubTypes)
+local function _OfStructure(SelfRef, StructureToCheck, Context, SubTypes)
     -- Check all fields which should be in the structure exist and the type check for each passes.
     for Key, SubType in SubTypes do
-        local Success, SubMessage = SubType:_Check(StructureToCheck[Key])
+        local Success, SubMessage = SubType:_Check(StructureToCheck[Key], Context)
 
         if (not Success) then
             return false, `[Key '{Key}'] {SubMessage}`
@@ -145,11 +150,12 @@ function IndexableClass:OfStructure(SubTypes)
     return self:_AddConstraint(true, "OfStructure", _OfStructure, SubTypes)
 end
 
-local function _OfValueType(_, Target, SubType)
+local function _OfValueType(_, Target, Context, SubType)
     local Check = SubType._Check
 
     for Index, Value in Target do
-        local Success, SubMessage = Check(SubType, Value)
+        local Success, SubMessage = Check(SubType, Value, Context)
+
         if (not Success) then
             return false, `[OfValueType: Key '{Index}'] {SubMessage}`
         end
@@ -167,7 +173,7 @@ function IndexableClass:OfValueType(SubType)
     return self:_AddConstraint(true, "OfValueType", _OfValueType, SubType)
 end
 
-local function _PureArray(_, Target)
+local function _PureArray(_, Target, _)
     if (IsPureArray(Target) or next(Target) == nil) then
         return true
     end
@@ -195,7 +201,7 @@ function IndexableClass:PureArray(ValueType)
             :OfValueType(ValueType)
 end
 
-local function _PureMap(_, Target)
+local function _PureMap(_, Target, _)
     if (IsPureMap(Target) or next(Target) == nil) then
         return true
     end
@@ -232,11 +238,11 @@ function IndexableClass:PureMap(KeyType, ValueType)
             :OfValueType(ValueType)
 end
 
-local function _OfKeyType(_, Target, SubType)
+local function _OfKeyType(_, Target, Context, SubType)
     local Check = SubType._Check
 
     for Key in Target do
-        local Success, SubMessage = Check(SubType, Key)
+        local Success, SubMessage = Check(SubType, Key, Context)
 
         if (not Success) then
             return false, `[OfKeyType: Key '{Key}'] {SubMessage}`
@@ -255,7 +261,7 @@ function IndexableClass:OfKeyType(SubType)
     return self:_AddConstraint(true, "OfKeyType", _OfKeyType, SubType)
 end
 
-local function _IsOrdered(_, Target, AscendingOrDescendingOrEither)
+local function _IsOrdered(_, Target, _, AscendingOrDescendingOrEither)
     if (IsOrdered(Target, AscendingOrDescendingOrEither)) then
         return true
     end
@@ -310,7 +316,7 @@ function IndexableClass:Strict()
     })
 end
 
-local function _IsFrozen(_, Target)
+local function _IsFrozen(_, Target, _)
     if (table.isfrozen(Target)) then
         return true
     end
@@ -323,8 +329,8 @@ function IndexableClass:IsFrozen()
     return self:_AddConstraint(true, "IsFrozen", _IsFrozen)
 end
 
-local function _CheckMetatable(_, Target, Checker)
-    local Success, Message = Checker:_Check(getmetatable(Target))
+local function _CheckMetatable(_, Target, Context, Checker)
+    local Success, Message = Checker:_Check(getmetatable(Target), Context)
 
     if (Success) then
         return true
@@ -356,11 +362,11 @@ function IndexableClass:OfClass(Class)
     return self:CheckMetatable(Indexable():Equals(Class))
 end
 
-local function _ContainsValueOfType(_, Target, Checker)
+local function _ContainsValueOfType(_, Target, Context, Checker)
     local Check = Checker._Check
 
     for _, Value in Target do
-        local Success = Check(Checker, Value)
+        local Success = Check(Checker, Value, Context)
 
         if (Success) then
             return true
@@ -377,11 +383,11 @@ function IndexableClass:ContainsValueOfType(Checker)
     return self:_AddConstraint(false, "ContainsValueOfType", _ContainsValueOfType, Checker)
 end
 
-local function _ContainsKeyOfType(_, Target, Checker)
+local function _ContainsKeyOfType(_, Target, Context, Checker)
     local Check = Checker._Check
 
     for Key in Target do
-        local Success = Check(Checker, Key)
+        local Success = Check(Checker, Key, Context)
 
         if (Success) then
             return true
@@ -398,7 +404,7 @@ function IndexableClass:ContainsKeyOfType(Checker)
     return self:_AddConstraint(false, "ContainsKeyOfType", _ContainsKeyOfType, Checker)
 end
 
-local function _MinSize(self, Target, MinSize)
+local function _MinSize(self, Target, _, MinSize)
     if (self:GetConstraint("PureArray")) then
         if (#Target < MinSize) then
             return false, `[MinSize] expected at least {MinSize} elements, got {#Target}`
@@ -426,7 +432,7 @@ function IndexableClass:MinSize(MinSize)
     return self:_AddConstraint(true, "MinSize", _MinSize, MinSize)
 end
 
-local function _MaxSize(self, Target, MaxSize)
+local function _MaxSize(self, Target, _, MaxSize)
     if (self:GetConstraint("PureArray")) then
         if (#Target > MaxSize) then
             return false, `[MaxSize] expected at most {MaxSize} elements, got {Target}`
@@ -460,9 +466,10 @@ function IndexableClass:OfLength(Length: number)
     return self:MinSize(Length):MaxSize(Length)
 end
 
-local Original = IndexableClass.RemapDeep
+local OriginalRemapDeep = IndexableClass.RemapDeep
+
 function IndexableClass:RemapDeep(Type, Mapper, Recursive)
-    local Copy = Original(self, Type, Mapper, Recursive)
+    local Copy = OriginalRemapDeep(self, Type, Mapper, Recursive)
         local MapStructure = Copy._MapStructure
 
     -- Todo: change to Modify?

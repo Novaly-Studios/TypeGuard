@@ -327,23 +327,6 @@ return function()
             end)
         end)
 
-        describe("Cached", function()
-            it("should cache results if Cached is used on simple types", function()
-                local Check = TypeGuard.Number():Cached()
-                expect(Check:Check(1)).to.equal(true)
-                expect(Check:Check(1)).to.equal(true)
-            end)
-
-            it("should cache results if Cached is used on complex types", function()
-                local Check = TypeGuard.Object():OfStructure({X = TypeGuard.Number()}):Strict():Cached()
-                local Test = {X = 1}
-                expect(Check:Check(Test)).to.equal(true)
-                Test.Y = 2
-                expect(Check:Check(Test)).to.equal(true) -- Technically incorrect but that's the cost of caching: performance increase for temporal correctness
-                expect(Check:Check({X = 1})).to.equal(true)
-            end)
-        end)
-
         describe("AsPredicate", function()
             it("should return a function", function()
                 expect(TypeGuard.Number():AsPredicate()).to.be.a("function")
@@ -521,16 +504,6 @@ return function()
                 local Check = TypeGuard.Number():FailMessage("0123456789")
                 local _, Error = Check:Check("Test")
                 expect(Error).to.equal("0123456789")
-            end)
-
-            it("should work with Cached calls", function()
-                local Check = TypeGuard.Number():Cached():FailMessage("0123456789")
-
-                local _, Error = Check:Check("Test")
-                expect(Error).to.equal("0123456789")
-
-                local _, Again = Check:Check("Test")
-                expect(Again).to.equal("0123456789")
             end)
 
             it("should still exist with subsequent constraint calls", function()

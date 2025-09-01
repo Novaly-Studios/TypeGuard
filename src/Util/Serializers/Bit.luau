@@ -152,71 +152,69 @@ local BitSerializer: Types.SerializerConstructor = function(Buffer, Size, Profil
             return bufreadf32(SampleBuffer, 0)
         end;
 
-        WriteBuffer = function(Subject, From, To)
-            local Length = To - From
-
-            if (Length == 0) then
+        WriteBuffer = function(Bits, Subject, From)
+            if (Bits == 0) then
                 return
             end
 
             -- Buffer is byte-aligned from start to end, copy it directly using inbuilt copy (faster).
             -- BitSerializer only does this for writes which are generally large (buffer, string) as it
             -- would otherwise be slower for realistic usages.
-            if (Position % 8 == 0 and From % 8 == 0 and To % 8 == 0) then
-                local NewPosition = CheckResize(Length)
-                bufcopy(Buffer, Position // 8, Subject, From // 8, Length // 8)
+            if (Position % 8 == 0 and Bits % 8 == 0 and From % 8 == 0) then
+                local NewPosition = CheckResize(Bits)
+                bufcopy(Buffer, Position // 8, Subject, From // 8, Bits // 8)
                 Position = NewPosition
                 return
             end
 
             local Accumulation = 0
 
-            while (Accumulation < Length) do
-                local Bits = mthmin(32, Length - Accumulation)
-                WriteBits(Bits, bufreadbits(Subject, From + Accumulation, Bits))
-                Accumulation += Bits
+            while (Accumulation < Bits) do
+                local ToWrite = mthmin(32, Bits - Accumulation)
+                WriteBits(ToWrite, bufreadbits(Subject, From + Accumulation, ToWrite))
+                Accumulation += ToWrite
             end
         end;
-        ReadBuffer = function(Length)
-            if (Length == 0) then
+        ReadBuffer = function(Bits)
+            if (Bits == 0) then
                 return bufcreate(0)
             end
 
-            if (Position % 8 == 0 and Length % 8 == 0) then
-                local Bytes = Length // 8
+            if (Position % 8 == 0 and Bits % 8 == 0) then
+                local Bytes = Bits // 8
                 local Temp = bufcreate(Bytes)
-                local NewPosition = CheckResize(Length)
+                local NewPosition = CheckResize(Bits)
                 bufcopy(Temp, 0, Buffer, Position // 8, Bytes)
                 Position = NewPosition
                 return Temp
             end
 
             local Accumulation = 0
-            local Result = bufcreate(mthceil(Length / 8))
+            local Result = bufcreate(mthceil(Bits / 8))
 
-            while (Accumulation < Length) do
-                local Bits = mthmin(32, Length - Accumulation)
-                bufwritebits(Result, Accumulation, Bits, ReadBits(Bits))
-                Accumulation += Bits
+            while (Accumulation < Bits) do
+                local ToRead = mthmin(32, Bits - Accumulation)
+                bufwritebits(Result, Accumulation, ToRead, ReadBits(ToRead))
+                Accumulation += ToRead
             end
 
             return Result
         end;
 
-        WriteString = function(String, Length)
-            if (Length == 0) then
+        WriteString = function(String, Bits)
+            if (Bits == 0) then
                 return
             end
 
-            if (Position % 8 == 0 and Length % 8 == 0) then
-                local NewPosition = CheckResize(Length)
+            if (Position % 8 == 0 and Bits % 8 == 0) then
+                local NewPosition = CheckResize(Bits)
                 bufwritestring(Buffer, Position // 8, String)
                 Position = NewPosition
                 return
             end
 
-            local Bytes = Length // 8
-            local FinalBits = b32band(Length, 7)
+            local Bytes = Bits // 8
+            local FinalBits = b32band(Bits, 7)
 
             for Index = 1, Bytes, 4 do
                 local Char1, Char2, Char3, Char4 = strbyte(String, Index, Index + 3)
@@ -244,20 +242,20 @@ local BitSerializer: Types.SerializerConstructor = function(Buffer, Size, Profil
                 WriteBits(FinalBits, strbyte(String, Bytes + 1))
             end
         end;
-        ReadString = function(Length)
-            if (Length == 0) then
+        ReadString = function(Bits)
+            if (Bits == 0) then
                 return ""
             end
 
-            if (Position % 8 == 0 and Length % 8 == 0) then
-                local NewPosition = CheckResize(Length)
-                local Result = bufreadstring(Buffer, Position // 8, Length // 8)
+            if (Position % 8 == 0 and Bits % 8 == 0) then
+                local NewPosition = CheckResize(Bits)
+                local Result = bufreadstring(Buffer, Position // 8, Bits // 8)
                 Position = NewPosition
                 return Result
             end
 
-            local Bytes = Length // 8
-            local FinalBits = (Length and b32band(Length, 7) or 0)
+            local Bytes = Bits // 8
+            local FinalBits = (Bits and b32band(Bits, 7) or 0)
 
             local HasMore = (FinalBits > 0)
             local Result = bufcreate(Bytes + (HasMore and 1 or 0))
@@ -281,8 +279,8 @@ local BitSerializer: Types.SerializerConstructor = function(Buffer, Size, Profil
             return buftostring(Result)
         end;
 
-        IncrementPosition = function(Increment)
-            Position += Increment
+        IncrementPosition = function(Bits)
+            Position += Bits
         end;
         SetPosition = function(Bit)
             Position = Bit
@@ -326,15 +324,6 @@ local BitSerializer: Types.SerializerConstructor = function(Buffer, Size, Profil
             dbgprofilebegin(Name)
         end
     end
-
-    --[[ for Key, Value in Result do
-        Result[Key] = function(...)
-            debug.profilebegin(Key)
-            local Result = Value(...)
-            debug.profileend()
-            return Result
-        end
-    end ]]
 
     return Result
 end

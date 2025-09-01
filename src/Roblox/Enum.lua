@@ -36,7 +36,7 @@ function EnumCheckerClass:_Initial(Value)
     return false, `Expected EnumItem or Enum, got {GotType}`
 end
 
-local function _IsA(_, Value, TargetEnum)
+local function _IsA(_, Value, _, TargetEnum)
     local TargetType = typeof(TargetEnum)
 
     -- Both are EnumItems.

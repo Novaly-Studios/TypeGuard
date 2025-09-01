@@ -165,7 +165,7 @@ do
 
             for Index = 1, Size do
                 local Arg = select(Index, ...)
-                local Success, Message = (CompareType :: any):_Check(Arg)
+                local Success, Message = CompareType:_Check(Arg)
 
                 if (not Success) then
                     error(`Invalid argument #{Index} ({Message}).`)

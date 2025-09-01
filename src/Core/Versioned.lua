@@ -14,8 +14,6 @@ local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
-local Number = require(script.Parent.Number)
-
 type VersionedTypeChecker = TypeChecker<VersionedTypeChecker, nil> & {
     DefineVersions: ((self: VersionedTypeChecker, Versions: {SignatureTypeChecker}) -> (VersionedTypeChecker));
 };

@@ -2,7 +2,7 @@
 --!native
 
 if (not script and Instance) then
-    script = game:GetService("ReplicatedFirst").TypeGuard.Util.HumanReadableSerializer
+    script = game:GetService("ReplicatedFirst").TypeGuard.Util.Debug
 end
 
 local bwritestring = buffer.writestring
@@ -16,18 +16,14 @@ local mlog = math.log
 local DEFAULT_MIN_SIZE = 16
 
 local function ReadError()
-    error("HumanReadableSerializer only for serialization, not deserialization")
+    error("DebugSerializer only for serialization, not deserialization")
 end
 
 local function EmptyFunction() end
 
---- Abstracts over buffers with an auto-resize mechanism. All lengths are
---- represented in bits as a standard to allow forward-compatible switches
---- between byte-level and bit-level buffers. Intended for long duration
---- lifetime.
 --- This is not meant to be fast, but rather to be human-readable for debugging
 --- or optimization purposes.
-local function HumanReadableSerializer(Buffer: buffer?, Size: number?)
+local function DebugSerializer(Buffer: buffer?, Size: number?)
     Size = Size or (Buffer and blen(Buffer :: buffer)) or DEFAULT_MIN_SIZE
     Buffer = Buffer or bcreate(Size :: number)
 
@@ -52,11 +48,6 @@ local function HumanReadableSerializer(Buffer: buffer?, Size: number?)
         bcopy(New, 0, Buffer :: any, 0, Position)
         return New
     end
-
-    --[[ local function GetChunks(ChunkSize: number): {buffer}
-        -- Todo. Useful for unreliable events data splitting.
-        error("Unimplemented")
-    end ]]
 
     local function RawWriteString(String: string, Length: number)
         local Bytes = mceil(Length / 8)
@@ -124,21 +115,11 @@ local function HumanReadableSerializer(Buffer: buffer?, Size: number?)
         end;
         GetClippedBuffer = GetClippedBuffer;
 
-        Constructor = HumanReadableSerializer;
-
-        Type = "Human";
+        Constructor = DebugSerializer;
+        Type = "Debug";
     }
-
-    --[[ for Key, Value in Result do
-        Result[Key] = function(...)
-            debug.profilebegin(Key)
-            local Result = Value(...)
-            debug.profileend()
-            return Result
-        end
-    end ]]
 
     return Result
 end
 
-return HumanReadableSerializer
+return DebugSerializer
