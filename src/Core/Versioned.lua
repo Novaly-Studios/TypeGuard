@@ -35,7 +35,7 @@ function VersionedCheckerClass:_Initial()
     return true
 end
 
-function VersionedCheckerClass:_UpdateSerialize()
+function VersionedCheckerClass:_Update()
     local Versions = self._DefineVersions
 
     if (not Versions) then

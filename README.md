@@ -177,7 +177,7 @@ local TestObject = TypeGuard.Object({
     Y = TypeGuard.Number(0, 10):Integer();
     Z = TypeGuard.String():MaxLength(1000);
 
-    W = TypeGuard.Optional(TypeGuard.Object():OfKeyType(TypeGuard.Boolean()):OfValueType(TypeGuard.String()));
+    W = TypeGuard.Optional(TypeGuard.Object(TypeGuard.Boolean(), TypeGuard.String()));
 })
 local Serialize2 = TestObject:Serialize({
     X = 1;

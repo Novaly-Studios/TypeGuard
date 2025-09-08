@@ -22,7 +22,7 @@ local Serializers = require(script.Parent.Util.Serializers)
     local ByteSerializer = Serializers.Byte
     type Serializer = Serializers.Serializer
 
-export type AnyMethod = (...any) -> (...any)
+export type AnyMethod = ((...any) -> (...any))
 
 export type SignatureTypeChecker = {
     Deserialize: AnyMethod;
@@ -45,6 +45,7 @@ export type SignatureTypeCheckerInternal = SignatureTypeChecker & { -- Stops Lua
     Equals: AnyMethod;
     Assert: AnyMethod;
     Negate: AnyMethod;
+    Sample: AnyMethod;
     Check: AnyMethod;
     Copy: AnyMethod;
 }
@@ -54,7 +55,6 @@ export type FunctionalArg<T> = (T | ((any?) -> T))
 
 export type TypeChecker<ExtensionClass, SampleType> = {
     _TC: true;
-    _C: {any};
     _P: SampleType;
 
     -- Methods available in all TypeCheckers.
@@ -70,6 +70,7 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     Assert: ((self: ExtensionClass, Value: any) -> ());
     Negate: ((self: ExtensionClass) -> (ExtensionClass));
     Modify: ((self: ExtensionClass, Modifications: {[any]: any}, ForceUpdate: boolean?) -> (ExtensionClass));
+    Sample: ((self: ExtensionClass, Seed: number?) -> (SampleType));
     Check: ((self: ExtensionClass, Value: any) -> (boolean, string?));
     Unmap: ((self: ExtensionClass, Unmapper: ((any?) -> (SampleType))) -> (ExtensionClass));
     Copy: ((self: ExtensionClass) -> (ExtensionClass));
@@ -82,10 +83,6 @@ export type TypeChecker<ExtensionClass, SampleType> = {
     LessThan: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
     Equals: ((self: ExtensionClass, Value: FunctionalArg<SampleType>) -> (ExtensionClass));
 }
-
-export type function AddConstraint(self: TypeChecker<any>, ID: string, Check: ((Type: any) -> ()))
-    table.insert(self._C, {ID, Check})
-end
 
 local InitForbiddenKeys = false
 local TemplateCache = {}
@@ -488,6 +485,21 @@ local function CreateTemplate(Name: string)
         return self:_Check(Value, UserContext and {UserContext = UserContext} or nil)
     end
 
+    --- Creates a randomized sample value based on the template.
+    function TemplateClass:Sample(Seed)
+        local Call = self._Sample
+
+        if (not Call) then
+            error(`Sample not implemented for '{Name}'`)
+        end
+
+        return Call({
+            Serializer = Util.Serializers.Bit();
+            MaxDepth = 8;
+            Random = Random.new(Seed);
+        }, 0)
+    end
+
     --- Throws an error if the check is unsatisfied.
     function TemplateClass:Assert(Value)
         local Success, Result = self:Check(Value)
@@ -629,11 +641,11 @@ local function CreateTemplate(Name: string)
         end
 
         -- Let the implementation update its _Serialize and _Deserialize functions.
-        local UpdateSerialize = self._UpdateSerialize
+        local Update = self._Update
         local ToMerge
 
-        if (UpdateSerialize) then
-            ToMerge = UpdateSerialize(self)
+        if (Update) then
+            ToMerge = Update(self)
         end
 
         -- Allow manual definition to overwrite.

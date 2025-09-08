@@ -174,6 +174,14 @@ local function DeferredPathWarn(FakeInstance, Message)
 end
 
 local function CreateInstance(ClassName)
+    if (ClassName == "EditableImage") then
+        return AssetService:CreateEditableImage()
+    end
+
+    if (ClassName == "EditableMesh") then
+        return AssetService:CreateEditableMesh()
+    end
+
     local Success, Result = pcall(InstanceNew, ClassName)
 
     if (Success) then
@@ -187,6 +195,8 @@ end
 --#endregion
 
 --#region Instance Properties Setup
+local CreatableInstanceNameToID = {}
+
 local InstanceNameToID = {}
 local InstanceIDToName = {}
 
@@ -243,6 +253,7 @@ local function InitInstanceTypes()
             end
 
             local Tags = Member.Tags
+
             if (Tags and (table.find(Tags, "ReadOnly") or table.find(Tags, "Hidden") or table.find(Tags, "NotScriptable"))) then
                 continue
             end
@@ -264,6 +275,10 @@ local function InitInstanceTypes()
             end
 
             Properties[PropertyName] = Member.ValueType.Name
+        end
+
+        if (pcall(Instance.new, InstanceName)) then
+            table.insert(CreatableInstanceNameToID, InstanceName)
         end
 
         table.insert(InstanceIDToName, InstanceName)
@@ -650,7 +665,7 @@ function InstanceCheckerClass:HasChild(Name)
     return self:_AddConstraint(false, "HasChild", _HasChild, Name)
 end
 
-function InstanceCheckerClass:_UpdateSerialize()
+function InstanceCheckerClass:_Update()
     local SerializeScheme = self._SerializeScheme or "Full"
 
     if (SerializeScheme == "NetSync") then
@@ -832,12 +847,28 @@ function InstanceCheckerClass:_UpdateSerialize()
         return Result
     end
 
+    local IsA = self:GetConstraint("IsA")
+        local IsAValue = (IsA and IsA[1] or nil)
+
+    local function Sample(Context)
+        InitInstanceTypes()
+        
+        if (IsAValue) then
+            -- Todo: random subclass.
+            return CreateInstance(IsAValue)
+        end
+
+        return CreateInstance(CreatableInstanceNameToID[Context.Random:NextInteger(1, #CreatableInstanceNameToID)])
+    end
+
     return {
         _InitSerialize = Init;
         _InitDeserialize = Init;
 
         _Serialize = Serialize;
         _Deserialize = Deserialize;
+
+        _Sample = Sample;
     }
 end
 

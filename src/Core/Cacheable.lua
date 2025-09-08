@@ -54,7 +54,7 @@ function CacheableClass:_Initial(Value, Context)
     return Using:_Check(Value, Context)
 end
 
-function CacheableClass:_UpdateSerialize()
+function CacheableClass:_Update()
     local Using = self._Using
 
     if (not Using) then
@@ -171,6 +171,7 @@ function CacheableClass:_UpdateSerialize()
 
             return UsingDeserialize(Buffer, Context)
         end;
+        _Sample = Using._Sample;
     }
 end
 

@@ -22,7 +22,7 @@ local Core = script.Parent.Parent.Core
     local Or = require(Core.Or)
 
 local Checker = Indexable({
-    Envelope = Or(Float32, DefaultNil);
+    Envelope = Or(Float32:Positive(), DefaultNil);
     Value = Float32;
     Time = Float32:RangeInclusive(0, 1);
 }):Unmap(function(Value)

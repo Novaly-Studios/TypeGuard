@@ -20,7 +20,7 @@ local Core = script.Parent.Parent.Core
 local NumberSequenceKeypointChecker = require(script.Parent.NumberSequenceKeypoint)
 
 local Checker = Indexable({
-    Keypoints = Array(NumberSequenceKeypointChecker());
+    Keypoints = Array(NumberSequenceKeypointChecker()):MinSize(2);
 }):Unmap(function(Value)
     return NumberSequence.new(Value.Keypoints)
 end):Strict():NoConstraints()

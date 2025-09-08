@@ -20,20 +20,26 @@ local Core = script.Parent.Parent.Core
     local Optional = require(Core.Optional)
     local String = require(Core.String)
         local CacheableString = Cacheable(String())
+    local Or = require(Core.Or)
 
 local RbxInstance = require(script.Parent.Instance)
-    local CacheableInstance = Cacheable(RbxInstance())
+    local CacheableObject = Or(
+        Cacheable(RbxInstance("EditableImage")),
+        Cacheable(RbxInstance("EditableMesh"))
+    )
 
 local Checker = Indexable({
-    Object = Optional(CacheableInstance);
+    Object = Optional(CacheableObject);
     Uri = Optional(CacheableString);
 }):Unmap(function(Value)
     local Object = Value.Object
+
     if (Object) then
         return Content.fromObject(Object)
     end
 
     local Uri = Value.Uri
+
     if (Uri) then
         return Content.fromUri(Uri)
     end

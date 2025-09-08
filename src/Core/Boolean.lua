@@ -21,7 +21,7 @@ BooleanClass._CacheConstruction = true
 BooleanClass._Initial = CreateStandardInitial("boolean")
 BooleanClass._TypeOf = {"boolean"}
 
-function BooleanClass:_UpdateSerialize()
+function BooleanClass:_Update()
     return {
         _Serialize = function(Buffer, Value, _Context)
             local BufferContext = Buffer.Context
@@ -38,6 +38,9 @@ function BooleanClass:_UpdateSerialize()
         end;
         _Deserialize = function(Buffer, _Context)
             return (Buffer.ReadUInt(1) == 1)
+        end;
+        _Sample = function(Context, _Depth)
+            return (Context.Random:NextInteger(0, 1) == 1)
         end;
     }
 end

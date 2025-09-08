@@ -44,4 +44,12 @@ function FunctionCheckerClass:CheckParamCount(Checker)
     return self:_AddConstraint(true, "CheckParamCount", _CheckParamCount, Checker)
 end
 
+function FunctionCheckerClass:_Update()
+    return {
+        _Sample = function(_Context, _Depth)
+            return function(...) end;
+        end;
+    }
+end
+
 return FunctionChecker

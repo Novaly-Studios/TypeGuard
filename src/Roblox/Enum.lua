@@ -65,19 +65,26 @@ end
 
 EnumCheckerClass.InitialConstraint = EnumCheckerClass.IsA
 
+local EnumClassToIDToEnumItemArray = {}
 local EnumClassToIDToEnumItem = {}
 local EnumClassToEnumItemToID = {}
+local AllEnumItems = {}
 
 for _, EnumClass in Enum:GetEnums() do
+    local IDToEnumItemArray = {}
+    local EnumItemArray = EnumClass:GetEnumItems()
     local EnumItemToID = {}
     local IDToEnumItem = {}
 
-    for _, EnumItem in EnumClass:GetEnumItems() do
+    for _, EnumItem in EnumItemArray do
         local ID = EnumItem.Value
         EnumItemToID[EnumItem] = ID
         IDToEnumItem[ID] = EnumItem
+        table.insert(AllEnumItems, EnumItem)
+        table.insert(IDToEnumItemArray, EnumItem)
     end
 
+    EnumClassToIDToEnumItemArray[EnumClass] = IDToEnumItemArray
     EnumClassToIDToEnumItem[EnumClass] = IDToEnumItem
     EnumClassToEnumItemToID[EnumClass] = EnumItemToID
 end
@@ -93,7 +100,7 @@ local EnumItemSerializer = Number():Integer(19, true)
     local EnumItemSerializerSerialize = EnumItemSerializer._Serialize
     local EnumItemSerializerDeserialize = EnumItemSerializer._Deserialize
 
-function EnumCheckerClass:_UpdateSerialize()
+function EnumCheckerClass:_Update()
     local IsA = self:GetConstraint("IsA")
         local IsAValue = IsA and IsA[1]
 
@@ -117,6 +124,10 @@ function EnumCheckerClass:_UpdateSerialize()
                 _Deserialize = function(Buffer, Context)
                     return EnumClassToIDToEnumItem[IsAValue][EnumItemSerializerDeserialize(Buffer)]
                 end;
+                _Sample = function(Context, _Depth)
+                    local List = EnumClassToIDToEnumItemArray[IsAValue]
+                    return List[Context.Random:NextInteger(1, #List)]
+                end;
             }
         end
 
@@ -131,6 +142,9 @@ function EnumCheckerClass:_UpdateSerialize()
                 end
             end;
             _Deserialize = function(_Buffer, _Context)
+                return IsAValue
+            end;
+            _Sample = function(Context, _Depth)
                 return IsAValue
             end;
         }
@@ -178,7 +192,10 @@ function EnumCheckerClass:_UpdateSerialize()
             end
 
             return Enum[EnumSerializerDeserialize(Buffer, Context)]
-        end
+        end;
+        _Sample = function(Context, _Depth)
+            return AllEnumItems[Context.Random:NextNumber(1, #AllEnumItems)]
+        end;
     }
 end
 

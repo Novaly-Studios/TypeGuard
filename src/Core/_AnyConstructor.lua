@@ -26,7 +26,7 @@ local Core = Root.Core
     local Nil = require(Core.Nil)
     local Or = require(Core.Or)
 
-local AllowFunctions = {"Check", "Assert", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "GetConstraint", "_Serialize", "_Deserialize", "_Check", "_Initial", "_UpdateSerializeFunctionCache", "_GetTypeIndexFromValue", "_InitSerialize", "_InitDeserialize", "_InitCheck"}
+local AllowFunctions = {"Check", "Assert", "Sample", "AsPredicate", "AsAssert", "Serialize", "Deserialize", "GetConstraint", "_Serialize", "_Deserialize", "_Check", "_Initial", "_UpdateFunctionCache", "_GetTypeIndexFromValue", "_InitSerialize", "_InitDeserialize", "_InitCheck", "_Sample"}
 
 local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: ((any, any) -> (number?)), AnyID: string)
     ExpectType(CustomGetType, Expect.FUNCTION, 1)
@@ -133,7 +133,7 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
             DefaultPureMapIndex = table.find(IsATypeIn, DefaultPureMap)
             DefaultMixedIndex = table.find(IsATypeIn, DefaultMixed)
             DefaultNilIndex = (IncludeNil and table.find(IsATypeIn, DefaultNil) or nil)
-            Any:_UpdateSerializeFunctionCache()
+            Any:_UpdateFunctionCache()
             table.freeze(Any)
 
             return
@@ -145,6 +145,7 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
 
         local AnyDeserialize = Any._Deserialize
         local AnySerialize = Any._Serialize
+        local AnySample = Any._Sample
         local AnyCheck = Any._Check
 
         Any._Serialize = function(Buffer, Value, Context)
@@ -206,6 +207,11 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
             return AnyCheck(self, Value, Context)
         end
 
+        Any._Sample = function(Context, Depth)
+            Setup()
+            return AnySample(Context, Depth)
+        end
+
         -- Avoid recursive tostring weirdness.
         local NewMT = table.clone(getmetatable(Any))
         NewMT.__tostring = function()
@@ -231,6 +237,7 @@ local function CreateConstructor(Types: {SignatureTypeChecker}, CustomGetType: (
             AsPredicate: ((self: any) -> ((Value: any) -> (boolean)));
             Serialize: ((self: any, Value: any, Atom: Util.Serializer?, BypassCheck: boolean?, Context: any?) -> (buffer));
             AsAssert: ((self: any) -> ((Value: any) -> ()));
+            Sample: ((self: any, Context: any?) -> (any));
             Assert: ((self: any, Value: any) -> ());
             Check: ((self: any, Value: any) -> (boolean));
         }

@@ -35,30 +35,46 @@ local ValueCache = require(script.Parent.ValueCache)
 end ]]
 
 export type IndexableTypeChecker = TypeChecker<IndexableTypeChecker, {[any]: any}> & {
+    --- Checks if an object contains a value which satisfies the given TypeChecker.
     ContainsValueOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- Checks if an object contains a value which satisfies the given TypeChecker.
     ContainsKeyOfType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- Checks an object's metatable against the given TypeChecker.
     CheckMetatable: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- For deserialization: transforms the deserialized value of a specific TypeChecker through an unmapper function.
     UnmapStructure: ((self: IndexableTypeChecker, Unmapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
+    --- Ensures all values in the indexable are distinct (no duplicates when inserted into a map).
+    DistinctValues: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    --- For serialization: transforms the value into a specific structure TypeChecker through a mapper function before serializing it.
     MapStructure: ((self: IndexableTypeChecker, StructureChecker: FunctionalArg<SignatureTypeChecker>, Mapper: FunctionalArg<(any?) -> (any?)>) -> (IndexableTypeChecker));
     -- OfValueType: (<Self, _, SubType>(self: Self, Checker: TypeChecker<_, SubType>) -> (Self));
+    --- For all values in the passed table, they must satisfy the TypeChecker passed to this constraint.
     OfValueType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. extra keys which don't exist in the spec are rejected.
     OfStructure: ((self: IndexableTypeChecker, Structure: FunctionalArg<{[any]: SignatureTypeChecker}>) -> (IndexableTypeChecker));
-    IsOrdered: ((self: IndexableTypeChecker, AscendingOrDescendingOrEither: FunctionalArg<boolean>?) -> (IndexableTypeChecker));
-    PureArray: ((self: IndexableTypeChecker, ValueType: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
-    OfKeyType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
-    IsFrozen: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
-    PureMap: ((self: IndexableTypeChecker, KeyType: FunctionalArg<SignatureTypeChecker>?, ValueType: FunctionalArg<SignatureTypeChecker>?) -> (IndexableTypeChecker));
-    MinSize: ((self: IndexableTypeChecker, MinSize: FunctionalArg<number>) -> (IndexableTypeChecker));
-    MaxSize: ((self: IndexableTypeChecker, MaxSize: FunctionalArg<number>) -> (IndexableTypeChecker));
-    OfClass: ((self: IndexableTypeChecker, Class: FunctionalArg<{[string]: any}>) -> (IndexableTypeChecker));
-    Strict: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
-    And: ((self: IndexableTypeChecker, Other: FunctionalArg<IndexableTypeChecker>) -> (IndexableTypeChecker));
-
+    --- Checks the similarity of a value to this type checker. Higher is more similar.
     Similarity: ((self: IndexableTypeChecker, Value: any) -> (number));
-    GroupKV: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    --- Checks if an array is ordered. Option for ascending, descending, or either.
+    IsOrdered: ((self: IndexableTypeChecker, AscendingOrDescendingOrEither: FunctionalArg<boolean>?) -> (IndexableTypeChecker));
+    --- Ensures the indexable is a pure array, i.e. contiguous positive integers starting at 1 as keys.
+    PureArray: ((self: IndexableTypeChecker, ValueType: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- For all keys in the passed table, they must satisfy the TypeChecker passed to this constraint.
+    OfKeyType: ((self: IndexableTypeChecker, Checker: FunctionalArg<SignatureTypeChecker>) -> (IndexableTypeChecker));
+    --- Checks if an object is frozen.
+    IsFrozen: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    --- Ensures the indexable is a pure map, i.e. no array keys are present.
+    PureMap: ((self: IndexableTypeChecker, KeyType: FunctionalArg<SignatureTypeChecker>?, ValueType: FunctionalArg<SignatureTypeChecker>?) -> (IndexableTypeChecker));
+    --- Ensures the indexable has at least MinSize elements.
+    MinSize: ((self: IndexableTypeChecker, MinSize: FunctionalArg<number>) -> (IndexableTypeChecker));
+    --- Ensures the indexable has at most MaxSize elements.
+    MaxSize: ((self: IndexableTypeChecker, MaxSize: FunctionalArg<number>) -> (IndexableTypeChecker));
+    --- Checks if an object's __index points to the specified class.
+    OfClass: ((self: IndexableTypeChecker, Class: FunctionalArg<{[string]: any}>) -> (IndexableTypeChecker));
+    --- Ensures no extra key-value pairs exist than what is explicitly specified when using OfStructure.
+    Strict: ((self: IndexableTypeChecker) -> (IndexableTypeChecker));
+    --- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
+    And: ((self: IndexableTypeChecker, Other: FunctionalArg<IndexableTypeChecker>) -> (IndexableTypeChecker));
 }
-
--- Todo: move arrays support into this?
 
 type Constructor = ((Structure: {SignatureTypeChecker}?) -> (IndexableTypeChecker)) & -- OfStructure
                    ((KeyType: SignatureTypeChecker, ValueType: SignatureTypeChecker?) -> (IndexableTypeChecker)) -- OfKeyType, OfValueType
@@ -131,7 +147,6 @@ local function _OfStructure(SelfRef, StructureToCheck, Context, SubTypes)
     return true
 end
 
---- Ensures every key that exists in the subject also exists in the structure passed, optionally strict i.e. extra keys which don't exist in the spec are rejected.
 function IndexableClass:OfStructure(SubTypes)
     ExpectType(SubTypes, Expect.SOMETHING, 1)
 
@@ -164,7 +179,6 @@ local function _OfValueType(_, Target, Context, SubType)
     return true
 end
 
---- For all values in the passed table, they must satisfy the TypeChecker passed to this constraint.
 function IndexableClass:OfValueType(SubType)
     if (type(SubType) ~= "function") then
         AssertIsTypeBase(SubType, 1)
@@ -181,7 +195,6 @@ local function _PureArray(_, Target, _)
     return false, "Expected a pure array"
 end
 
---- Ensures the indexable is a pure array, i.e. contiguous positive integers starting at 1 as keys.
 function IndexableClass:PureArray(ValueType)
     if (ValueType) then
         AssertIsTypeBase(ValueType, 1)
@@ -209,7 +222,6 @@ local function _PureMap(_, Target, _)
     return false, "Expected a pure map"
 end
 
---- Ensures the indexable is a pure map, i.e. no array keys are present.
 function IndexableClass:PureMap(KeyType, ValueType)
     if (ValueType) then
         AssertIsTypeBase(ValueType, 1)
@@ -252,7 +264,6 @@ local function _OfKeyType(_, Target, Context, SubType)
     return true
 end
 
---- For all keys in the passed table, they must satisfy the TypeChecker passed to this constraint.
 function IndexableClass:OfKeyType(SubType)
     if (type(SubType) ~= "function") then
         AssertIsTypeBase(SubType, 1)
@@ -269,7 +280,6 @@ local function _IsOrdered(_, Target, _, AscendingOrDescendingOrEither)
     return false, "Array values were not ordered"
 end
 
---- Checks if an array is ordered.
 function IndexableClass:IsOrdered(AscendingOrDescendingOrEither)
     assert(self:GetConstraint("PureArray"), "IsOrdered can only be used on pure arrays")
 
@@ -280,7 +290,6 @@ function IndexableClass:IsOrdered(AscendingOrDescendingOrEither)
     return self:_AddConstraint(true, "IsOrdered", _IsOrdered, AscendingOrDescendingOrEither)
 end
 
---- Merges two Object checkers together. Fields in the latter overwrites fields in the former.
 function IndexableClass:And(Other)
     AssertIsTypeBase(Other, 1)
     assert(IndexableClass.And, "Conjunction is not a structural checker")
@@ -307,7 +316,6 @@ function IndexableClass:And(Other)
     return self
 end
 
---- Strict i.e. no extra key-value pairs than what is explicitly specified when using OfStructure.
 function IndexableClass:Strict()
     assert(self:GetConstraint("OfStructure") or self._MapStructure, "Strict can only be used on Indexables with OfStructure or MapStructure defined")
 
@@ -324,7 +332,6 @@ local function _IsFrozen(_, Target, _)
     return false, "Table was not frozen"
 end
 
---- Checks if an object is frozen.
 function IndexableClass:IsFrozen()
     return self:_AddConstraint(true, "IsFrozen", _IsFrozen)
 end
@@ -339,7 +346,6 @@ local function _CheckMetatable(_, Target, Context, Checker)
     return false, `[Metatable] {Message}`
 end
 
---- Checks an object's metatable.
 function IndexableClass:CheckMetatable(Checker)
     AssertIsTypeBase(Checker, 1)
     assert(
@@ -354,7 +360,6 @@ function IndexableClass:CheckMetatable(Checker)
     return self:_AddConstraint(false, "CheckMetatable", _CheckMetatable, Checker)
 end
 
---- Checks if an object's __index points to the specified class.
 function IndexableClass:OfClass(Class)
     ExpectType(Class, Expect.TABLE, 1)
     assert(Class.__index, "Class must have an __index")
@@ -376,7 +381,6 @@ local function _ContainsValueOfType(_, Target, Context, Checker)
     return false, `[ContainsValueOfType] did not contain any values which satisfied {Checker}`
 end
 
---- Checks if an object contains a value which satisfies the given TypeChecker.
 function IndexableClass:ContainsValueOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
@@ -394,10 +398,9 @@ local function _ContainsKeyOfType(_, Target, Context, Checker)
         end
     end
 
-    return false, `[ContainsKeyOfType] did not contain any values which satisfied {Checker}`
+    return false, `[ContainsKeyOfType] did not contain any keys which satisfied {Checker}`
 end
 
---- Checks if an object contains a value which satisfies the given TypeChecker.
 function IndexableClass:ContainsKeyOfType(Checker)
     AssertIsTypeBase(Checker, 1)
 
@@ -435,7 +438,7 @@ end
 local function _MaxSize(self, Target, _, MaxSize)
     if (self:GetConstraint("PureArray")) then
         if (#Target > MaxSize) then
-            return false, `[MaxSize] expected at most {MaxSize} elements, got {Target}`
+            return false, `[MaxSize] expected at most {MaxSize} elements, got {#Target}`
         end
 
         return true
@@ -557,16 +560,40 @@ function IndexableClass:Similarity(Value)
     return Similarity
 end
 
+function IndexableClass:DistinctValues()
+    return self:_AddConstraint(false, "DistinctValues", function(_self, Target, _Context)
+        local Seen = {}
+
+        for _, Value in Target do
+            if (Seen[Value]) then
+                return false, `Found duplicate value: {Value}`
+            end
+
+            Seen[Value] = true
+        end
+
+        return true
+    end)
+end
+
 local function EmptyFunction()
 end
 
-function IndexableClass:_UpdateSerialize()
+function IndexableClass:_Update()
     local HasFunctionalConstraints = self:_HasFunctionalConstraints()
     local MapStructure = self._MapStructure
 
+    local DistinctValues = self:GetConstraint("DistinctValues")
     local OfStructure = self:GetConstraint("OfStructure")
     local OfValueType = self:GetConstraint("OfValueType")
     local OfKeyType = self:GetConstraint("OfKeyType")
+    local IsFrozen = self:GetConstraint("IsFrozen")
+
+    local MaxSize = self:GetConstraint("MaxSize")
+        local MaxSizeValue = (MaxSize and MaxSize[1] or nil)
+
+    local MinSize = self:GetConstraint("MinSize")
+        local MinSizeValue = (MinSize and MinSize[1] or nil)
 
     local MapStructureFunction = (MapStructure and MapStructure[2] or function(Value)
         return Value
@@ -578,8 +605,9 @@ function IndexableClass:_UpdateSerialize()
 
     local CheckMetatable = self:GetConstraint("CheckMetatable")
         local CheckMetatableValue = (CheckMetatable and CheckMetatable[1])
-            local CheckMetatableSerialize = (CheckMetatableValue and CheckMetatableValue._Serialize)
+            local CheckMetatableValueSample = (CheckMetatableValue and CheckMetatableValue._Sample)
             local CheckMetatableDeserialize = (CheckMetatableValue and CheckMetatableValue._Deserialize)
+            local CheckMetatableSerialize = (CheckMetatableValue and CheckMetatableValue._Serialize)
 
     local function SerializeMetaProperties(Buffer, Value, Context)
         -- 0 = not a table.
@@ -656,14 +684,64 @@ function IndexableClass:_UpdateSerialize()
                 })
             end
 
-            local Result
-
-            if (Deserialize) then
-                local Temp = Deserialize(Buffer, Context)
-                Result = (UnmapStructureFunction and UnmapStructureFunction(Temp) or Temp)
+            local Temp = Deserialize(Buffer, Context)
+            local Result = (UnmapStructureFunction and UnmapStructureFunction(Temp) or Temp)
+            DeserializeMetaProperties(Buffer, Result, Context)
+            return Result
+        end;
+        _Sample = function(Context, Depth)
+            if (Depth == Context.MaxDepth) then
+                return nil
             end
 
-            DeserializeMetaProperties(Buffer, Result, Context)
+            _InitAny()
+
+            local Distinct = (DistinctValues and {} or nil)
+            local Sample = Any._Sample
+            local Random = Context.Random
+            local Result = {}
+
+            for _ = 1, Random:NextInteger(MinSizeValue or 0, MaxSizeValue or math.max(MinSizeValue or 0, 10)) do
+                local SampleValue
+                local SampleKey
+
+                repeat
+                    SampleKey = Sample(Context, Depth + 1)
+                until (SampleKey ~= nil and SampleKey == SampleKey)
+
+                repeat
+                    SampleValue = Sample(Context, Depth + 1)
+                until (SampleValue ~= nil and (not Distinct or Distinct[SampleValue] == nil))
+
+                if (Distinct) then
+                    Distinct[SampleValue] = true
+                end
+
+                Result[SampleKey] = SampleValue
+            end
+
+            if (UnmapStructureFunction) then
+                local Success, Temp = pcall(UnmapStructureFunction, Result)
+
+                if (not Success) then
+                    warn("Warning: UnmapStructure failed during sampling with error:", Temp)
+                end
+
+                Result = if (Success) then Temp else debug.info(1, "f")(Context, Depth)
+            end
+
+            if (IsFrozen) then
+                table.freeze(Result)
+            end
+
+            if (CheckMetatableValueSample) then
+                local SampleMetatable = CheckMetatableValueSample(Context)
+
+                if (SampleMetatable) then
+                    setmetatable(Result, SampleMetatable)
+                end
+            end
+
             return Result
         end;
     }
@@ -681,9 +759,6 @@ function IndexableClass:_UpdateSerialize()
     local OfKeyTypeChecker = (OfKeyType and OfKeyType[1] or nil)
         local KeyDeserialize = (OfKeyTypeChecker and OfKeyTypeChecker._Deserialize or nil)
         local KeySerialize = (OfKeyTypeChecker and OfKeyTypeChecker._Serialize or nil)
-
-    local MaxSize = self:GetConstraint("MaxSize")
-    local MinSize = self:GetConstraint("MinSize")
 
     local SizeSerializer = (
         (MaxSize or MinSize) and
@@ -914,6 +989,115 @@ function IndexableClass:_UpdateSerialize()
             end
 
             DeserializeMetaProperties(Buffer, Result, Context)
+            return Result
+        end;
+        _Sample = function(Context, Depth)
+            if (Depth == Context.MaxDepth) then
+                return nil
+            end
+
+            local StructureValues = 0
+
+            if (StructureDefinition) then
+                for _ in StructureDefinition do
+                    StructureValues += 1
+                end
+            end
+
+            local Distinct = (DistinctValues and {} or nil)
+            local Random = Context.Random
+            local Result = {}
+            local RemainingPairs = (Random:NextInteger(StructureValues + (MinSizeValue or 0), StructureValues + (MaxSizeValue or math.max(MinSizeValue or 0, 10))))
+
+            if (HasUnambiguousMapKeys) then
+                for Key, Checker in StructureDefinition do
+                    if (RemainingPairs <= 0) then
+                        break
+                    end
+
+                    if (type(Key) == "number" and HasArrayKeys and (Key >= 1 and Key <= #Result)) then
+                        continue
+                    end
+
+                    local Sample = Checker._Sample
+                    local Value
+
+                    repeat
+                        Value = Sample(Context, Depth + 1)
+                    until (Value ~= nil and (not Distinct or Distinct[Value] == nil))
+
+                    if (Distinct) then
+                        Distinct[Value] = true
+                    end
+
+                    Result[Key] = Value
+                    RemainingPairs -= 1
+                end
+            end
+
+            if (HasArrayKeys and OfValueTypeChecker) then
+                local Count = Random:NextInteger(1, RemainingPairs)
+                local Sample = OfValueTypeChecker._Sample
+
+                for _ = 1, Count do
+                    local Value
+
+                    repeat
+                        Value = Sample(Context, Depth + 1)
+                    until (Value ~= nil and (not Distinct or Distinct[Value] == nil))
+
+                    if (Distinct) then
+                        Distinct[Value] = true
+                    end
+
+                    table.insert(Result, Value)
+                end
+
+                RemainingPairs -= Count
+            end
+
+            -- Todo: resort to Any if OfKeyTypeChecker or OfValueTypeChecker is undefined.
+            if (HasAmbiguousMapKeys and OfKeyTypeChecker and OfValueTypeChecker) then
+                local SampleValue = OfValueTypeChecker._Sample
+                local SampleKey = OfKeyTypeChecker._Sample
+
+                for _ = 1, RemainingPairs do
+                    local Key, Value
+
+                    repeat
+                        Key = SampleKey(Context, Depth + 1)
+                    until (Key ~= nil and Key == Key and Result[Key] == nil)
+
+                    repeat
+                        Value = SampleValue(Context, Depth + 1)
+                    until (Value ~= nil and (not Distinct or Distinct[Value] == nil))
+
+                    if (Distinct) then
+                        Distinct[Value] = true
+                    end
+
+                    Result[Key] = Value
+                end
+            end
+
+            if (UnmapStructureFunction) then
+                local Success, Temp = pcall(UnmapStructureFunction, Result)
+
+                if (not Success) then
+                    warn("Warning: UnmapStructure failed during sampling with error:", Temp)
+                end
+
+                Result = if (Success) then Temp else debug.info(1, "f")(Context, Depth)
+            end
+
+            if (IsFrozen) then
+                table.freeze(Result)
+            end
+
+            if (CheckMetatableValue) then
+                setmetatable(Result, CheckMetatableValueSample(Context))
+            end
+
             return Result
         end;
     }

@@ -28,11 +28,6 @@ return function()
             Value.X = {}
             Value.X.Y = {}
             Value.X.Y.Z = Value
-            _G.Test = true
-            print(">>>>>>>>>", pcall(function()
-                Temp:Check(Value)
-            end))
-            _G.Test = false
             expect(Temp:Check(Value)).to.equal(true)
         end)
     end)

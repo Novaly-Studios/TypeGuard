@@ -195,7 +195,7 @@ local DynamicUInt = Number():Integer(32, false):Positive():Dynamic()
     local DynamicUIntDeserialize = DynamicUInt._Deserialize
     local DynamicUIntSerialize = DynamicUInt._Serialize
 
-function StringClass:_UpdateSerialize()
+function StringClass:_Update()
     -- TODO: contains can substitute all the found strings to empty & record positions at the start of the string.
     -- Same with pattern?
 
@@ -238,6 +238,12 @@ function StringClass:_UpdateSerialize()
             end;
         }
     end ]]
+
+    local MinLength = self:GetConstraint("MinLength")
+        local MinLengthValue = (MinLength and MinLength[1] or nil)
+
+    local MaxLength = self:GetConstraint("MaxLength")
+        local MaxLengthValue = (MaxLength and MaxLength[1] or nil)
 
     local Aligned = self._Aligned
     local UsingCharacters = self:GetConstraint("UsingCharacters")
@@ -306,6 +312,16 @@ function StringClass:_UpdateSerialize()
 
                 return buftostring(Result)
             end;
+            _Sample = function(Context, _Depth)
+                local Random = Context.Random
+                local Result = buffer.create(Random:NextInteger(MinLengthValue or 0, math.max(MinLengthValue or 0, MaxLengthValue or 64)))
+
+                for Index = 0, buffer.len(Result) - 1 do
+                    buffer.writeu8(Result, Index, IndexToCharacterByte[Random:NextInteger(1, #IndexToCharacterByte)])
+                end
+
+                return buffer.tostring(Result)
+            end;
         }
     end
 
@@ -349,16 +365,21 @@ function StringClass:_UpdateSerialize()
 
                 return buffer.tostring(Result.GetClippedBuffer())
             end;
+            _Sample = function(Context, _Depth)
+                local Random = Context.Random
+                local Result = buffer.create(Random:NextInteger(MinLengthValue or 0, math.max(MinLengthValue or 0, MaxLengthValue or 64)))
+
+                for Index = 0, buffer.len(Result) - 2 do
+                    buffer.writeu8(Result, Index, Random:NextInteger(1, 255))
+                end
+
+                buffer.writeu8(Result, buffer.len(Result) - 1, 0)
+                return buffer.tostring(Result)
+            end;
         }
     end
 
-    local MaxLength = self:GetConstraint("MaxLength")
-    local MinLength = self:GetConstraint("MinLength")
-
     if (MaxLength and MinLength) then
-        local MaxLengthValue = MaxLength[1]
-        local MinLengthValue = MinLength[1]
-
         -- Length equals a certain value.
         if (MaxLengthValue == MinLengthValue) then
             return {
@@ -385,6 +406,16 @@ function StringClass:_UpdateSerialize()
                     end
 
                     return Buffer.ReadString(MaxLengthValue * 8)
+                end;
+                _Sample = function(Context, _Depth)
+                    local Random = Context.Random
+                    local Result = buffer.create(MaxLengthValue)
+
+                    for Index = 0, buffer.len(Result) - 1 do
+                        buffer.writeu8(Result, Index, Random:NextInteger(0, 255))
+                    end
+
+                    return buffer.tostring(Result)
                 end;
             }
         end
@@ -424,6 +455,16 @@ function StringClass:_UpdateSerialize()
 
                 return Buffer.ReadString(Length)
             end;
+            _Sample = function(Context, _Depth)
+                local Random = Context.Random
+                local Result = buffer.create(Random:NextInteger(MinLengthValue, MaxLengthValue))
+
+                for Index = 0, buffer.len(Result) - 1 do
+                    buffer.writeu8(Result, Index, Random:NextInteger(0, 255))
+                end
+
+                return buffer.tostring(Result)
+            end;
         }
     end
 
@@ -457,6 +498,16 @@ function StringClass:_UpdateSerialize()
             end
 
             return Buffer.ReadString(Length)
+        end;
+        _Sample = function(Context, _Depth)
+            local Random = Context.Random
+            local Result = buffer.create(Random:NextInteger(MinLengthValue or 0, math.max(MinLengthValue or 0, MaxLengthValue or 64)))
+
+            for Index = 0, buffer.len(Result) - 1 do
+                buffer.writeu8(Result, Index, Random:NextInteger(0, 255))
+            end
+
+            return buffer.tostring(Result)
         end;
     }
 end

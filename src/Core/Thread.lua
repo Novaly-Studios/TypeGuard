@@ -42,6 +42,14 @@ function ThreadCheckerClass:HasStatus(Status)
     return self:_AddConstraint(true, "HasStatus", _HasStatus, Status)
 end
 
+function ThreadCheckerClass:_Update()
+    return {
+        _Sample = function(_Context, _Depth)
+            return coroutine.create(function() end)
+        end;
+    }
+end
+
 ThreadCheckerClass.InitialConstraint = ThreadCheckerClass.Status
 
 return ThreadChecker

@@ -56,20 +56,20 @@ function ValueCacheClass:_Initial(Value, Context)
     }))
 end
 
-function ValueCacheClass:_UpdateSerialize()
-    local Serializer = self._Using
+function ValueCacheClass:_Update()
+    local Using = self._Using
 
-    if (not Serializer) then
+    if (not Using) then
         return
     end
 
     local GetIndexFromValue = self._GetIndexFromValue
     local GetValueFromIndex = self._GetValueFromIndex
 
-    local ValueCacheOf = `ValueCache({Serializer.Name})`
+    local ValueCacheOf = `ValueCache({Using.Name})`
 
-    local Deserialize = Serializer._Deserialize
-    local Serialize = Serializer._Serialize
+    local Deserialize = Using._Deserialize
+    local Serialize = Using._Serialize
 
     return {
         _Serialize = function(Buffer, Value, Context)
@@ -96,6 +96,7 @@ function ValueCacheClass:_UpdateSerialize()
                 CacheIndex = 0;
             }))
         end;
+        _Sample = Using._Sample;
     }
 end
 

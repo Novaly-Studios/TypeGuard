@@ -33,7 +33,7 @@ function CompressibleClass:_Initial(Value)
     return self._Using:Check(Value)
 end
 
-function CompressibleClass:_UpdateSerialize()
+function CompressibleClass:_Update()
     local Using = self._Using
 
     if (not Using) then

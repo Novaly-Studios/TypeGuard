@@ -15,6 +15,8 @@ local Util = require(script.Parent.Parent.Util)
     local ExpectType = Util.ExpectType
     local Expect = Util.Expect
 
+local WeirdValues = {0 / 0, math.huge, -math.huge}
+
 export type NumberTypeChecker = TypeChecker<NumberTypeChecker, number> & {
     RangeInclusive: ((self: NumberTypeChecker, Start: FunctionalArg<number>, End: FunctionalArg<number>) -> (NumberTypeChecker));
     RangeExclusive: ((self: NumberTypeChecker, Start: FunctionalArg<number>, End: FunctionalArg<number>) -> (NumberTypeChecker));
@@ -144,30 +146,30 @@ function NumberClass:RangeExclusive(Min, Max)
     return self:GreaterThan(Min):LessThan(Max)
 end
 
-local function _Positive(_, Item, _)
+--[[ local function _Positive(_, Item, _)
     if (Item < 0) then
         return false, `Expected positive number, got {Item}`
     end
 
     return true
-end
+end ]]
 
 --- Checks the number is positive.
 function NumberClass:Positive()
-    return self:_AddConstraint(true, "Positive", _Positive)
+    return self:GreaterThanOrEqualTo(0) -- self:_AddConstraint(true, "Positive", _Positive)
 end
 
-local function _Negative(_, Item, _)
+--[[ local function _Negative(_, Item, _)
     if (Item >= 0) then
         return false, `Expected negative number, got {Item}`
     end
 
     return true
-end
+end ]]
 
 --- Checks the number is negative.
 function NumberClass:Negative()
-    return self:_AddConstraint(true, "Negative", _Negative)
+    return self:LessThanOrEqualTo(-1) -- self:_AddConstraint(true, "Negative", _Negative)
 end
 
 local function _IsNaN(_, Item, _)
@@ -224,7 +226,31 @@ end
 
 local NaN = 0 / 0
 
-function NumberClass:_UpdateSerialize()
+function NumberClass:_Update()
+    -- Multiple range constraints can exist, so find the boundaries here.
+    local Min = (self:GetConstraint("Positive") and 0 or nil)
+    local Max = (self:GetConstraint("Negative") and -0 or nil)
+
+    for _, Args in self:GetConstraints("GreaterThanOrEqualTo") do
+        local Value = Args[1]
+
+        if (type(Value) == "function") then
+            continue
+        end
+
+        Min = math.min(Min or Value, Value)
+    end
+
+    for _, Args in self:GetConstraints("LessThanOrEqualTo") do
+        local Value = Args[1]
+
+        if (type(Value) == "function") then
+            continue
+        end
+
+        Max = math.max(Max or Value, Value)
+    end
+
     local MysteriousNumber = { -- Default to double if we don't know many details about the number. Largest number type in Luau.
         _Serialize = function(Buffer, Value, _Context)
             local BufferContext = Buffer.Context
@@ -241,6 +267,34 @@ function NumberClass:_UpdateSerialize()
         end;
         _Deserialize = function(Buffer, _Context)
             return Buffer.ReadFloat(64)
+        end;
+        _Sample = function(Context, _Depth)
+            local Random = Context.Random
+            local UnusualFloatValues = self._UnusualFloatValues
+
+            if (Min or Max) then
+                if ((UnusualFloatValues or UnusualFloatValues == nil) and Random:NextInteger(1, UnusualFloatValues or 10) == 1) then
+                    return NaN
+                end
+
+                return Random:NextNumber(Min or -0xFFFFFFFF, Max or 0xFFFFFFFF)
+            end
+
+            if ((UnusualFloatValues or UnusualFloatValues == nil) and Random:NextInteger(1, UnusualFloatValues or 10) == 1) then
+                return WeirdValues[Random:NextInteger(1, #WeirdValues)]
+            end
+
+            local Serializer = Context.Serializer
+                local SetPosition = Serializer.SetPosition
+                local WriteUInt = Serializer.WriteUInt
+
+            WriteUInt(32, Random:NextInteger(0, 0xFFFFFFFF))
+            WriteUInt(32, Random:NextInteger(0, 0xFFFFFFFF))
+            SetPosition(0)
+
+            local Result = Serializer.ReadFloat(64)
+            SetPosition(0)
+            return Result
         end;
     }
 
@@ -266,6 +320,9 @@ function NumberClass:_UpdateSerialize()
             _Deserialize = function(Buffer, _Context)
                 return (Buffer.ReadUInt(1) == 1 and math.huge or -math.huge)
             end;
+            _Sample = function(Context, _Depth)
+                return (Context.Random:NextInteger(0, 1) == 1 and math.huge or -math.huge)
+            end;
         }
     end
 
@@ -280,6 +337,9 @@ function NumberClass:_UpdateSerialize()
                 end
             end;
             _Deserialize = function(_, _)
+                return NaN
+            end;
+            _Sample = function(_Context, _Depth)
                 return NaN
             end;
         }
@@ -308,21 +368,35 @@ function NumberClass:_UpdateSerialize()
             _Deserialize = function(Buffer, _Context)
                 return Buffer.ReadFloat(Bits)
             end;
+            _Sample = function(Context, _Depth)
+                local UnusualFloatValues = self._UnusualFloatValues
+                local Random = Context.Random
+
+                if (Min or Max) then
+                    if ((UnusualFloatValues or UnusualFloatValues == nil) and Random:NextInteger(1, UnusualFloatValues or 10) == 1) then
+                        return NaN
+                    end
+
+                    return Random:NextNumber(Min or -0xFFFFFFFF, Max or 0xFFFFFFFF)
+                end
+
+                if ((UnusualFloatValues or UnusualFloatValues == nil) and Random:NextInteger(1, UnusualFloatValues or 10) == 1) then
+                    return WeirdValues[Random:NextInteger(1, #WeirdValues)]
+                end
+
+                local Serializer = Context.Serializer
+                    local SetPosition = Serializer.SetPosition
+                    local WriteUInt = Serializer.WriteUInt
+
+                WriteUInt(32, Random:NextInteger(0, 0xFFFFFFFF))
+                WriteUInt(32, Random:NextInteger(0, 0xFFFFFFFF))
+                SetPosition(0)
+
+                local Result = Serializer.ReadFloat(Bits)
+                SetPosition(0)
+                return Result
+            end;
         }
-    end
-
-    -- Multiple range constraints can exist, so find the boundaries here.
-    local Min
-    local Max
-
-    for _, Args in self:GetConstraints("GreaterThanOrEqualTo") do
-        local Value = Args[1]
-        Min = math.min(Min or Value, Value)
-    end
-
-    for _, Args in self:GetConstraints("LessThanOrEqualTo") do
-        local Value = Args[1]
-        Max = math.max(Max or Value, Value)
     end
 
     local Integer = self:GetConstraint("Integer")
@@ -364,6 +438,9 @@ function NumberClass:_UpdateSerialize()
                         local Value = ReadUInt(ReadUInt(6))
                         return (Negative and (-Value - 1) or Value)
                     end;
+                    _Sample = function(Context, _Depth)
+                        return Context.Random:NextInteger(0, 0xFFFFFFFF) * (Negative and -1 or 1)
+                    end;
                 }
             end
 
@@ -401,6 +478,9 @@ function NumberClass:_UpdateSerialize()
 
                     return (Positive and Value or (-Value - 1))
                 end;
+                _Sample = function(Context, _Depth)
+                    return Context.Random:NextInteger(-0x80000000, 0x7FFFFFFF)
+                end;
             }
         end
 
@@ -427,6 +507,9 @@ function NumberClass:_UpdateSerialize()
                 _Deserialize = function(Buffer, _Context)
                     return Buffer.ReadUInt(Bits) + Min
                 end;
+                _Sample = function(Context, _Depth)
+                    return Context.Random:NextInteger(Min, Max)
+                end;
             }
         end
 
@@ -451,6 +534,9 @@ function NumberClass:_UpdateSerialize()
                 end;
                 _Deserialize = function(Buffer, _Context)
                     return Buffer.ReadUInt(DefinedBits)
+                end;
+                _Sample = function(Context, _Depth)
+                    return Context.Random:NextInteger(0, 2 ^ DefinedBits)
                 end;
             }
         end
@@ -477,6 +563,9 @@ function NumberClass:_UpdateSerialize()
                 _Deserialize = function(Buffer, _Context)
                     return -Buffer.ReadUInt(DefinedBits) - 1
                 end;
+                _Sample = function(Context, _Depth)
+                    return Context.Random:NextInteger(-2 ^ DefinedBits, 0)
+                end;
             }
         end
 
@@ -500,6 +589,9 @@ function NumberClass:_UpdateSerialize()
             end;
             _Deserialize = function(Buffer, _Context)
                 return Buffer.ReadInt(DefinedBits)
+            end;
+            _Sample = function(Context, _Depth)
+                return Context.Random:NextInteger(-2 ^ (DefinedBits - 1), 2 ^ (DefinedBits - 1) - 1)
             end;
         }
     end

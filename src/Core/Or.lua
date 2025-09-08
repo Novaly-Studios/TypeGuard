@@ -235,7 +235,7 @@ end
 --- Internal function to update the IsATypeIn function performance caches for serialization.
 --- Necessary with Any types because of their cyclic recursive nature - don't want to regenerate
 --- _Serialize when the same technique is also used by objects to cache functions of Any.
-function OrClass:_UpdateSerializeFunctionCache()
+function OrClass:_UpdateFunctionCache()
     local IsATypeIn = self:GetConstraint("IsATypeIn")
         local Types = IsATypeIn[1]
 
@@ -258,15 +258,28 @@ function OrClass:_UpdateSerializeFunctionCache()
     end
 
     self._KeyToDeserializeFunction = KeyToDeserializeFunction
+
+    local KeyToSampleFunction = self._KeyToSampleFunction or table.clone(Types)
+    table.clear(KeyToSampleFunction)
+    setmetatable(KeyToSampleFunction, nil)
+
+    for Key, Value in Types do
+        KeyToSampleFunction[Key] = Value._Sample
+    end
+
+    self._KeyToSampleFunction = KeyToSampleFunction
 end
 
-function OrClass:_UpdateSerialize()
+function OrClass:_Update()
     if (self:_HasFunctionalConstraints()) then
         return {
-            _Serialize = function(_, _, _)
+            _Serialize = function(_Buffer, _Value, _Context)
                 error("Functional constraints currently not supported")
             end;
-            _Deserialize = function(_, _)
+            _Deserialize = function(_Buffer, _Context)
+                error("Functional constraints currently not supported")
+            end;
+            _Sample = function(_Context, _Depth)
                 error("Functional constraints currently not supported")
             end;
         }
@@ -298,6 +311,9 @@ function OrClass:_UpdateSerialize()
             _Deserialize = function(Buffer, Context)
                 return Values[NumberDeserialize(Buffer, Context)]
             end;
+            _Sample = function(Context, _Depth)
+                return Values[Context.Random:NextInteger(1, #Values)]
+            end;
         }
     end
 
@@ -321,6 +337,9 @@ function OrClass:_UpdateSerialize()
                 end;
                 _Deserialize = function(_Buffer, _Context)
                     error("Cannot deserialize with non-string key as Or")
+                end;
+                _Sample = function(_Context, _Depth)
+                    error("Cannot sample with non-string key as Or")
                 end;
             }
         end
@@ -346,6 +365,9 @@ function OrClass:_UpdateSerialize()
             _Deserialize = function(Buffer, Context)
                 return AsArray[NumberDeserialize(Buffer, Context)]
             end;
+            _Sample = function(Context, _Depth)
+                return AsArray[Context.Random:NextInteger(1, #AsArray)]
+            end;
         }
     end
 
@@ -359,10 +381,11 @@ function OrClass:_UpdateSerialize()
             local NumberDeserialize = NumberSerializer._Deserialize
             local NumberSerialize = NumberSerializer._Serialize
 
-        self:_UpdateSerializeFunctionCache()
+        self:_UpdateFunctionCache()
 
         local KeyToDeserializeFunction = self._KeyToDeserializeFunction
         local KeyToSerializeFunction = self._KeyToSerializeFunction
+        local KeyToSampleFunction = self._KeyToSampleFunction
         local Divider = self._Divider
 
         if (GetTypeIndexFromValue) then
@@ -402,6 +425,10 @@ function OrClass:_UpdateSerialize()
                     end
 
                     return Result
+                end;
+                _Sample = function(Context, Depth)
+                    local Sample = KeyToSampleFunction[Context.Random:NextInteger(1, #KeyToSampleFunction)]
+                    return Sample(Context, Depth)
                 end;
             }
         end
@@ -443,6 +470,10 @@ function OrClass:_UpdateSerialize()
 
                 return Result
             end;
+            _Sample = function(Context, Depth)
+                local Sample = KeyToSampleFunction[Context.Random:NextInteger(1, #KeyToSampleFunction)]
+                return Sample(Context, Depth)
+            end;
         }
     end
 
@@ -452,6 +483,9 @@ function OrClass:_UpdateSerialize()
         end;
         _Deserialize = function(_Buffer, _Context)
             error("No constraints: cannot deserialize")
+        end;
+        _Sample = function(_Context, _Depth)
+            error("No constraints: cannot sample")
         end;
     }
 end

@@ -51,7 +51,7 @@ function CompressibleCacheClass:_Initial(Value)
     return self._Using:Check(Value)
 end
 
-function CompressibleCacheClass:_UpdateSerialize()
+function CompressibleCacheClass:_Update()
     local Serializer = self._Using
 
     if (not Serializer) then

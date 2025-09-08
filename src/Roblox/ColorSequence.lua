@@ -20,7 +20,7 @@ local Core = script.Parent.Parent.Core
 local ColorSequenceKeypointChecker = require(script.Parent.ColorSequenceKeypoint)
 
 local Checker = Indexable({
-    Keypoints = Array(ColorSequenceKeypointChecker());
+    Keypoints = Array(ColorSequenceKeypointChecker()):MinSize(2);
 }):Unmap(function(Value)
     local Keypoints = Value.Keypoints
     local Result = table.create(#Keypoints)

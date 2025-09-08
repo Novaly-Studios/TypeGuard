@@ -35,7 +35,7 @@ function BufferClass:Aligned()
     })
 end
 
-function BufferClass:_UpdateSerialize()
+function BufferClass:_Update()
     local Aligned = self._Aligned
 
     return {
@@ -67,6 +67,16 @@ function BufferClass:_UpdateSerialize()
             end
 
             return Buffer.ReadBuffer(Length * 8)
+        end;
+        _Sample = function(Context, _Depth)
+            local Size = Context.Random:NextInteger(0, 1024)
+            local Result = buffer.create(Size)
+
+            for Index = 0, Size - 1 do
+                buffer.writeu8(Result, Index, Context.Random:NextInteger(0, 255))
+            end
+
+            return Result
         end;
     }
 end

@@ -21,4 +21,12 @@ UserdataCheckerClass._CacheConstruction = true
 UserdataCheckerClass._Initial = CreateStandardInitial("userdata")
 UserdataCheckerClass._TypeOf = {"userdata"}
 
+function UserdataCheckerClass:_Update()
+    return {
+        _Sample = function(_Context, _Depth)
+            return newproxy(true)
+        end;
+    }
+end
+
 return UserdataChecker

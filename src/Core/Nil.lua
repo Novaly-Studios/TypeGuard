@@ -21,7 +21,7 @@ NilCheckerClass._CacheConstruction = true
 NilCheckerClass._Initial = CreateStandardInitial("nil")
 NilCheckerClass._TypeOf = {"nil"}
 
-function NilCheckerClass:_UpdateSerialize()
+function NilCheckerClass:_Update()
     return {
         _Serialize = function(Buffer, _, _)
             local BufferContext = Buffer.Context
@@ -32,6 +32,9 @@ function NilCheckerClass:_UpdateSerialize()
             end
         end;
         _Deserialize = function(_, _)
+            return nil
+        end;
+        _Sample = function(_Context, _Depth)
             return nil
         end;
     }
